@@ -16,9 +16,9 @@
 - _Test(@components/Test)
 
 ```jsx
-const {default:Test} = _Test;
-const BaseExample = ()=>{
-    return <Test />;
+const { default: Test } = _Test;
+const BaseExample = () => {
+  return <Test />;
 };
 
 render(<BaseExample />);

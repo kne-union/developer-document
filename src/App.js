@@ -81,6 +81,11 @@ const App = createWithRemoteLoader({
                     key: 'file',
                     title: '文件管理',
                     path: '/admin/file'
+                  },
+                  {
+                    key: 'setting',
+                    title: '设置',
+                    path: '/admin/setting'
                   }
                 ]
               }}

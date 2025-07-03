@@ -16,9 +16,9 @@
 - _HomePage(@components/HomePage)
 
 ```jsx
-const {default:HomePage} = _HomePage;
-const BaseExample = ()=>{
-    return <HomePage />;
+const { default: HomePage } = _HomePage;
+const BaseExample = () => {
+  return <HomePage />;
 };
 
 render(<BaseExample />);

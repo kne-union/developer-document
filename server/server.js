@@ -40,9 +40,13 @@ const createServer = () => {
         db: {
           dialect: fastify.config.DB_DIALECT,
           host: fastify.config.DB_HOST,
+          port: fastify.config.DB_PORT,
           database: fastify.config.DB_DATABASE,
           username: fastify.config.DB_USERNAME,
           password: fastify.config.DB_PASSWORD
+        },
+        getUserModel: () => {
+          return fastify.account.models.user;
         },
         modelsGlobOptions: {
           syncOptions: {}
@@ -51,18 +55,51 @@ const createServer = () => {
     })
   );
 
-  fastify.register(require('@kne/fastify-file-manager'), {
-    prefix: `${options.prefix}/static`,
-    root: path.resolve('./static')
-  });
-
-  fastify.register(require('@kne/fastify-account'), {
-    isTest: true,
-    prefix: `${options.prefix}`
-  });
+  fastify.register(
+    require('fastify-plugin')(async fastify => {
+      fastify.register(require('@kne/fastify-account'), {
+        isTest: fastify.config.IS_TEST,
+        prefix: `${options.prefix}`,
+        sendMessage: async ({ name, type, messageType, props }) => {
+          // messageType: 0:短信验证码，1:邮件验证码 type: 0:注册,2:登录,4:验证租户管理员,5:忘记密码
+          if (messageType === 1 && type === 0) {
+            await fastify.message.services.sendMessage({
+              name,
+              type: 0,
+              code: 'REGISTERCODE',
+              props,
+              options: {
+                title: '注册验证码'
+              }
+            });
+          }
+        }
+      });
+    })
+  );
 
   fastify.register(
     require('fastify-plugin')(async fastify => {
+      fastify.register(require('@kne/fastify-file-manager'), {
+        prefix: `${options.prefix}/static`,
+        root: path.resolve('./static'),
+        ossAdapter: () => {
+          return fastify.aliyun.services.oss;
+        }
+      });
+
+      fastify.register(require('@kne/fastify-message'), {
+        isTest: fastify.config.IS_TEST,
+        emailConfig: {
+          host: fastify.config.ALISMTP_ENDPOINT,
+          port: 465,
+          secure: true,
+          user: fastify.config.ALISMTP_USER,
+          pass: fastify.config.ALISMTP_PASSWORD
+        },
+        templateDir: path.join(__dirname, './messageTemplate')
+      });
+
       fastify.register(require('@kne/fastify-namespace'), {
         options,
         name: options.name,
@@ -77,6 +114,26 @@ const createServer = () => {
           ['services', path.resolve(__dirname, './libs/services')]
         ]
       });
+
+      fastify.register(require('@kne/fastify-signature'), {
+        prefix: `${options.prefix}/signature`
+      });
+
+      /*fastify.register(require('@kne/fastify-aliyun'), {
+        prefix: `${options.prefix}/aliyun`,
+        oss: {
+          baseDir: 'video-conference',
+          region: fastify.config.OSS_REGION,
+          accessKeyId: fastify.config.OSS_ACCESS_KEY_ID,
+          accessKeySecret: fastify.config.OSS_ACCESS_KEY_SECRET,
+          bucket: fastify.config.OSS_BUCKET
+        }
+      });*/
+    })
+  );
+
+  fastify.register(
+    require('fastify-plugin')(async fastify => {
       await fastify.sequelize.sync();
     })
   );
@@ -104,6 +161,8 @@ const createServer = () => {
       fastify.setNotFoundHandler((req, reply) => {
         if (req.method === 'GET') {
           reply.sendFile(getEntry(), { root: path.join(__dirname, './build') });
+        } else {
+          reply.code(404).send({ error: 'Not Found' });
         }
       });
     })

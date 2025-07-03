@@ -16,9 +16,9 @@
 - _About(@components/About)
 
 ```jsx
-const {default:About} = _About;
-const BaseExample = ()=>{
-    return <About />;
+const { default: About } = _About;
+const BaseExample = () => {
+  return <About />;
 };
 
 render(<BaseExample />);
