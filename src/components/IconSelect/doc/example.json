@@ -7,8 +7,12 @@
       "code": "./base.js",
       "scope": [
         {
-          "name": "_Test",
-          "packageName": "@components/Test"
+          "name": "_IconSelect",
+          "packageName": "@components/IconSelect"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
         }
       ]
     }

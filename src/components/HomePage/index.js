@@ -1,17 +1,42 @@
 import React from 'react';
+import { createWithRemoteLoader } from '@kne/remote-loader';
 import { Typography, Row, Col, Card, Button, Divider, Space } from 'antd';
 import { GithubOutlined, RocketOutlined, ApiOutlined, ToolOutlined } from '@ant-design/icons';
+import { IconDisplay } from '@kne/antd-icon-select';
 import styles from './style.module.scss';
 
 const { Title, Paragraph, Text } = Typography;
 
-const FeatureCard = ({ icon, title, description }) => (
+export const FeatureCard = ({ icon, title, description }) => (
   <Card className={styles.featureCard}>
     <div className={styles.featureIcon}>{icon}</div>
     <Title level={4}>{title}</Title>
     <Paragraph>{description}</Paragraph>
   </Card>
 );
+
+export const FeatureSection = ({ data }) => {
+  if (!(data && data.length > 0)) {
+    return null;
+  }
+
+  return (
+    <div className={styles.section}>
+      <Title level={2} className={styles.sectionTitle}>
+        特性
+      </Title>
+      <Row gutter={[24, 24]}>
+        {data.map((item, idnex) => {
+          return (
+            <Col xs={24} sm={12} lg={6} key={idnex}>
+              <FeatureCard icon={<IconDisplay type={item.icon} />} title={item.title} description={item.description} />
+            </Col>
+          );
+        })}
+      </Row>
+    </div>
+  );
+};
 
 const ComponentCard = ({ title, description, preview }) => (
   <Card className={styles.componentCard} hoverable>
@@ -22,45 +47,34 @@ const ComponentCard = ({ title, description, preview }) => (
   </Card>
 );
 
-const HomePage = () => {
+const HomePage = createWithRemoteLoader({
+  modules: ['components-core:Global@usePreset']
+})(({ remoteModules }) => {
+  const [usePreset] = remoteModules;
+  const { setting } = usePreset();
+  const data = setting['profile'];
   return (
     <div className={styles.homePage}>
       {/* 顶部横幅 */}
       <div className={styles.banner}>
         <div className={styles.bannerContent}>
-          <Title>KNE 组件库</Title>
-          <Paragraph className={styles.bannerDescription}>一套高质量、可定制的 React 组件库，帮助开发者快速构建现代化的用户界面</Paragraph>
+          <Title>{data.name}</Title>
+          <Paragraph className={styles.bannerDescription}>{data.description}</Paragraph>
           <Space size="large">
             <Button type="primary" size="large" icon={<RocketOutlined />}>
               快速开始
             </Button>
-            <Button size="large" icon={<GithubOutlined />}>
-              GitHub
-            </Button>
+            {data.github && (
+              <Button size="large" icon={<GithubOutlined />} href={data.github}>
+                GitHub
+              </Button>
+            )}
           </Space>
         </div>
       </div>
 
       {/* 特性部分 */}
-      <div className={styles.section}>
-        <Title level={2} className={styles.sectionTitle}>
-          特性
-        </Title>
-        <Row gutter={[24, 24]}>
-          <Col xs={24} sm={12} lg={6}>
-            <FeatureCard icon={<RocketOutlined className={styles.featureIconSvg} />} title="高性能" description="采用现代化的技术栈，确保组件运行高效，提供流畅的用户体验" />
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <FeatureCard icon={<ToolOutlined className={styles.featureIconSvg} />} title="可定制" description="提供丰富的配置选项和主题系统，满足不同项目的个性化需求" />
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <FeatureCard icon={<ApiOutlined className={styles.featureIconSvg} />} title="API友好" description="简洁一致的API设计，降低学习成本，提高开发效率" />
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <FeatureCard icon={<GithubOutlined className={styles.featureIconSvg} />} title="开源共建" description="开放源代码，欢迎社区贡献，共同打造更好的组件库" />
-          </Col>
-        </Row>
-      </div>
+      <FeatureSection data={data.features} />
 
       {/* 快速开始部分 */}
       <div className={`${styles.section} ${styles.quickStartSection}`}>
@@ -141,6 +155,6 @@ const HomePage = () => {
       </div>
     </div>
   );
-};
+});
 
 export default HomePage;

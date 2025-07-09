@@ -66,8 +66,10 @@ export const globalInit = async () => {
 
   const componentsCoreRemote = {
     ...registry,
+    url: 'http://localhost:3001',
+    tpl: '{{url}}',
     remote: 'components-core',
-    defaultVersion: '0.3.31'
+    defaultVersion: '0.4.0'
   };
   remoteLoaderPreset({
     remotes: {
@@ -89,16 +91,17 @@ export const globalInit = async () => {
         remote: 'components-admin',
         defaultVersion: '1.0.6'
       },
-      'fastify-app':
+      'developer-document':
         process.env.NODE_ENV === 'development'
           ? {
-              remote: 'fastify-app',
+              remote: 'developer-document',
               url: '/',
-              tpl: '{{url}}'
+              tpl: '{{url}}',
+              defaultVersion: process.env.DEFAULT_VERSION
             }
           : {
               ...registry,
-              remote: 'fastify-app',
+              remote: 'developer-document',
               defaultVersion: process.env.DEFAULT_VERSION
             }
     }
@@ -131,35 +134,49 @@ export const globalInit = async () => {
   })();
   const getAccountApis = await safeLoadApis('components-admin:Apis@getApis');
 
+  const apis = Object.assign(
+    {},
+    getAccountApis(),
+    remoteApis,
+    {
+      file: {
+        contentWindowUrl: 'https://uc.fatalent.cn/components/@kne/iframe-resizer/0.1.3/dist/contentWindow.js',
+        pdfjsUrl: 'https://uc.fatalent.cn/components/pdfjs-dist/4.4.168',
+        getUrl: {
+          url: `/api/v1/static/file-url/{id}`,
+          paramsType: 'urlParams',
+          ignoreSuccessState: true
+        },
+        upload: ({ file }) => {
+          return ajax.postForm({
+            url: `/api/v1/static/upload`,
+            data: { file }
+          });
+        }
+      }
+    },
+    getApis()
+  );
+  let setting = {};
+  try {
+    const { data: resData } = await ajax(Object.assign({}, apis.setting.detail));
+
+    if (resData.code !== 0) {
+      return { error: true };
+    }
+    setting = resData.data;
+  } catch (e) {
+    return { error: true };
+  }
+
   return {
     ajax,
+    setting,
     staticUrl: baseApiUrl,
     enums: Object.assign({}),
-    apis: Object.assign(
-      {},
-      getAccountApis(),
-      remoteApis,
-      {
-        file: {
-          contentWindowUrl: 'https://uc.fatalent.cn/components/@kne/iframe-resizer/0.1.3/dist/contentWindow.js',
-          pdfjsUrl: 'https://uc.fatalent.cn/components/pdfjs-dist/4.4.168',
-          getUrl: {
-            url: `/api/v1/static/file-url/{id}`,
-            paramsType: 'urlParams',
-            ignoreSuccessState: true
-          },
-          upload: ({ file }) => {
-            return ajax.postForm({
-              url: `/api/v1/static/upload`,
-              data: { file }
-            });
-          }
-        }
-      },
-      getApis()
-    ),
+    apis,
     themeToken: {
-      colorPrimary: '#4183F0'
+      colorPrimary: setting.profile?.theme || '#4183F0'
     }
   };
 };

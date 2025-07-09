@@ -1,5 +1,5 @@
 {
-  "name": "@kne/developer-document",
+  "name": "developer-document",
   "version": "0.1.0",
   "description": "用来部署一个开发者文档系统",
   "scripts": {
@@ -7,7 +7,7 @@
     "init-server": "cd server && npm install",
     "start": "run-p start-frontend start-server",
     "start-server": "cd server && npm run dev",
-    "start-frontend": "cross-env PORT=3040 MODULES_DEV_PUBLIC_URL=/ craco start",
+    "start-frontend": "cross-env PORT=3040 MODULES_DEV_PUBLIC_URL=/  COMPONENTS_NAME=developer-document craco start",
     "build": "cross-env COMPONENTS_NAME=developer-document MODULES_DEV_PUBLIC_URL=/ craco build && npm run deploy && npm run deploy-prod",
     "deploy": "cross-env OUTPUT_HTML_PATH=build/entry.html DEPLOY_URL=/ API_URL=/ RUNTIME_ENV='env:staging' npx @kne/npm-tools entryHtml",
     "deploy-prod": "cross-env OUTPUT_HTML_PATH=build/entry-prod.html DEPLOY_URL=/ API_URL=/ RUNTIME_ENV='env:prod' npx @kne/npm-tools entryHtml",
@@ -90,8 +90,11 @@
     "sass": "^1.75.0"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.0.0",
+    "@kne/antd-icon-select": "^1.0.0",
     "@kne/axios-fetch": "^1.0.7",
     "@kne/token-storage": "^1.0.0",
-    "@kne/use-ref-callback": "^0.1.2"
+    "@kne/use-ref-callback": "^0.1.2",
+    "dayjs": "^1.11.13"
   }
 }

@@ -1,0 +1,112 @@
+{
+  "profile": {
+    "name": "KNE 组件库",
+    "slogan": "一套高质量、可定制的 React 组件库，帮助开发者快速构建现代化的用户界面",
+    "github": "https://github.com/kne-union",
+    "homepage": "https://www.kne-union.top",
+    "features": [
+      {
+        "icon": "RocketOutlined",
+        "title": "高性能",
+        "description": "采用现代化的技术栈，确保组件运行高效，提供流畅的用户体验"
+      },
+      {
+        "icon": "ToolOutlined",
+        "title": "可定制",
+        "description": "提供丰富的配置选项和主题系统，满足不同项目的个性化需求"
+      },
+      {
+        "icon": "ApiOutlined",
+        "title": "API友好",
+        "description": "简洁一致的API设计，降低学习成本，提高开发效率"
+      },
+      {
+        "icon": "GithubFilled",
+        "title": "开源",
+        "description": "开放源代码，欢迎社区贡献，共同打造更好的组件库"
+      }
+    ]
+  },
+  "about": {
+    "statistic": [
+      {
+        "icon": "TeamOutlined",
+        "value": 100,
+        "name": "服务客户"
+      },
+      {
+        "icon": "HeartOutlined",
+        "value": 100,
+        "name": "团队成员"
+      },
+      {
+        "icon": "TrophyOutlined",
+        "value": 500,
+        "name": "项目案例"
+      },
+      {
+        "icon": "BulbOutlined",
+        "value": 50,
+        "name": "技术专利"
+      }
+    ],
+    "coreValues": [
+      {
+        "icon": "RocketOutlined",
+        "title": "创新驱动",
+        "description": "持续创新是我们的核心动力，我们始终走在技术前沿"
+      },
+      {
+        "icon": "TeamOutlined",
+        "title": "团队协作",
+        "description": "优秀的团队合作让我们能够完成更具挑战性的项目"
+      },
+      {
+        "icon": "StarOutlined",
+        "title": "追求卓越",
+        "description": "我们追求卓越品质，为客户创造最大价值"
+      }
+    ],
+    "history": [
+      {
+        "time": "2025-07-08T16:00:00.000Z",
+        "event": "团队成立"
+      },
+      {
+        "time": "2025-07-09T16:00:00.000Z",
+        "event": "发布第一个产品"
+      }
+    ],
+    "coreTeam": [
+      {
+        "name": "李白",
+        "role": "CEO",
+        "description": "拥有15年技术管理经验，曾领导多个大型项目成功落地"
+      },
+      {
+        "name": "赵云",
+        "role": "CTO",
+        "description": "专注于云计算和人工智能领域，推动公司技术创新"
+      },
+      {
+        "name": "李华",
+        "role": "产品总监",
+        "description": "专注于云计算和人工智能领域，推动公司技术创新"
+      }
+    ],
+    "culture": [
+      {
+        "title": "开放包容",
+        "description": "我们提倡开放的工作环境，鼓励团队成员表达想法和创意"
+      },
+      {
+        "title": "持续学习",
+        "description": "为员工提供持续的学习和发展机会，支持职业成长"
+      },
+      {
+        "title": "工作生活平衡",
+        "description": "重视员工的工作生活平衡，组织丰富的团队活动"
+      }
+    ]
+  }
+}

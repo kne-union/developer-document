@@ -5,13 +5,14 @@ const fastify = require('fastify')({
 
 const fastifyEnv = require('@fastify/env');
 const packageJson = require('./package.json');
-const path = require('path');
+const path = require('node:path');
 
 const version = `v${packageJson.version.split('.')[0]}`;
 
 const options = {
   name: 'project',
   prefix: `/api/${version}`,
+  initDataDir: path.join(__dirname, './initData'),
   getUserModel: () => {
     return fastify.account.models.user;
   }
@@ -29,7 +30,8 @@ const createServer = () => {
         DB_PASSWORD: { type: 'string' },
         DB_DATABASE: { type: 'string' },
         ENV: { type: 'string', default: 'local' },
-        PORT: { type: 'number', default: 8061 }
+        PORT: { type: 'number', default: 8061 },
+        IS_TEST: { type: 'boolean', default: false }
       }
     }
   });
@@ -82,10 +84,10 @@ const createServer = () => {
     require('fastify-plugin')(async fastify => {
       fastify.register(require('@kne/fastify-file-manager'), {
         prefix: `${options.prefix}/static`,
-        root: path.resolve('./static'),
-        ossAdapter: () => {
-          return fastify.aliyun.services.oss;
-        }
+        root: path.resolve('./static')
+        /*ossAdapter: () => {
+        return fastify.aliyun.services.oss;
+      }*/
       });
 
       fastify.register(require('@kne/fastify-message'), {
@@ -120,15 +122,15 @@ const createServer = () => {
       });
 
       /*fastify.register(require('@kne/fastify-aliyun'), {
-        prefix: `${options.prefix}/aliyun`,
-        oss: {
-          baseDir: 'video-conference',
-          region: fastify.config.OSS_REGION,
-          accessKeyId: fastify.config.OSS_ACCESS_KEY_ID,
-          accessKeySecret: fastify.config.OSS_ACCESS_KEY_SECRET,
-          bucket: fastify.config.OSS_BUCKET
-        }
-      });*/
+      prefix: `${options.prefix}/aliyun`,
+      oss: {
+        baseDir: 'video-conference',
+        region: fastify.config.OSS_REGION,
+        accessKeyId: fastify.config.OSS_ACCESS_KEY_ID,
+        accessKeySecret: fastify.config.OSS_ACCESS_KEY_SECRET,
+        bucket: fastify.config.OSS_BUCKET
+      }
+    });*/
     })
   );
 
@@ -166,6 +168,15 @@ const createServer = () => {
         }
       });
     })
+  );
+
+  fastify.register(
+    require('fastify-plugin')((fastify, options) => {
+      fastify.sequelize.syncPromise.then(() => {
+        return fastify[options.name].services.setting.includeSetting(options.initDataDir);
+      });
+    }),
+    options
   );
 
   fastify.register(require('@kne/fastify-response-data-format'));

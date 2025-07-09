@@ -1,12 +1,17 @@
 import { BrowserRouter } from 'react-router-dom';
 import { globalInit } from './preset';
 import React from 'react';
+import { Result } from 'antd';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 const renderRoot = async App => {
   const globalPreset = await globalInit();
+  if (globalPreset.error) {
+    root.render(<Result status="500" title="设置载入错误" subTitle="设置载入错误，请联系网站管理员" />);
+    return;
+  }
   root.render(
     <BrowserRouter>
       <App themeToken={globalPreset.themeToken} globalPreset={globalPreset} />

@@ -92,8 +92,9 @@ const App = createWithRemoteLoader({
             />
           }
         >
-          <Route index element={<Navigate to={`${baseUrl}/admin/user`} replace />} />
-          <Route path="file" element={<RemoteLoader module="components-file-manager:FileListPage" />} />
+          <Route index element={<Navigate to={`${baseUrl}/admin/setting`} replace />} />
+          <Route path="file/*" element={<RemoteLoader module="components-file-manager:FileListPage" key="file" />} />
+          <Route path="setting/*" element={<RemoteLoader module="developer-document:Setting" key="setting" baseUrl={`${baseUrl}/admin/setting`} />} />
           <Route path="*" element={<Admin baseUrl={`${baseUrl}/admin`} />} />
         </Route>
         <Route element={<BeforeLoginLayout />}>

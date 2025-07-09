@@ -1,6 +1,6 @@
-const { default: Test } = _Test;
+const { Menu } = _Setting;
 const BaseExample = () => {
-  return <Test />;
+  return <Menu />;
 };
 
 render(<BaseExample />);

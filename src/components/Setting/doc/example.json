@@ -1,0 +1,27 @@
+{
+  "isFull": true,
+  "list": [
+    {
+      "title": "这里填写示例标题",
+      "description": "这里填写示例说明",
+      "code": "./menu.js",
+      "scope": [
+        {
+          "name": "_Setting",
+          "packageName": "@components/Setting"
+        }
+      ]
+    },
+    {
+      "title": "这里填写示例标题",
+      "description": "这里填写示例说明",
+      "code": "./profile.js",
+      "scope": [
+        {
+          "name": "_Setting",
+          "packageName": "@components/Setting"
+        }
+      ]
+    }
+  ]
+}

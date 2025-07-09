@@ -1,24 +1,48 @@
 import React from 'react';
-import { Typography, Row, Col, Card, Timeline, Statistic, Avatar } from 'antd';
-import { RocketOutlined, TeamOutlined, BulbOutlined, TrophyOutlined, HeartOutlined, StarOutlined } from '@ant-design/icons';
+import { createWithRemoteLoader } from '@kne/remote-loader';
+import { Typography, Row, Col, Card, Timeline, Statistic } from 'antd';
 import styles from './style.module.scss';
+import { IconDisplay } from '@kne/antd-icon-select';
+import dayjs from 'dayjs';
 
 const { Title, Paragraph } = Typography;
 
-const TeamMember = ({ avatar, name, role, description }) => (
-  <Card className={styles.teamCard}>
-    <div className={styles.memberAvatar}>
-      <Avatar size={100} src={avatar}>
-        {name.charAt(0)}
-      </Avatar>
+const TeamMember = createWithRemoteLoader({
+  modules: ['components-core:Image']
+})(({ remoteModules, avatar, name, role, description }) => {
+  const [Image] = remoteModules;
+  return (
+    <Card className={styles.teamCard}>
+      <div className={styles.memberAvatar}>
+        <Image.Avatar size={100} id={avatar} />
+      </div>
+      <Title level={4}>{name}</Title>
+      <Title level={5} type="secondary">
+        {role}
+      </Title>
+      <Paragraph>{description}</Paragraph>
+    </Card>
+  );
+});
+
+export const StatisticSection = ({ data }) => {
+  if (!(data && data.length > 0)) {
+    return null;
+  }
+  return (
+    <div className={styles.statsSection}>
+      <Row gutter={[32, 32]} justify="center">
+        {data.map(item => {
+          return (
+            <Col xs={12} sm={6} key={item.name}>
+              <Statistic title={item.name} value={item.value} prefix={<IconDisplay type={item.icon} />} suffix="+" />
+            </Col>
+          );
+        })}
+      </Row>
     </div>
-    <Title level={4}>{name}</Title>
-    <Title level={5} type="secondary">
-      {role}
-    </Title>
-    <Paragraph>{description}</Paragraph>
-  </Card>
-);
+  );
+};
 
 const ValueCard = ({ icon, title, description }) => (
   <Card className={styles.valueCard}>
@@ -28,7 +52,105 @@ const ValueCard = ({ icon, title, description }) => (
   </Card>
 );
 
-const About = () => {
+export const ValueSection = ({ data }) => {
+  if (!(data && data.length > 0)) {
+    return null;
+  }
+  return (
+    <div className={styles.section}>
+      <Title level={2} className={styles.sectionTitle}>
+        核心价值观
+      </Title>
+      <Row gutter={[24, 24]}>
+        {data.map((item, index) => {
+          return (
+            <Col xs={24} sm={12} lg={8} key={index}>
+              <ValueCard icon={<IconDisplay type={item.icon} />} title={item.title} description={item.description} />
+            </Col>
+          );
+        })}
+      </Row>
+    </div>
+  );
+};
+
+export const HistorySection = ({ data }) => {
+  if (!(data && data.length > 0)) {
+    return null;
+  }
+  return (
+    <div className={styles.section}>
+      <Title level={2} className={styles.sectionTitle}>
+        发展历程
+      </Title>
+      <Timeline
+        mode="left"
+        className={styles.timeline}
+        items={data.map(item => {
+          return {
+            label: dayjs(item.time).format('YYYY年MM月DD日'),
+            children: item.event
+          };
+        })}
+      />
+    </div>
+  );
+};
+
+export const TeamMemberSection = ({ data }) => {
+  if (!(data && data.length > 0)) {
+    return null;
+  }
+  return (
+    <div className={styles.section}>
+      <Title level={2} className={styles.sectionTitle}>
+        核心团队
+      </Title>
+      <Row gutter={[24, 24]}>
+        {data.map((item, index) => {
+          return (
+            <Col xs={24} sm={12} lg={8} key={index}>
+              <TeamMember avatar={item.avatar} name={item.name} role={item.role} description={item.description} />
+            </Col>
+          );
+        })}
+      </Row>
+    </div>
+  );
+};
+
+export const CompanyCultureSection = ({ data }) => {
+  if (!(data && data.length > 0)) {
+    return null;
+  }
+
+  return (
+    <div className={styles.section}>
+      <Title level={2} className={styles.sectionTitle}>
+        公司文化
+      </Title>
+      <Row gutter={[24, 24]}>
+        {data.map((item, index) => {
+          return (
+            <Col xs={24} md={8} key={index}>
+              <Card className={styles.cultureCard}>
+                <Title level={4}>{item.title}</Title>
+                <Paragraph>{item.description}</Paragraph>
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
+    </div>
+  );
+};
+
+const About = createWithRemoteLoader({
+  modules: ['components-core:Global@usePreset']
+})(({ remoteModules }) => {
+  const [usePreset] = remoteModules;
+  const { setting } = usePreset();
+  const data = setting['about'];
   return (
     <div className={styles.aboutPage}>
       {/* 公司简介部分 */}
@@ -42,101 +164,20 @@ const About = () => {
       </div>*/}
 
       {/* 公司数据统计 */}
-      <div className={styles.statsSection}>
-        <Row gutter={[32, 32]} justify="center">
-          <Col xs={12} sm={6}>
-            <Statistic title="服务客户" value={1000} prefix={<TeamOutlined />} suffix="+" />
-          </Col>
-          <Col xs={12} sm={6}>
-            <Statistic title="团队成员" value={100} prefix={<HeartOutlined />} suffix="+" />
-          </Col>
-          <Col xs={12} sm={6}>
-            <Statistic title="项目案例" value={500} prefix={<TrophyOutlined />} suffix="+" />
-          </Col>
-          <Col xs={12} sm={6}>
-            <Statistic title="技术专利" value={50} prefix={<BulbOutlined />} suffix="+" />
-          </Col>
-        </Row>
-      </div>
-
+      <StatisticSection data={data.statistic} />
       {/* 核心价值观 */}
-      <div className={styles.section}>
-        <Title level={2} className={styles.sectionTitle}>
-          核心价值观
-        </Title>
-        <Row gutter={[24, 24]}>
-          <Col xs={24} sm={12} lg={8}>
-            <ValueCard icon={<RocketOutlined />} title="创新驱动" description="持续创新是我们的核心动力，我们始终走在技术前沿" />
-          </Col>
-          <Col xs={24} sm={12} lg={8}>
-            <ValueCard icon={<TeamOutlined />} title="团队协作" description="优秀的团队合作让我们能够完成更具挑战性的项目" />
-          </Col>
-          <Col xs={24} sm={12} lg={8}>
-            <ValueCard icon={<StarOutlined />} title="追求卓越" description="我们追求卓越品质，为客户创造最大价值" />
-          </Col>
-        </Row>
-      </div>
-
+      <ValueSection data={data.coreValues} />
       {/* 发展历程 */}
-      <div className={styles.section}>
-        <Title level={2} className={styles.sectionTitle}>
-          发展历程
-        </Title>
-        <Timeline mode="alternate" className={styles.timeline}>
-          <Timeline.Item>2023年 - 技术创新中心成立</Timeline.Item>
-          <Timeline.Item>2022年 - 获得行业领先认证</Timeline.Item>
-          <Timeline.Item>2021年 - 完成B轮融资</Timeline.Item>
-          <Timeline.Item>2020年 - 团队规模突破100人</Timeline.Item>
-          <Timeline.Item>2019年 - 公司成立</Timeline.Item>
-        </Timeline>
-      </div>
-
+      <HistorySection data={data.history} />
       {/* 核心团队 */}
-      <div className={styles.section}>
-        <Title level={2} className={styles.sectionTitle}>
-          核心团队
-        </Title>
-        <Row gutter={[24, 24]}>
-          <Col xs={24} sm={12} lg={8}>
-            <TeamMember name="张明" role="首席执行官" description="拥有15年技术管理经验，曾领导多个大型项目成功落地" />
-          </Col>
-          <Col xs={24} sm={12} lg={8}>
-            <TeamMember name="李华" role="技术总监" description="专注于云计算和人工智能领域，推动公司技术创新" />
-          </Col>
-          <Col xs={24} sm={12} lg={8}>
-            <TeamMember name="王芳" role="产品总监" description="深耕产品设计10年，致力于提供极致用户体验" />
-          </Col>
-        </Row>
-      </div>
-
+      <TeamMemberSection data={data.coreTeam} />
       {/* 公司文化 */}
-      <div className={`${styles.section} ${styles.cultureSection}`}>
-        <Title level={2} className={styles.sectionTitle}>
-          公司文化
-        </Title>
-        <Row gutter={[24, 24]}>
-          <Col xs={24} md={8}>
-            <Card className={styles.cultureCard}>
-              <Title level={4}>开放包容</Title>
-              <Paragraph>我们提倡开放的工作环境，鼓励团队成员表达想法和创意</Paragraph>
-            </Card>
-          </Col>
-          <Col xs={24} md={8}>
-            <Card className={styles.cultureCard}>
-              <Title level={4}>持续学习</Title>
-              <Paragraph>为员工提供持续的学习和发展机会，支持职业成长</Paragraph>
-            </Card>
-          </Col>
-          <Col xs={24} md={8}>
-            <Card className={styles.cultureCard}>
-              <Title level={4}>工作生活平衡</Title>
-              <Paragraph>重视员工的工作生活平衡，组织丰富的团队活动</Paragraph>
-            </Card>
-          </Col>
-        </Row>
+
+      <div className={styles.cultureSection}>
+        <CompanyCultureSection data={data.culture} />
       </div>
     </div>
   );
-};
+});
 
 export default About;

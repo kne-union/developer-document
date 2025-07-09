@@ -1,0 +1,23 @@
+.icon-select {
+  :global {
+    .ant-select-selection-item {
+      color: var(--primary-color);
+    }
+  }
+}
+
+.icon-select-popup {
+  min-width: 300px;
+
+  :global {
+    .rc-virtual-list-holder-inner {
+      flex-direction: row !important;
+      flex-wrap: wrap;
+    }
+
+    .ant-select-item {
+      font-size: 20px;
+      color: var(--primary-color);
+    }
+  }
+}

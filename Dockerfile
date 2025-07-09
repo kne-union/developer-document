@@ -18,6 +18,7 @@ WORKDIR /node-app
 
 COPY ./server/libs ./libs
 COPY ./server/messageTemplate ./messageTemplate
+COPY ./server/initData ./initData
 COPY ./server/* ./
 
 RUN cp -r /app_build/build ./build
