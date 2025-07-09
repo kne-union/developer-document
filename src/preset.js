@@ -66,10 +66,10 @@ export const globalInit = async () => {
 
   const componentsCoreRemote = {
     ...registry,
-    url: 'http://localhost:3001',
-    tpl: '{{url}}',
+    //url: 'http://localhost:3001',
+    //tpl: '{{url}}',
     remote: 'components-core',
-    defaultVersion: '0.4.0'
+    defaultVersion: '0.4.1'
   };
   remoteLoaderPreset({
     remotes: {
