@@ -55,8 +55,8 @@ const BaseExample = () => {
             description: '开放源代码，欢迎社区贡献，共同打造更好的组件库'
           }
         ],
-        homepage:'https://kne-ui.github.io/',
-        github:'https://github.com/kne-ui/kne'
+        homepage: 'https://kne-ui.github.io/',
+        github: 'https://github.com/kne-ui/kne'
       }}
     />
   );
