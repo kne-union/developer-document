@@ -1,0 +1,65 @@
+{
+  "isFull": true,
+  "list": [
+    {
+      "title": "列表页",
+      "description": "列表页",
+      "code": "./list.js",
+      "scope": [
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        },
+        {
+          "name": "_AdminBlog",
+          "packageName": "@components/AdminBlog"
+        }
+      ]
+    },
+    {
+      "title": "表单页",
+      "description": "表单页",
+      "code": "./form-inner.js",
+      "scope": [
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        },
+        {
+          "name": "_AdminBlog",
+          "packageName": "@components/AdminBlog"
+        }
+      ]
+    },
+    {
+      "title": "详情页",
+      "description": "详情页",
+      "code": "./detail.js",
+      "scope": [
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        },
+        {
+          "name": "_AdminBlog",
+          "packageName": "@components/AdminBlog"
+        }
+      ]
+    },
+    {
+      "title": "tab详情页",
+      "description": "tab详情页",
+      "code": "./tab-detail.js",
+      "scope": [
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        },
+        {
+          "name": "_AdminBlog",
+          "packageName": "@components/AdminBlog"
+        }
+      ]
+    }
+  ]
+}

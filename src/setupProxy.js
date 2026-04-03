@@ -8,4 +8,11 @@ module.exports = function (app) {
       changeOrigin: true
     })
   );
+  app.use(
+    '/@kne-components',
+    createProxyMiddleware({
+      target: 'http://localhost:8061',
+      changeOrigin: true
+    })
+  );
 };

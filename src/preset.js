@@ -69,7 +69,7 @@ export const globalInit = async () => {
     //url: 'http://localhost:3001',
     //tpl: '{{url}}',
     remote: 'components-core',
-    defaultVersion: '0.4.1'
+    defaultVersion: '0.4.67'
   };
   remoteLoaderPreset({
     remotes: {
@@ -89,7 +89,14 @@ export const globalInit = async () => {
         ...registry, //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.0.6'
+        defaultVersion: '1.1.26'
+      },
+      'components-thirdparty': {
+        ...registry,
+        //url: 'http://localhost:3010',
+        //tpl: '{{url}}',
+        remote: 'components-thirdparty',
+        defaultVersion: '0.1.12'
       },
       'developer-document':
         process.env.NODE_ENV === 'development'
@@ -134,6 +141,13 @@ export const globalInit = async () => {
   })();
   const getAccountApis = await safeLoadApis('components-admin:Apis@getApis');
 
+  const enums = Object.assign({}, await safeLoadApis('components-admin:Task@enums'), {
+    taskType: () => [
+      { value: 'blogSearch', description: '博客内容搜索', type: 'info' },
+      { value: 'npmPackageSync', description: 'NPM 包同步', type: 'info' }
+    ]
+  });
+
   const apis = Object.assign(
     {},
     getAccountApis(),
@@ -173,7 +187,7 @@ export const globalInit = async () => {
     ajax,
     setting,
     staticUrl: baseApiUrl,
-    enums: Object.assign({}),
+    enums,
     apis,
     themeToken: {
       colorPrimary: setting.profile?.theme || '#4183F0'

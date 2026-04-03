@@ -31,7 +31,8 @@ const createServer = () => {
         DB_DATABASE: { type: 'string' },
         ENV: { type: 'string', default: 'local' },
         PORT: { type: 'number', default: 8061 },
-        IS_TEST: { type: 'boolean', default: false }
+        IS_TEST: { type: 'boolean', default: false },
+        TASK_CRON: { type: 'string', default: '' }
       }
     }
   });
@@ -100,6 +101,52 @@ const createServer = () => {
           pass: fastify.config.ALISMTP_PASSWORD
         },
         templateDir: path.join(__dirname, './messageTemplate')
+      });
+
+      fastify.register(require('fastify-cron'), {
+        jobs: [
+          {
+            cronTime: '0 9 * * *', // 每天早上9点执行
+            onTick: async () => {
+              console.log('开始执行每日博客搜索任务...');
+              try {
+                await fastify.project.services.task.createBlogSearchTask();
+                console.log('每日博客搜索任务创建成功');
+              } catch (error) {
+                console.error('每日博客搜索任务创建失败:', error.message);
+              }
+            },
+            start: true
+          },
+          {
+            cronTime: '0 10 * * *', // 每天早上10点执行
+            onTick: async () => {
+              console.log('开始执行每日 NPM 包同步任务...');
+              try {
+                await fastify.project.services.task.createNpmPackageSyncTask();
+                console.log('每日 NPM 包同步任务创建成功');
+              } catch (error) {
+                console.error('每日 NPM 包同步任务创建失败:', error.message);
+              }
+            },
+            start: true
+          }
+        ]
+      });
+
+      fastify.register(require('@kne/fastify-task'), {
+        prefix: `${options.prefix}/task`,
+        scriptName: 'index',
+        cronTime: '*/1 * * * *',
+        task: {
+          blogSearch: target => {
+            return fastify.project.services.task.saveBlogSearch(target);
+          },
+          npmPackageSync: target => {
+            return fastify.project.services.task.saveNpmPackageSync(target);
+          }
+        },
+        options
       });
 
       fastify.register(require('@kne/fastify-namespace'), {
@@ -187,11 +234,17 @@ module.exports = {
   createServer,
   start: () => {
     createServer();
-    return fastify.then(() => {
+    return fastify.then(async () => {
       fastify.listen({ port: fastify.config.PORT, host: '0.0.0.0' }, (err, address) => {
         if (err) throw err;
         console.log(`Server is now listening on ${address}`);
       });
+      console.log('开始部署示例代码');
+      const list = await fastify[options.name].models.npmPackage.findAll();
+      for (const item of list) {
+        await fastify[options.name].services.npmPackage.deployExamples(item.packageName);
+      }
+      console.log('示例代码部署完成');
     });
   }
 };

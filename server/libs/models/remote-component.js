@@ -28,6 +28,11 @@ module.exports = ({ DataTypes, options }) => {
         type: DataTypes.STRING,
         comment: '组件描述'
       },
+      group: {
+        type: DataTypes.STRING,
+        comment: '组件分类：business-业务, general-通用',
+        defaultValue: 'general'
+      },
       versions: {
         type: DataTypes.JSON,
         comment: '组件版本列表，如果是npm package，会自动获取',
