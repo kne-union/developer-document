@@ -1,14 +1,5 @@
 import { Tag } from 'antd';
-
-const GROUP_LABELS = {
-  business: '业务',
-  common: '通用'
-};
-
-const GROUP_COLORS = {
-  business: 'blue',
-  common: 'green'
-};
+import { REMOTE_COMPONENT_GROUP_LABELS, REMOTE_COMPONENT_GROUP_COLORS } from '@components/Shared/catalogMeta';
 
 const getColumns = ({ navigate, baseUrl }) => {
   return [
@@ -44,7 +35,7 @@ const getColumns = ({ navigate, baseUrl }) => {
       title: '分类',
       valueOf: item => {
         const group = item.group || 'common';
-        return <Tag color={GROUP_COLORS[group] || 'default'}>{GROUP_LABELS[group] || group}</Tag>;
+        return <Tag color={REMOTE_COMPONENT_GROUP_COLORS[group] || 'default'}>{REMOTE_COMPONENT_GROUP_LABELS[group] || group}</Tag>;
       }
     },
     {

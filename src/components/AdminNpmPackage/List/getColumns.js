@@ -1,22 +1,5 @@
 import { Tag } from 'antd';
-
-const TYPE_LABELS = {
-  frontend: '前端组件',
-  nodejs: 'NodeJS',
-  engineering: '工程化',
-  miniprogram: '小程序',
-  prompts: 'Prompts',
-  other: '其他'
-};
-
-const TYPE_COLORS = {
-  frontend: 'blue',
-  nodejs: 'green',
-  engineering: 'orange',
-  miniprogram: 'cyan',
-  prompts: 'purple',
-  other: 'default'
-};
+import { NPM_PACKAGE_TYPE_LABELS, NPM_PACKAGE_TYPE_COLORS } from '@components/Shared/catalogMeta';
 
 const getColumns = ({ navigate, baseUrl }) => {
   return [
@@ -40,7 +23,7 @@ const getColumns = ({ navigate, baseUrl }) => {
       title: '类型',
       valueOf: item => {
         const type = item.type || 'other';
-        return <Tag color={TYPE_COLORS[type] || 'default'}>{TYPE_LABELS[type] || type}</Tag>;
+        return <Tag color={NPM_PACKAGE_TYPE_COLORS[type] || 'default'}>{NPM_PACKAGE_TYPE_LABELS[type] || type}</Tag>;
       }
     },
     {

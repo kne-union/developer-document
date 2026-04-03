@@ -66,8 +66,6 @@ export const globalInit = async () => {
 
   const componentsCoreRemote = {
     ...registry,
-    //url: 'http://localhost:3001',
-    //tpl: '{{url}}',
     remote: 'components-core',
     defaultVersion: '0.4.67'
   };
@@ -86,15 +84,12 @@ export const globalInit = async () => {
         defaultVersion: '0.1.1'
       },
       'components-admin': {
-        ...registry, //url: 'http://localhost:3016',
-        //tpl: '{{url}}',
+        ...registry,
         remote: 'components-admin',
         defaultVersion: '1.1.26'
       },
       'components-thirdparty': {
         ...registry,
-        //url: 'http://localhost:3010',
-        //tpl: '{{url}}',
         remote: 'components-thirdparty',
         defaultVersion: '0.1.12'
       },
@@ -190,7 +185,13 @@ export const globalInit = async () => {
     enums,
     apis,
     themeToken: {
-      colorPrimary: setting.profile?.theme || '#4183F0'
+      colorPrimary: setting.profile?.theme || '#4183F0',
+      colorInfo: setting.profile?.theme || '#4183F0',
+      colorBgLayout: '#f5f7fa',
+      colorBgContainer: '#ffffff',
+      borderRadius: 12,
+      borderRadiusLG: 16,
+      boxShadowSecondary: '0 10px 24px rgba(15, 23, 42, 0.06)'
     }
   };
 };

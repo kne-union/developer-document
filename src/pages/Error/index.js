@@ -1,7 +1,7 @@
-import { Space } from 'antd';
-import { Result, Button } from 'antd';
+import { Space, Result, Button } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import get from 'lodash/get';
+import styles from '@components/Shared/detailPage.module.scss';
 
 const subTitleEnum = {
   404: { title: '404', subTitle: '数据未找到' },
@@ -15,24 +15,29 @@ const Error = () => {
   const status = location.status || searchParams.get('status') || 500;
   const msg = location.msg || searchParams.get('msg') || get(subTitleEnum[status], 'subTitle') || '';
   const navigate = useNavigate();
+
   return (
-    <Result
-      status={status}
-      title={status || get(subTitleEnum[status], 'title') || 500}
-      subTitle={msg}
-      extra={
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => {
-              navigate('/');
-            }}
-          >
-            返回首页
-          </Button>
-        </Space>
-      }
-    />
+    <div className={styles.narrowPage}>
+      <div className={styles.sectionCard}>
+        <Result
+          status={status}
+          title={status || get(subTitleEnum[status], 'title') || 500}
+          subTitle={msg}
+          extra={
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => {
+                  navigate('/');
+                }}
+              >
+                返回首页
+              </Button>
+            </Space>
+          }
+        />
+      </div>
+    </div>
   );
 };
 

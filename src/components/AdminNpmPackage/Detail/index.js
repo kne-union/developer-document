@@ -1,32 +1,25 @@
 import { createWithRemoteLoader, useLoader } from '@kne/remote-loader';
 import { useSearchParams } from 'react-router-dom';
 import Fetch from '@kne/react-fetch';
-import { Card, Descriptions, Tag, Typography, Flex, Select } from 'antd';
+import { Button, Empty, Select, Tag, Typography } from 'antd';
+import { ApiOutlined, CodeOutlined } from '@ant-design/icons';
 import createEntry from '@kne/modules-dev/dist/create-entry.modern';
 import '@kne/modules-dev/dist/create-entry.css';
 import { useState } from 'react';
 import MarkdownComponentsRender from '@kne/markdown-components-render';
+import { NPM_PACKAGE_TYPE_LABELS } from '@components/Shared/catalogMeta';
+import styles from '@components/Shared/detailPage.module.scss';
 
 const ExampleContent = createEntry.ExampleContent;
+const { Title, Paragraph, Text } = Typography;
 
-const { Title } = Typography;
-
-const TYPE_LABELS = {
-  frontend: '前端组件',
-  nodejs: 'NodeJS',
-  engineering: '工程化',
-  miniprogram: '小程序',
-  prompts: 'Prompts',
-  other: '其他'
-};
-
-const TYPE_COLORS = {
-  frontend: 'blue',
-  nodejs: 'green',
-  engineering: 'orange',
-  miniprogram: 'cyan',
-  prompts: 'purple',
-  other: 'default'
+const MetaItem = ({ label, value }) => {
+  return (
+    <div className={styles.metaItem}>
+      <div className={styles.metaLabel}>{label}</div>
+      <div className={styles.metaValue}>{value}</div>
+    </div>
+  );
 };
 
 const ExampleRunner = ({ packageName, version }) => {
@@ -44,12 +37,15 @@ const ExampleRunner = ({ packageName, version }) => {
       version
     }
   });
+
   if (loading) {
     return null;
   }
+
   if (error) {
-    return <div>加载远程组件库可能不符合规范，您可以向开发者报告该问题</div>;
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="加载示例失败，请检查组件包构建产物" />;
   }
+
   const target = targetModules[0];
 
   return <ExampleContent data={Object.values(target)[0]} />;
@@ -64,49 +60,83 @@ const Detail = createWithRemoteLoader({
   const [selectedVersion, setSelectedVersion] = useState(null);
 
   return (
-    <Page name="npm-package-detail">
+    <Page name="admin-npm-package-detail">
       <Fetch
         {...Object.assign({}, apis.npmPackage.detail, {
           params: { id: searchParams.get('id') }
         })}
         render={({ data }) => {
+          if (!data) {
+            return (
+              <div className={styles.page}>
+                <div className={styles.emptyCard}>
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="未找到对应 NPM 组件" />
+                </div>
+              </div>
+            );
+          }
+
           const type = data.type || 'other';
           const examples = data.examples || [];
           const currentVersion = selectedVersion || data.latestVersion;
 
           return (
-            <Flex vertical gap={12}>
-              <Card>
-                <Title level={4} style={{ marginBottom: 24 }}>
-                  {data.name || data.packageName}
-                </Title>
-                <Descriptions column={2} bordered>
-                  <Descriptions.Item label="Package Name">{data.packageName}</Descriptions.Item>
-                  <Descriptions.Item label="显示名称">{data.name || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="类型">
-                    <Tag color={TYPE_COLORS[type] || 'default'}>{TYPE_LABELS[type] || type}</Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="最新版本">{data.latestVersion || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="Registry">{data.registry || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="是否公开">
-                    <Tag color={data.isPublic ? 'success' : 'warning'}>{data.isPublic ? '是' : '否'}</Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="描述" span={2}>
-                    {data.description || '-'}
-                  </Descriptions.Item>
-                </Descriptions>
-              </Card>
-              {examples.length > 0 ? (
-                <Card>
-                  <div style={{ marginBottom: 16 }}>
-                    <Select style={{ width: 200 }} options={examples.map(v => ({ label: `v${v}`, value: v }))} value={currentVersion} onChange={setSelectedVersion} />
+            <div className={styles.page}>
+              <section className={`${styles.headerCard} ${styles.headerCardNpm}`}>
+                <div className={styles.headerTop}>
+                  <div className={styles.headerContent}>
+                    <Title level={2} className={styles.pageTitle}>
+                      {data.name || data.packageName}
+                    </Title>
+                    <Paragraph className={styles.pageDescription}>{data.description || '后台查看组件基础信息、公开状态及示例版本。'}</Paragraph>
+                    <div className={styles.tagRow}>
+                      <Tag icon={<ApiOutlined />} className={styles.tagTone}>
+                        {NPM_PACKAGE_TYPE_LABELS[type] || type}
+                      </Tag>
+                      {data.latestVersion && <Tag className={styles.tagToneSoft}>v{data.latestVersion}</Tag>}
+                      <Tag className={data.isPublic ? styles.tagStatePublic : styles.tagStatePrivate}>{data.isPublic ? '公开' : '私有'}</Tag>
+                    </div>
                   </div>
-                  <ExampleRunner packageName={data.packageName} version={currentVersion} />
-                </Card>
+                  <div className={styles.headerActions}>
+                    <Button icon={<CodeOutlined />}>示例 {examples.length}</Button>
+                  </div>
+                </div>
+                <div className={styles.metaGrid}>
+                  <MetaItem label="Package Name" value={<Text copyable={{ text: data.packageName }}>{data.packageName}</Text>} />
+                  <MetaItem label="Registry" value={data.registry || '-'} />
+                  <MetaItem label="最新版本" value={data.latestVersion || '-'} />
+                  <MetaItem label="显示名称" value={data.name || '-'} />
+                </div>
+              </section>
+
+              {examples.length > 0 ? (
+                <section className={styles.sectionCard}>
+                  <div className={styles.sectionHeader}>
+                    <div>
+                      <Title level={4} className={styles.sectionTitle}>
+                        在线示例
+                      </Title>
+                      <p className={styles.sectionDesc}>支持后台快速切换版本，核验示例构建是否可用。</p>
+                    </div>
+                    <Select style={{ width: 220 }} options={examples.map(v => ({ label: `v${v}`, value: v }))} value={currentVersion} onChange={setSelectedVersion} />
+                  </div>
+                  <div className={styles.exampleWrap}>
+                    <ExampleRunner packageName={data.packageName} version={currentVersion} />
+                  </div>
+                </section>
               ) : (
-                data.readme && <MarkdownComponentsRender>{data.readme}</MarkdownComponentsRender>
+                <section className={styles.sectionCard}>
+                  <div className={styles.sectionHeader}>
+                    <div>
+                      <Title level={4} className={styles.sectionTitle}>
+                        README
+                      </Title>
+                    </div>
+                  </div>
+                  {data.readme ? <MarkdownComponentsRender>{data.readme}</MarkdownComponentsRender> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无文档内容" />}
+                </section>
               )}
-            </Flex>
+            </div>
           );
         }}
       />

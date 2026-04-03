@@ -3,7 +3,17 @@ import Fetch from '@kne/react-fetch';
 import { useSearchParams } from 'react-router-dom';
 import Actions from '../Actions';
 import { Tag, Space } from 'antd';
+import { CheckCircleOutlined, ClockCircleOutlined, EyeInvisibleOutlined, EyeOutlined, ReadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import styles from '../style.module.scss';
+
+const groupTagClassMap = {
+  tech: styles.groupTagTech,
+  life: styles.groupTagLife,
+  product: styles.groupTagProduct,
+  design: styles.groupTagDesign,
+  other: styles.groupTagOther
+};
 
 const Basic = createWithRemoteLoader({
   modules: ['components-core:InfoPage', 'components-core:Descriptions']
@@ -43,7 +53,9 @@ const Basic = createWithRemoteLoader({
                 content: (
                   <Space>
                     {(data.groups || []).map(group => (
-                      <Tag key={group}>{groupsMap[group] || group}</Tag>
+                      <Tag key={group} className={`${styles.groupTagBase} ${groupTagClassMap[group] || styles.groupTagOther}`}>
+                        {groupsMap[group] || group}
+                      </Tag>
                     ))}
                   </Space>
                 )
@@ -106,7 +118,25 @@ const TabDetail = createWithRemoteLoader({
       render={({ data, reload }) => {
         const activeKey = searchParams.get('tab') || 'basic';
         const ContentComponent = contentMap[activeKey] || Basic;
-        const statusTag = data.status === 'published' ? <Tag color="success">已发布</Tag> : <Tag color="warning">草稿</Tag>;
+        const statusTag =
+          data.status === 'published' ? (
+            <Tag className={styles.statusTagPublished} icon={<CheckCircleOutlined />}>
+              已发布
+            </Tag>
+          ) : (
+            <Tag className={styles.statusTagDraft} icon={<ClockCircleOutlined />}>
+              草稿
+            </Tag>
+          );
+        const visibilityTag = data.isPublic ? (
+          <Tag className={styles.visibilityTagPublic} icon={<EyeOutlined />}>
+            公开
+          </Tag>
+        ) : (
+          <Tag className={styles.visibilityTagPrivate} icon={<EyeInvisibleOutlined />}>
+            私密
+          </Tag>
+        );
 
         return (
           <StateBarPage
@@ -116,7 +146,13 @@ const TabDetail = createWithRemoteLoader({
               <PageHeader
                 title={data.title}
                 info={`ID: ${data.id}`}
-                tags={[statusTag]}
+                tags={[
+                  <Tag className={styles.domainTag} icon={<ReadOutlined />} key="domain">
+                    博客管理
+                  </Tag>,
+                  statusTag,
+                  visibilityTag
+                ]}
                 buttonOptions={
                   <Actions
                     data={data}

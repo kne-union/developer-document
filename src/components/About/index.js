@@ -1,67 +1,81 @@
 import React from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { Typography, Row, Col, Card, Timeline, Statistic } from 'antd';
+import { Typography, Row, Col, Card, Timeline, Statistic, Tag } from 'antd';
+import { TeamOutlined } from '@ant-design/icons';
 import styles from './style.module.scss';
 import { IconDisplay } from '@kne/antd-icon-select';
 import dayjs from 'dayjs';
 
-const { Title, Paragraph } = Typography;
+const { Title, Paragraph, Text } = Typography;
 
 const TeamMember = createWithRemoteLoader({
   modules: ['components-core:Image']
 })(({ remoteModules, avatar, name, role, description }) => {
   const [Image] = remoteModules;
   return (
-    <Card className={styles.teamCard}>
+    <Card className={styles.teamCard} bordered={false}>
       <div className={styles.memberAvatar}>
-        <Image.Avatar size={100} id={avatar} />
+        <Image.Avatar size={88} id={avatar} />
       </div>
-      <Title level={4}>{name}</Title>
-      <Title level={5} type="secondary">
-        {role}
+      <Title level={4} className={styles.cardTitle}>
+        {name}
       </Title>
-      <Paragraph>{description}</Paragraph>
+      <Text className={styles.cardSubTitle}>{role}</Text>
+      <Paragraph className={styles.cardText}>{description}</Paragraph>
     </Card>
   );
 });
 
-export const StatisticSection = ({ data }) => {
+export const StatisticSection = ({ data = [] }) => {
   if (!(data && data.length > 0)) {
     return null;
   }
+
   return (
-    <div className={styles.statsSection}>
-      <Row gutter={[32, 32]} justify="center">
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <Title level={2} className={styles.sectionTitle}>
+          数据概览
+        </Title>
+      </div>
+      <div className={styles.statsGrid}>
         {data.map(item => {
           return (
-            <Col xs={12} sm={6} key={item.name}>
-              <Statistic title={item.name} value={item.value} prefix={<IconDisplay type={item.icon} />} suffix="+" />
-            </Col>
+            <div className={styles.statCard} key={item.name}>
+              <div className={styles.statIcon}>
+                <IconDisplay type={item.icon} />
+              </div>
+              <Statistic title={item.name} value={item.value} suffix="+" />
+            </div>
           );
         })}
-      </Row>
-    </div>
+      </div>
+    </section>
   );
 };
 
 const ValueCard = ({ icon, title, description }) => (
-  <Card className={styles.valueCard}>
+  <Card className={styles.valueCard} bordered={false}>
     <div className={styles.valueIcon}>{icon}</div>
-    <Title level={4}>{title}</Title>
-    <Paragraph>{description}</Paragraph>
+    <Title level={4} className={styles.cardTitle}>
+      {title}
+    </Title>
+    <Paragraph className={styles.cardText}>{description}</Paragraph>
   </Card>
 );
 
-export const ValueSection = ({ data }) => {
+export const ValueSection = ({ data = [] }) => {
   if (!(data && data.length > 0)) {
     return null;
   }
   return (
-    <div className={styles.section}>
-      <Title level={2} className={styles.sectionTitle}>
-        核心价值观
-      </Title>
-      <Row gutter={[24, 24]}>
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <Title level={2} className={styles.sectionTitle}>
+          核心价值观
+        </Title>
+      </div>
+      <Row gutter={[16, 16]}>
         {data.map((item, index) => {
           return (
             <Col xs={24} sm={12} lg={8} key={index}>
@@ -70,43 +84,48 @@ export const ValueSection = ({ data }) => {
           );
         })}
       </Row>
-    </div>
+    </section>
   );
 };
 
-export const HistorySection = ({ data }) => {
+export const HistorySection = ({ data = [] }) => {
   if (!(data && data.length > 0)) {
     return null;
   }
   return (
-    <div className={styles.section}>
-      <Title level={2} className={styles.sectionTitle}>
-        发展历程
-      </Title>
-      <Timeline
-        mode="left"
-        className={styles.timeline}
-        items={data.map(item => {
-          return {
-            label: dayjs(item.time).format('YYYY年MM月DD日'),
-            children: item.event
-          };
-        })}
-      />
-    </div>
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <Title level={2} className={styles.sectionTitle}>
+          发展历程
+        </Title>
+      </div>
+      <div className={styles.timelinePanel}>
+        <Timeline
+          mode="left"
+          items={data.map(item => {
+            return {
+              label: dayjs(item.time).format('YYYY.MM.DD'),
+              children: <span className={styles.timelineText}>{item.event}</span>
+            };
+          })}
+        />
+      </div>
+    </section>
   );
 };
 
-export const TeamMemberSection = ({ data }) => {
+export const TeamMemberSection = ({ data = [] }) => {
   if (!(data && data.length > 0)) {
     return null;
   }
   return (
-    <div className={styles.section}>
-      <Title level={2} className={styles.sectionTitle}>
-        核心团队
-      </Title>
-      <Row gutter={[24, 24]}>
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <Title level={2} className={styles.sectionTitle}>
+          核心团队
+        </Title>
+      </div>
+      <Row gutter={[16, 16]}>
         {data.map((item, index) => {
           return (
             <Col xs={24} sm={12} lg={8} key={index}>
@@ -115,33 +134,37 @@ export const TeamMemberSection = ({ data }) => {
           );
         })}
       </Row>
-    </div>
+    </section>
   );
 };
 
-export const CompanyCultureSection = ({ data }) => {
+export const CompanyCultureSection = ({ data = [] }) => {
   if (!(data && data.length > 0)) {
     return null;
   }
 
   return (
-    <div className={styles.section}>
-      <Title level={2} className={styles.sectionTitle}>
-        公司文化
-      </Title>
-      <Row gutter={[24, 24]}>
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <Title level={2} className={styles.sectionTitle}>
+          公司文化
+        </Title>
+      </div>
+      <Row gutter={[16, 16]}>
         {data.map((item, index) => {
           return (
             <Col xs={24} md={8} key={index}>
-              <Card className={styles.cultureCard}>
-                <Title level={4}>{item.title}</Title>
-                <Paragraph>{item.description}</Paragraph>
+              <Card className={styles.cultureCard} bordered={false}>
+                <Title level={4} className={styles.cardTitle}>
+                  {item.title}
+                </Title>
+                <Paragraph className={styles.cardText}>{item.description}</Paragraph>
               </Card>
             </Col>
           );
         })}
       </Row>
-    </div>
+    </section>
   );
 };
 
@@ -150,32 +173,29 @@ const About = createWithRemoteLoader({
 })(({ remoteModules }) => {
   const [usePreset] = remoteModules;
   const { setting } = usePreset();
-  const data = setting['about'];
+  const about = setting.about || {};
+  const profile = setting.profile || {};
+
   return (
-    <div className={styles.aboutPage}>
-      {/* 公司简介部分 */}
-      {/*<div className={styles.hero}>
+    <div className={styles.page}>
+      <section className={styles.hero}>
         <div className={styles.heroContent}>
-          <Title>追求卓越 创新未来</Title>
-          <Paragraph className={styles.heroDescription}>
-            我们致力于为客户提供最优质的技术解决方案，用创新改变世界
-          </Paragraph>
+          <Tag bordered={false} className={styles.heroTag}>
+            <span className={styles.heroTagIcon}>
+              <TeamOutlined />
+            </span>
+            About
+          </Tag>
+          <Title className={styles.heroTitle}>关于 {profile.name || 'KNE UNION'}</Title>
+          <Paragraph className={styles.heroDescription}>围绕组件体系、远程模块与文档资源持续沉淀统一能力，帮助团队在长期交付中保持一致的开发体验与信息结构。</Paragraph>
         </div>
-      </div>*/}
+      </section>
 
-      {/* 公司数据统计 */}
-      <StatisticSection data={data.statistic} />
-      {/* 核心价值观 */}
-      <ValueSection data={data.coreValues} />
-      {/* 发展历程 */}
-      <HistorySection data={data.history} />
-      {/* 核心团队 */}
-      <TeamMemberSection data={data.coreTeam} />
-      {/* 公司文化 */}
-
-      <div className={styles.cultureSection}>
-        <CompanyCultureSection data={data.culture} />
-      </div>
+      <StatisticSection data={about.statistic} />
+      <ValueSection data={about.coreValues} />
+      <HistorySection data={about.history} />
+      <TeamMemberSection data={about.coreTeam} />
+      <CompanyCultureSection data={about.culture} />
     </div>
   );
 });

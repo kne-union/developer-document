@@ -1,24 +1,29 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
-import { Card, Tag, Space, Typography, Button, Divider } from 'antd';
+import { Tag, Space, Typography, Button, Empty } from 'antd';
+import { ArrowLeftOutlined, CalendarOutlined, ClockCircleOutlined, EyeInvisibleOutlined, EyeOutlined, LockOutlined, LoginOutlined, ReadOutlined, UserOutlined, FileTextOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import classNames from 'classnames';
 import { useMemo } from 'react';
+import { BLOG_GROUP_LABELS } from '@components/Shared/blogMeta';
+import { hasUserToken } from '@components/Shared/auth';
+import styles from '../style.module.scss';
 
 const { Title, Paragraph } = Typography;
 
-const groupsMap = {
-  tech: '技术',
-  life: '生活',
-  product: '产品',
-  design: '设计',
-  other: '其他'
+const groupTagClassMap = {
+  tech: styles.tagTech,
+  design: styles.tagDesign,
+  product: styles.tagProduct,
+  life: styles.tagLife,
+  other: styles.tagOther
 };
 
 const BlogDetail = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:Layout@Page']
+  modules: ['components-core:Global@usePreset', 'components-core:Layout@Page', 'components-thirdparty:CKEditor']
 })(({ remoteModules, baseUrl: propsBaseUrl }) => {
-  const [usePreset, Page] = remoteModules;
+  const [usePreset, Page, CKEditor] = remoteModules;
   const { apis } = usePreset();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -31,76 +36,121 @@ const BlogDetail = createWithRemoteLoader({
   }, [propsBaseUrl, location.pathname]);
 
   return (
-    <Fetch
-      {...Object.assign({}, apis.blog.detail, { params: { id: searchParams.get('id') } })}
-      render={({ data }) => {
-        if (!data) {
-          return <div>博客不存在</div>;
-        }
-
-        // 检查访问权限
-        const isLoggedIn = (() => {
-          try {
-            const token = localStorage.getItem('X-User-Token');
-            return !!token;
-          } catch {
-            return false;
+    <Page name="blog-detail">
+      <Fetch
+        {...Object.assign({}, apis.blog.detail, { params: { id: searchParams.get('id') } })}
+        render={({ data }) => {
+          if (!data) {
+            return (
+              <div className={styles.detailPage}>
+                <div className={styles.noticePanel}>
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="博客不存在或已被删除" />
+                </div>
+              </div>
+            );
           }
-        })();
 
-        // 如果未登录且博客不公开，不允许查看
-        if (!isLoggedIn && !data.isPublic) {
+          const isLoggedIn = hasUserToken();
+
+          if (!isLoggedIn && !data.isPublic) {
+            return (
+              <div className={styles.detailPage}>
+                <div className={styles.noticePanel}>
+                  <Title level={4}>该文章为私密文章</Title>
+                  <Paragraph>请登录后查看完整内容。</Paragraph>
+                  <Button type="primary" icon={<LoginOutlined />} onClick={() => navigate('/account/login')}>
+                    去登录
+                  </Button>
+                </div>
+              </div>
+            );
+          }
+
+          const isRichContent = /<\/?[a-z][\s\S]*>/i.test(data.content || '');
+
           return (
-            <div style={{ padding: '48px', textAlign: 'center' }}>
-              <Title level={3}>该文章为私密文章</Title>
-              <Paragraph>请登录后查看</Paragraph>
-              <Button type="primary" onClick={() => navigate('/account/login')}>
-                去登录
-              </Button>
-            </div>
-          );
-        }
-
-        return (
-          <Page>
-            <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px' }}>
-              <Card>
-                <Title level={2} style={{ marginBottom: 16 }}>
+            <div className={styles.detailPage}>
+              <section className={styles.detailHeader}>
+                <div className={styles.headerIdentity}>
+                  <span className={styles.headerIdentityIcon}>
+                    <ReadOutlined />
+                  </span>
+                  <span className={styles.headerIdentityText}>博客内容</span>
+                </div>
+                <Title level={2} className={styles.detailTitle}>
                   {data.title}
                 </Title>
-                <Space size="small" wrap style={{ marginBottom: 16 }}>
+                <div className={styles.tagRow}>
                   {data.groups?.map(group => (
-                    <Tag key={group} color="blue">
-                      {groupsMap[group] || group}
+                    <Tag key={group} className={classNames(styles.blogTag, groupTagClassMap[group] || styles.tagOther)} style={{ margin: 0 }}>
+                      {BLOG_GROUP_LABELS[group] || group}
                     </Tag>
                   ))}
-                  {data.status === 'published' && <Tag color="success">已发布</Tag>}
-                  {!data.isPublic && <Tag color="warning">私密</Tag>}
-                </Space>
-                <Divider />
-                <Space split="|" size="small" style={{ color: '#999', fontSize: 14, marginBottom: 24 }}>
-                  <span>作者：{data.createdUser?.email || '匿名'}</span>
-                  <span>发布时间：{dayjs(data.publishTime || data.createdAt).format('YYYY-MM-DD HH:mm')}</span>
-                </Space>
-                <div
-                  style={{
-                    whiteSpace: 'pre-wrap',
-                    lineHeight: 1.8,
-                    fontSize: 16,
-                    color: '#333'
-                  }}
-                >
-                  {data.content}
+                  <Tag className={classNames(styles.blogTag, data.status === 'published' ? styles.tagLife : styles.tagProduct)}>{data.status === 'published' ? '已发布' : '草稿'}</Tag>
+                  {!data.isPublic && (
+                    <Tag icon={<LockOutlined />} className={classNames(styles.blogTag, styles.tagPrivate)}>
+                      私密
+                    </Tag>
+                  )}
                 </div>
-              </Card>
-              <div style={{ marginTop: 24, textAlign: 'center' }}>
-                <Button onClick={() => navigate(baseUrl)}>返回列表</Button>
+                <div className={styles.detailMeta}>
+                  <div className={styles.detailMetaItem}>
+                    <span className={styles.detailMetaIcon}>
+                      <UserOutlined />
+                    </span>
+                    <div>
+                      <div className={styles.detailMetaLabel}>作者</div>
+                      <div className={styles.detailMetaValue}>{data.createdUser?.email || '匿名'}</div>
+                    </div>
+                  </div>
+                  <div className={styles.detailMetaItem}>
+                    <span className={styles.detailMetaIcon}>
+                      <CalendarOutlined />
+                    </span>
+                    <div>
+                      <div className={styles.detailMetaLabel}>发布时间</div>
+                      <div className={styles.detailMetaValue}>{dayjs(data.publishTime || data.createdAt).format('YYYY-MM-DD HH:mm')}</div>
+                    </div>
+                  </div>
+                  <div className={styles.detailMetaItem}>
+                    <span className={styles.detailMetaIcon}>
+                      <ClockCircleOutlined />
+                    </span>
+                    <div>
+                      <div className={styles.detailMetaLabel}>更新时间</div>
+                      <div className={styles.detailMetaValue}>{dayjs(data.updatedAt || data.createdAt).format('YYYY-MM-DD HH:mm')}</div>
+                    </div>
+                  </div>
+                  <div className={styles.detailMetaItem}>
+                    <span className={styles.detailMetaIcon}>{data.isPublic ? <EyeOutlined /> : <EyeInvisibleOutlined />}</span>
+                    <div>
+                      <div className={styles.detailMetaLabel}>可见性</div>
+                      <div className={styles.detailMetaValue}>{data.isPublic ? '公开' : '私密'}</div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className={styles.detailContent}>
+                <div className={styles.detailContentHeader}>
+                  <FileTextOutlined />
+                  <span>正文内容</span>
+                </div>
+                <div className={styles.detailContentBody}>{isRichContent ? <CKEditor.Content>{data.content}</CKEditor.Content> : <div className={styles.articleContent}>{data.content}</div>}</div>
+              </section>
+
+              <div className={styles.detailActions}>
+                <Space>
+                  <Button type="primary" ghost icon={<ArrowLeftOutlined />} onClick={() => navigate(baseUrl)}>
+                    返回列表
+                  </Button>
+                </Space>
               </div>
             </div>
-          </Page>
-        );
-      }}
-    />
+          );
+        }}
+      />
+    </Page>
   );
 });
 
