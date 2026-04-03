@@ -1,7 +1,7 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import classNames from 'classnames';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { Tag, Typography, Empty, Pagination, Input, Button, Space } from 'antd';
 import { ReadOutlined, CodeOutlined, HeartOutlined, AppstoreOutlined, BgColorsOutlined, FileTextOutlined } from '@ant-design/icons';
@@ -39,9 +39,10 @@ const BlogList = createWithRemoteLoader({
   const { apis } = usePreset();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [keyword, setKeyword] = useState('');
   const [current, setCurrent] = useState(1);
-  const [selectedGroup, setSelectedGroup] = useState('all');
+  const [selectedGroup, setSelectedGroup] = useState(searchParams.get('group') || 'all');
 
   const isLoggedIn = useMemo(() => hasUserToken(), []);
 
@@ -52,6 +53,16 @@ const BlogList = createWithRemoteLoader({
   }, [propsBaseUrl, location.pathname]);
 
   const apiConfig = isLoggedIn ? apis.blog.list : apis.blog.publicList;
+
+  const syncGroupToSearch = nextGroup => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+    if (nextGroup && nextGroup !== 'all') {
+      nextSearchParams.set('group', nextGroup);
+    } else {
+      nextSearchParams.delete('group');
+    }
+    setSearchParams(nextSearchParams, { replace: true });
+  };
 
   const requestParams = useMemo(() => {
     const params = {
@@ -120,6 +131,7 @@ const BlogList = createWithRemoteLoader({
                     onClick={() => {
                       setSelectedGroup(item.value);
                       setCurrent(1);
+                      syncGroupToSearch(item.value);
                     }}
                   >
                     <Space size={4}>
@@ -145,7 +157,7 @@ const BlogList = createWithRemoteLoader({
 
             if (list.length === 0) {
               return (
-                <div className={classNames(styles.emptyState, styles.emptyStateNarrow)}>
+                <div className={styles.emptyState}>
                   <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无博客文章" />
                 </div>
               );

@@ -68,9 +68,61 @@ module.exports = fp(async (fastify, options) => {
     }
     let examples = [];
     const npmInfo = await loadNpmInfo(pkg.packageName, { registry: pkg.registry });
+    await fs.ensureDir(path.resolve(outputPath, pkg.packageName));
     if (/^@kne\//.test(pkg.packageName)) {
-      for (let currentVersion of Object.keys(npmInfo.versions)) {
+      const allVersions = Object.keys(npmInfo.versions);
+      
+      // 按大版本分组
+      const majorVersionMap = new Map();
+      allVersions.forEach(version => {
+        const major = version.split('.')[0];
+        if (!majorVersionMap.has(major)) {
+          majorVersionMap.set(major, []);
+        }
+        majorVersionMap.get(major).push(version);
+      });
+      
+      // 获取排序后的大版本列表（降序）
+      const sortedMajors = Array.from(majorVersionMap.keys()).sort((a, b) => {
+        const numA = parseInt(a.replace(/^\D/, ''), 10);
+        const numB = parseInt(b.replace(/^\D/, ''), 10);
+        return numB - numA;
+      });
+      
+      // 最多保留最近10个大版本
+      const recentMajors = sortedMajors.slice(0, 10);
+      
+      // 构建要部署的版本列表
+      const versionsToDeploy = [];
+      
+      recentMajors.forEach((major, index) => {
+        const versions = majorVersionMap.get(major);
+        // 版本排序（降序，最新的在前）
+        versions.sort((a, b) => {
+          const partsA = a.split('.').map(p => parseInt(p.replace(/\D/g, ''), 10) || 0);
+          const partsB = b.split('.').map(p => parseInt(p.replace(/\D/g, ''), 10) || 0);
+          for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+            if ((partsA[i] || 0) !== (partsB[i] || 0)) {
+              return (partsB[i] || 0) - (partsA[i] || 0);
+            }
+          }
+          return 0;
+        });
+        
+        if (index === 0) {
+          // 最后一个大版本，最多保留5个最近小版本
+          versionsToDeploy.push(...versions.slice(0, 5));
+        } else {
+          // 其他大版本，只保留该大版本的最后一个版本
+          versionsToDeploy.push(versions[0]);
+        }
+      });
+      
+      for (let currentVersion of versionsToDeploy) {
         const packageName = `@kne-components/${npmInfo.name}@${currentVersion}`;
+        if (await fs.pathExists(path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`))) {
+          continue;
+        }
         try {
           await deployPackage(packageName, { registry: pkg.registry, output: outputPath });
           examples.push(currentVersion);

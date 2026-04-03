@@ -8,6 +8,7 @@
 }
 
 .page {
+  width: 100%;
   max-width: 1240px;
   margin: 0 auto;
   padding: 20px 24px 40px;
@@ -334,13 +335,19 @@
 
 .emptyState,
 .noticePanel {
+  width: 100%;
+  max-width: 100%;
   padding: 48px 24px;
 }
 
-.emptyStateNarrow {
-  max-width: 760px;
-  margin: 0 auto;
+.emptyState :global(.ant-empty) {
+  margin: 0;
 }
+
+.emptyState :global(.ant-empty-normal) {
+  max-width: none;
+}
+
 
 .detailPage {
   max-width: 1240px;

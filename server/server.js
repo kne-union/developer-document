@@ -87,8 +87,8 @@ const createServer = () => {
         prefix: `${options.prefix}/static`,
         root: path.resolve('./static')
         /*ossAdapter: () => {
-        return fastify.aliyun.services.oss;
-      }*/
+      return fastify.aliyun.services.oss;
+    }*/
       });
 
       fastify.register(require('@kne/fastify-message'), {
@@ -169,15 +169,15 @@ const createServer = () => {
       });
 
       /*fastify.register(require('@kne/fastify-aliyun'), {
-      prefix: `${options.prefix}/aliyun`,
-      oss: {
-        baseDir: 'video-conference',
-        region: fastify.config.OSS_REGION,
-        accessKeyId: fastify.config.OSS_ACCESS_KEY_ID,
-        accessKeySecret: fastify.config.OSS_ACCESS_KEY_SECRET,
-        bucket: fastify.config.OSS_BUCKET
-      }
-    });*/
+    prefix: `${options.prefix}/aliyun`,
+    oss: {
+      baseDir: 'video-conference',
+      region: fastify.config.OSS_REGION,
+      accessKeyId: fastify.config.OSS_ACCESS_KEY_ID,
+      accessKeySecret: fastify.config.OSS_ACCESS_KEY_SECRET,
+      bucket: fastify.config.OSS_BUCKET
+    }
+  });*/
     })
   );
 
@@ -242,7 +242,7 @@ module.exports = {
       console.log('开始部署示例代码');
       const list = await fastify[options.name].models.npmPackage.findAll();
       for (const item of list) {
-        await fastify[options.name].services.npmPackage.deployExamples(item.packageName);
+        await fastify[options.name].services.npmPackage.deployExamples({ id: item.id });
       }
       console.log('示例代码部署完成');
     });
