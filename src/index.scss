@@ -14,7 +14,37 @@ body {
   color: #0f172a;
 }
 
-.navigation-list > .ant-menu {
+.ant-layout-header {
+  background: rgba(255, 255, 255, 0.86)!important;
+  border-bottom: 1px solid #e7edf5;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
+  backdrop-filter: blur(8px);
+}
+
+.ant-layout-header > .ant-row.ant-row-no-wrap {
+  max-width: 1240px;
+  margin: 0 auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.navigation-logo {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.navigation-logo img {
+  width: 34px;
+  height: 34px;
+}
+
+.navigation-list {
+  min-width: 0;
+}
+
+.navigation-list > .ant-menu,
+.navigation-main-menu.ant-menu-horizontal {
   justify-content: center;
   background: transparent;
 }
