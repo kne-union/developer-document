@@ -1,7 +1,8 @@
 import RemoteLoader, { createWithRemoteLoader } from '@kne/remote-loader';
 import AppChildrenRouter from '@kne/app-children-router';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import './index.scss';
+import '@kne/react-box/dist/index.css';
 
 const Blog = createWithRemoteLoader({
   modules: []
@@ -70,16 +71,17 @@ const NpmPackage = createWithRemoteLoader({
 });
 
 const App = createWithRemoteLoader({
-  modules: ['components-core:Global', 'components-admin:Authenticate@AfterUserLoginLayout', 'components-admin:Authenticate@AfterAdminUserLoginLayout']
+  modules: ['components-core:Global', 'components-admin:Authenticate@Layout', 'components-admin:Authenticate@AfterUserLoginLayout', 'components-admin:Authenticate@MainLayout', 'components-admin:Authenticate@AfterAdminUserLoginLayout']
 })(({ remoteModules, globalPreset }) => {
-  const [Global, AfterUserLoginLayout, AfterAdminUserLoginLayout] = remoteModules;
+  const [Global, Layout, AfterUserLoginLayout, MainLayout, AfterAdminUserLoginLayout] = remoteModules;
   const baseUrl = '';
   const currentYear = new Date().getFullYear();
+
   return (
     <Global preset={globalPreset} themeToken={globalPreset.themeToken}>
       <AppChildrenRouter
-        errorPage
         notFoundPage
+        errorPage
         baseUrl={baseUrl}
         list={[
           {
@@ -107,7 +109,6 @@ const App = createWithRemoteLoader({
             element: (
               <AppChildrenRouter
                 errorPage
-                notFoundPage
                 baseUrl={baseUrl + '/admin'}
                 element={
                   <AfterAdminUserLoginLayout
@@ -200,7 +201,13 @@ const App = createWithRemoteLoader({
         <AppChildrenRouter
           baseUrl={baseUrl}
           element={
-            <AfterUserLoginLayout
+            <Layout
+              login={() => {
+                const searchParams = new URLSearchParams(window.location.search);
+                const referer = encodeURIComponent(window.location.pathname + window.location.search);
+                searchParams.append('referer', referer);
+                window.location.href = '/account/login?' + searchParams.toString();
+              }}
               navigation={{
                 list: [
                   {
@@ -214,10 +221,10 @@ const App = createWithRemoteLoader({
                     path: '/remote-components'
                   },
                   /*{
-                    key: 'apis',
-                    title: '接口文档',
-                    path: '/apis'
-                  },*/
+                key: 'apis',
+                title: '接口文档',
+                path: '/apis'
+              },*/
                   {
                     key: 'blog',
                     title: '博客',

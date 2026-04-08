@@ -1,30 +1,14 @@
 import React from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { Typography, Row, Col, Card, Timeline, Statistic, Tag } from 'antd';
+import { Typography, Row, Col, Timeline, Statistic, Tag } from 'antd';
 import { TeamOutlined } from '@ant-design/icons';
+import { ColorfulCard, defaultColors, Jelly, GlassCard, PersonalCard } from '@kne/react-box';
 import styles from './style.module.scss';
 import { IconDisplay } from '@kne/antd-icon-select';
 import dayjs from 'dayjs';
+import '@kne/react-box/dist/index.css';
 
-const { Title, Paragraph, Text } = Typography;
-
-const TeamMember = createWithRemoteLoader({
-  modules: ['components-core:Image']
-})(({ remoteModules, avatar, name, role, description }) => {
-  const [Image] = remoteModules;
-  return (
-    <Card className={styles.teamCard} bordered={false}>
-      <div className={styles.memberAvatar}>
-        <Image.Avatar size={88} id={avatar} />
-      </div>
-      <Title level={4} className={styles.cardTitle}>
-        {name}
-      </Title>
-      <Text className={styles.cardSubTitle}>{role}</Text>
-      <Paragraph className={styles.cardText}>{description}</Paragraph>
-    </Card>
-  );
-});
+const { Title, Paragraph } = Typography;
 
 export const StatisticSection = ({ data = [] }) => {
   if (!(data && data.length > 0)) {
@@ -39,14 +23,12 @@ export const StatisticSection = ({ data = [] }) => {
         </Title>
       </div>
       <div className={styles.statsGrid}>
-        {data.map(item => {
+        {data.map((item, index) => {
+          const color = Object.values(defaultColors)[index];
           return (
-            <div className={styles.statCard} key={item.name}>
-              <div className={styles.statIcon}>
-                <IconDisplay type={item.icon} />
-              </div>
-              <Statistic title={item.name} value={item.value} suffix="+" />
-            </div>
+            <ColorfulCard icon={<IconDisplay type={item.icon} style={{ color }} />} color={color} title={item.name} className={styles.statCard} key={item.name}>
+              <Statistic value={item.value} suffix="+" />
+            </ColorfulCard>
           );
         })}
       </div>
@@ -54,14 +36,16 @@ export const StatisticSection = ({ data = [] }) => {
   );
 };
 
-const ValueCard = ({ icon, title, description }) => (
-  <Card className={styles.valueCard} bordered={false}>
-    <div className={styles.valueIcon}>{icon}</div>
+const ValueCard = ({ icon, title, description, color }) => (
+  <div className={styles.valueCard}>
+    <Jelly className={styles.valueIcon} color={color}>
+      {icon}
+    </Jelly>
     <Title level={4} className={styles.cardTitle}>
       {title}
     </Title>
     <Paragraph className={styles.cardText}>{description}</Paragraph>
-  </Card>
+  </div>
 );
 
 export const ValueSection = ({ data = [] }) => {
@@ -77,9 +61,10 @@ export const ValueSection = ({ data = [] }) => {
       </div>
       <Row gutter={[16, 16]}>
         {data.map((item, index) => {
+          const color = Object.values(defaultColors)[index + 3];
           return (
             <Col xs={24} sm={12} lg={8} key={index}>
-              <ValueCard icon={<IconDisplay type={item.icon} />} title={item.title} description={item.description} />
+              <ValueCard icon={<IconDisplay type={item.icon} />} title={item.title} description={item.description} color={color} />
             </Col>
           );
         })}
@@ -114,7 +99,10 @@ export const HistorySection = ({ data = [] }) => {
   );
 };
 
-export const TeamMemberSection = ({ data = [] }) => {
+export const TeamMemberSection = createWithRemoteLoader({
+  modules: ['components-core:Image']
+})(({ remoteModules, data = [] }) => {
+  const [Image] = remoteModules;
   if (!(data && data.length > 0)) {
     return null;
   }
@@ -129,14 +117,14 @@ export const TeamMemberSection = ({ data = [] }) => {
         {data.map((item, index) => {
           return (
             <Col xs={24} sm={12} lg={8} key={index}>
-              <TeamMember avatar={item.avatar} name={item.name} role={item.role} description={item.description} />
+              <PersonalCard avatar={({ className }) => <Image.Avatar className={className} size={72} id={item.avatar} />} name={item.name} title={item.role} description={item.description} status="online" mode="vertical" />
             </Col>
           );
         })}
       </Row>
     </section>
   );
-};
+});
 
 export const CompanyCultureSection = ({ data = [] }) => {
   if (!(data && data.length > 0)) {
@@ -154,12 +142,12 @@ export const CompanyCultureSection = ({ data = [] }) => {
         {data.map((item, index) => {
           return (
             <Col xs={24} md={8} key={index}>
-              <Card className={styles.cultureCard} bordered={false}>
+              <GlassCard className={styles.cultureCard} bordered={false}>
                 <Title level={4} className={styles.cardTitle}>
                   {item.title}
                 </Title>
                 <Paragraph className={styles.cardText}>{item.description}</Paragraph>
-              </Card>
+              </GlassCard>
             </Col>
           );
         })}

@@ -116,7 +116,7 @@ const CatalogPage = createWithRemoteLoader({
   const headerPanelClassName = classNames(styles.headerPanel, headerVariant === 'npm' && styles['headerPanelNpm'], headerVariant === 'remote' && styles['headerPanelRemote']);
 
   return (
-    <Page name={pageName}>
+    <Page name={pageName} noMargin>
       <div className={styles.page}>
         <div className={contentClassName}>
           <section className={headerPanelClassName}>

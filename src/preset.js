@@ -22,12 +22,12 @@ export const globalInit = async () => {
     },
     registerInterceptors: interceptors => {
       interceptors.response.use(response => {
-        if (response.status === 401 || response.data.code === 401) {
+        response.config.showError = false;
+        if (response.config.ignoreRedirect !== true && (response.status === 401 || response.data.code === 401)) {
           const searchParams = new URLSearchParams(window.location.search);
           const referer = encodeURIComponent(window.location.pathname + window.location.search);
           searchParams.append('referer', referer);
           window.location.href = '/account/login?' + searchParams.toString();
-          response.showError = false;
         }
         return response;
       });
@@ -85,8 +85,10 @@ export const globalInit = async () => {
       },
       'components-admin': {
         ...registry,
+        //url: 'http://localhost:3016',
+        //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.26'
+        defaultVersion: '1.1.28'
       },
       'components-thirdparty': {
         ...registry,
@@ -139,7 +141,8 @@ export const globalInit = async () => {
   const enums = Object.assign({}, await safeLoadApis('components-admin:Task@enums'), {
     taskType: () => [
       { value: 'blogSearch', description: '博客内容搜索', type: 'info' },
-      { value: 'npmPackageSync', description: 'NPM 包同步', type: 'info' }
+      { value: 'npmPackageSync', description: 'NPM 包同步', type: 'info' },
+      { value: 'remoteComponentDeploy', description: '远程组件部署', type: 'info' }
     ]
   });
 

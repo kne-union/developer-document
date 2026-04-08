@@ -80,7 +80,7 @@ const BlogList = createWithRemoteLoader({
   }, [keyword, current, selectedGroup, isLoggedIn]);
 
   return (
-    <Page name="blog">
+    <Page name="blog" noMargin>
       <div className={styles.page}>
         <section className={`${styles.headerPanel} ${styles.listHeader}`}>
           <div className={styles.headerTop}>
@@ -201,7 +201,7 @@ const BlogList = createWithRemoteLoader({
                         )}
                       </div>
                       <Paragraph ellipsis={{ rows: 3 }} className={styles.excerpt}>
-                        {item.content}
+                        {item.content?.replace(/<[^>]*>/g, '')}
                       </Paragraph>
                       <div className={styles.cardFooter}>
                         <Text className={styles.metaText}>{item.createdUser?.email?.split('@')[0] || '匿名'}</Text>

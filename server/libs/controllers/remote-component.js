@@ -17,6 +17,7 @@ module.exports = fp(async (fastify, options) => {
             remote: { type: 'string' },
             url: { type: 'string' },
             packageName: { type: 'string' },
+            registry: { type: 'string' },
             tpl: { type: 'string' },
             name: { type: 'string' },
             description: { type: 'string' },
@@ -30,7 +31,16 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => {
-      return services.remoteComponent.create(request.body);
+      const component = await services.remoteComponent.create(request.body);
+      // 创建后触发部署任务
+      if (component.packageName) {
+        try {
+          await services.task.createRemoteComponentDeployTask({ targetId: component.id });
+        } catch (error) {
+          console.error('触发远程组件部署任务失败:', error.message);
+        }
+      }
+      return component;
     }
   );
 
@@ -48,6 +58,7 @@ module.exports = fp(async (fastify, options) => {
             remote: { type: 'string' },
             url: { type: 'string' },
             packageName: { type: 'string' },
+            registry: { type: 'string' },
             tpl: { type: 'string' },
             name: { type: 'string' },
             description: { type: 'string' },
@@ -61,7 +72,16 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => {
-      return services.remoteComponent.update(request.body);
+      const component = await services.remoteComponent.update(request.body);
+      // 更新后触发部署任务
+      if (component.packageName) {
+        try {
+          await services.task.createRemoteComponentDeployTask({ targetId: component.id });
+        } catch (error) {
+          console.error('触发远程组件部署任务失败:', error.message);
+        }
+      }
+      return component;
     }
   );
 

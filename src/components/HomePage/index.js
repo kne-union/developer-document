@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Typography, Row, Col, Button, Space, Tag } from 'antd';
 import { GithubOutlined, AppstoreOutlined, RocketOutlined, CodeOutlined, DeploymentUnitOutlined, FileTextOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { IconDisplay } from '@kne/antd-icon-select';
+import { Zsh } from '@kne/react-box';
 import styles from './style.module.scss';
 
 const { Title, Paragraph, Text } = Typography;
@@ -196,18 +197,29 @@ const HomePage = createWithRemoteLoader({
               </div>
             </Space>
           </div>
-          <div className={styles.codePanel}>
-            <div className={styles.terminalBar}>
-              <span className={styles.dot} />
-              <span className={styles.dot} />
-              <span className={styles.dot} />
-              <Text className={styles.terminalTitle}>terminal</Text>
+          <Zsh title="终端 — zsh" padding="32px" radius="12px">
+            <div style={{ color: '#1f2937' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <span style={{ color: '#22c55e', fontWeight: 'bold' }}>$</span>
+                <span>npm init @kne/union-app my-dashboard</span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                <span style={{ color: '#22c55e', fontWeight: 'bold' }}>$</span>
+                <span>cd my-dashboard</span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                <span style={{ color: '#22c55e', fontWeight: 'bold' }}>$</span>
+                <span>npm install</span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                <span style={{ color: '#22c55e', fontWeight: 'bold' }}>$</span>
+                <span>npm run start</span>
+              </div>
+              <div style={{ marginTop: '1.5rem', padding: '0.75rem', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #dcfce7', color: '#15803d', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                <p style={{ margin: 0 }}>成功！项目已创建并启动</p>
+              </div>
             </div>
-            <pre className={styles.codeBlock}>{`npm init @kne/union-app my-dashboard
-cd my-dashboard
-npm install
-npm run start`}</pre>
-          </div>
+          </Zsh>
         </div>
       </section>
 

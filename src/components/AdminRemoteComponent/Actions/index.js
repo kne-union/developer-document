@@ -1,6 +1,7 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Save from './Save';
 import Remove from './Remove';
+import Deploy from './Deploy';
 
 const Actions = createWithRemoteLoader({
   modules: ['components-core:ButtonGroup']
@@ -12,6 +13,11 @@ const Actions = createWithRemoteLoader({
       ...props,
       buttonComponent: Save,
       children: '编辑'
+    },
+    {
+      ...props,
+      buttonComponent: Deploy,
+      children: '部署'
     },
     {
       ...props,

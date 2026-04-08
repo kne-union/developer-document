@@ -1,4 +1,4 @@
-import { Tag } from 'antd';
+import { Tag, Space } from 'antd';
 import { REMOTE_COMPONENT_GROUP_LABELS, REMOTE_COMPONENT_GROUP_COLORS } from '@components/Shared/catalogMeta';
 
 const getColumns = ({ navigate, baseUrl }) => {
@@ -47,6 +47,14 @@ const getColumns = ({ navigate, baseUrl }) => {
       }
     },
     {
+      name: 'registry',
+      title: 'NPM Registry',
+      type: 'text',
+      valueOf: item => {
+        return item.registry || '-';
+      }
+    },
+    {
       name: 'defaultVersion',
       title: '默认版本',
       type: 'text',
@@ -60,6 +68,21 @@ const getColumns = ({ navigate, baseUrl }) => {
       type: 'tag',
       valueOf: item => {
         return item.isPublic ? { type: 'success', text: '公开' } : { type: 'default', text: '私密' };
+      }
+    },
+    {
+      name: 'examples',
+      title: '部署版本',
+      valueOf: item => {
+        const examples = item.examples || [];
+        if (examples.length === 0) return '-';
+        return (
+          <Space size={[4, 4]} wrap>
+            {examples.map(version => (
+              <Tag key={version}>{version}</Tag>
+            ))}
+          </Space>
+        );
       }
     },
     {

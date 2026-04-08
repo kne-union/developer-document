@@ -48,4 +48,30 @@ module.exports = fp(async (fastify, options) => {
       };
     }
   );
+
+  // 手动触发远程组件部署任务
+  fastify.post(
+    `${options.prefix}/task/remote-component-deploy`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: '手动触发远程组件部署任务',
+        body: {
+          type: 'object',
+          properties: {
+            targetId: { type: 'string', description: '指定部署的组件 ID，不传则部署所有' }
+          }
+        }
+      }
+    },
+    async request => {
+      const { targetId } = request.body || {};
+      const task = await services.task.createRemoteComponentDeployTask({ targetId: targetId || 'all' });
+      return {
+        success: true,
+        taskId: task.id,
+        message: '远程组件部署任务已创建'
+      };
+    }
+  );
 });

@@ -15,6 +15,15 @@ module.exports = ({ DataTypes, options }) => {
         type: DataTypes.STRING,
         comment: 'npm package name'
       },
+      registry: {
+        type: DataTypes.STRING,
+        comment: 'npm registry'
+      },
+      examples: {
+        type: DataTypes.JSON,
+        comment: '部署示例版本列表',
+        defaultValue: []
+      },
       tpl: {
         type: DataTypes.STRING,
         comment: '加载地址模版',

@@ -21,7 +21,7 @@ const MetaItem = ({ label, value }) => {
   );
 };
 
-const ComponentExample = ({ remote, tpl, url, defaultVersion, current }) => {
+const ComponentExample = ({ remote, tpl, url, defaultVersion, current, examples }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     loading,
@@ -29,12 +29,19 @@ const ComponentExample = ({ remote, tpl, url, defaultVersion, current }) => {
     remoteModules: targetModules
   } = useLoader({
     modules: ['components'],
-    options: {
-      url,
-      tpl,
-      remote,
-      version: defaultVersion
-    }
+    options: url
+      ? {
+          url,
+          tpl,
+          remote,
+          version: defaultVersion
+        }
+      : {
+          url: window.location.origin,
+          tpl: '{{url}}/@kne-components/{{remote}}/{{version}}/build',
+          remote,
+          version: examples[0]
+        }
   });
 
   if (loading) {

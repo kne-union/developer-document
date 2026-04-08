@@ -39,12 +39,32 @@ module.exports = fp(async (fastify, options) => {
     return result;
   };
 
+  const createRemoteComponentDeployTask = async ({ targetId = 'all' } = {}) => {
+    const task = await fastify.task.services.create({
+      runnerType: 'system',
+      input: {
+        name: `远程组件部署`
+      },
+      targetId,
+      targetType: 'remoteComponentDeploy',
+      type: 'remoteComponentDeploy'
+    });
+    return task;
+  };
+
+  const saveRemoteComponentDeploy = async ({ result, task }) => {
+    console.log('远程组件部署任务完成:', result);
+    return result;
+  };
+
   Object.assign(services, {
     task: {
       createBlogSearchTask,
       saveBlogSearch,
       createNpmPackageSyncTask,
-      saveNpmPackageSync
+      saveNpmPackageSync,
+      createRemoteComponentDeployTask,
+      saveRemoteComponentDeploy
     }
   });
 });

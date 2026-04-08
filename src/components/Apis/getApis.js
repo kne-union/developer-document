@@ -78,6 +78,10 @@ const getApis = options => {
         url: `${prefix}/remote-component/public/list`,
         method: 'GET',
         paramsType: 'params'
+      },
+      triggerDeploy: {
+        url: `${prefix}/task/remote-component-deploy`,
+        method: 'POST'
       }
     },
     npmPackage: {

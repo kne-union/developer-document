@@ -10,15 +10,34 @@ body,
 
 body {
   margin: 0;
-  background: #f5f7fa;
-  color: #0f172a;
 }
 
 .ant-layout-header {
-  background: rgba(255, 255, 255, 0.86)!important;
+  background: rgba(255, 255, 255, 0.86) !important;
   border-bottom: 1px solid #e7edf5;
   box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
   backdrop-filter: blur(8px);
+
+  .ant-menu-item .ant-menu-title-content,
+  .ant-menu-submenu-title .ant-space-item,
+  .user-tool-username,
+  .right-options-login,
+  .style_navigation-mobile-title__Zm6bU__urHvB,
+  .style_mobile-menu-trigger__xStQw__urHvB {
+    color: #000 !important;
+  }
+
+  .ant-menu-item.ant-menu-item-selected .ant-menu-title-content {
+    color: var(--primary-color) !important;
+  }
+
+  &:after {
+    background: #000 !important;
+  }
+}
+
+.style_logo__lB9RC__urHvB {
+  filter: invert(1) brightness(0);
 }
 
 .ant-layout-header > .ant-row.ant-row-no-wrap {
@@ -81,7 +100,7 @@ body {
 }
 
 .global-page-footer__title {
-  background: linear-gradient(135deg, #4f46e5 0%, #6d5dfc 60%, #3b82f6 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, #6d5dfc 60%, var(--primary-color) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

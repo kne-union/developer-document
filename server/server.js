@@ -26,13 +26,26 @@ const createServer = () => {
       properties: {
         DB_DIALECT: { type: 'string', default: 'sqlite' },
         DB_HOST: { type: 'string', default: 'data.db' },
+        DB_PORT: { type: 'number' },
         DB_USERNAME: { type: 'string' },
         DB_PASSWORD: { type: 'string' },
         DB_DATABASE: { type: 'string' },
+
         ENV: { type: 'string', default: 'local' },
         PORT: { type: 'number', default: 8061 },
         IS_TEST: { type: 'boolean', default: false },
-        TASK_CRON: { type: 'string', default: '' }
+
+        ORIGIN: { type: 'string', default: '' },
+        TASK_CRON: { type: 'string', default: '' },
+
+        OSS_REGION: { type: 'string' },
+        OSS_BUCKET: { type: 'string' },
+        OSS_ACCESS_KEY_ID: { type: 'string' },
+        OSS_ACCESS_KEY_SECRET: { type: 'string' },
+
+        ALISMTP_USER: { type: 'string' },
+        ALISMTP_PASSWORD: { type: 'string' },
+        ALISMTP_ENDPOINT: { type: 'string' }
       }
     }
   });
@@ -83,13 +96,23 @@ const createServer = () => {
 
   fastify.register(
     require('fastify-plugin')(async fastify => {
-      fastify.register(require('@kne/fastify-file-manager'), {
-        prefix: `${options.prefix}/static`,
-        root: path.resolve('./static')
-        /*ossAdapter: () => {
-      return fastify.aliyun.services.oss;
-    }*/
-      });
+      fastify.register(
+        require('@kne/fastify-file-manager'),
+        Object.assign(
+          {},
+          {
+            prefix: `${options.prefix}/static`,
+            root: path.resolve('./static')
+          },
+          fastify.config.OSS_ACCESS_KEY_ID
+            ? {
+                ossAdapter: () => {
+                  return fastify.aliyun.services.oss;
+                }
+              }
+            : {}
+        )
+      );
 
       fastify.register(require('@kne/fastify-message'), {
         isTest: fastify.config.IS_TEST,
@@ -144,6 +167,9 @@ const createServer = () => {
           },
           npmPackageSync: target => {
             return fastify.project.services.task.saveNpmPackageSync(target);
+          },
+          remoteComponentDeploy: target => {
+            return fastify.project.services.task.saveRemoteComponentDeploy(target);
           }
         },
         options

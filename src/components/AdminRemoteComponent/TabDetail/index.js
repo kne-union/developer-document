@@ -1,5 +1,6 @@
 import { createWithRemoteLoader, useLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
+import { Empty } from 'antd';
 import { useSearchParams, Navigate } from 'react-router-dom';
 import createEntry from '@kne/modules-dev/dist/create-entry.modern';
 import '@kne/modules-dev/dist/create-entry.css';
@@ -8,7 +9,7 @@ const ExamplePage = createEntry.ExamplePage;
 
 const ComponentPage = createWithRemoteLoader({
   modules: ['components-core:Layout@Page']
-})(({ remoteModules, remote, tpl, url, defaultVersion, current }) => {
+})(({ remoteModules, remote, tpl, url, defaultVersion, current, examples }) => {
   const [Page] = remoteModules;
   const [searchParams, setSearchParams] = useSearchParams();
   const {
@@ -17,12 +18,19 @@ const ComponentPage = createWithRemoteLoader({
     remoteModules: targetModules
   } = useLoader({
     modules: ['components'],
-    options: {
-      url,
-      tpl,
-      remote,
-      version: defaultVersion
-    }
+    options: url
+      ? {
+          url,
+          tpl,
+          remote,
+          version: defaultVersion
+        }
+      : {
+          url: window.location.origin,
+          tpl: '{{url}}/@kne-components/{{remote}}/{{version}}/build',
+          remote,
+          version: examples[0]
+        }
   });
   if (loading) {
     return null;
@@ -72,6 +80,13 @@ const TabDetail = createWithRemoteLoader({
     <Fetch
       {...Object.assign({}, apis.remoteComponent.detail, { params: { id } })}
       render={({ data, reload }) => {
+        if (!(data.url || (data.packageName && data.examples && data.examples.length > 0))) {
+          return (
+            <Page>
+              <Empty description="无法读取到远程组件信息" />
+            </Page>
+          );
+        }
         return <ComponentPage {...data} current={current} />;
       }}
     />
