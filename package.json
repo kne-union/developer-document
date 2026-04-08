@@ -1,7 +1,7 @@
 {
   "name": "developer-document",
   "version": "0.1.0",
-  "description": "用来部署一个开发者文档系统",
+  "description": "用来部署一个开发者文档系统.",
   "scripts": {
     "init": "npm run init-server && husky",
     "init-server": "cd server && npm install",
