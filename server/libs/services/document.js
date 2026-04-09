@@ -4,43 +4,41 @@ const { Op, literal } = require('sequelize');
 module.exports = fp(async (fastify, options) => {
   const { models } = fastify[options.name];
 
-  const create = async ({ title, content, status, publishTime, isPublic, groups, createdUserId }) => {
-    return models.blog.create({
-      title,
+  const create = async ({ name, content, status, isPublic, groups, createdUserId }) => {
+    return models.document.create({
+      name,
       content,
       status: status || 'draft',
-      publishTime,
-      isPublic: isPublic !== undefined ? isPublic : true,
+      isPublic: isPublic !== undefined ? isPublic : false,
       groups: groups || [],
       createdUserId
     });
   };
 
-  const update = async ({ id, title, content, status, publishTime, isPublic, groups }) => {
-    const blog = await models.blog.findByPk(id);
-    if (!blog) {
-      throw new Error('博客不存在');
+  const update = async ({ id, name, content, status, isPublic, groups }) => {
+    const document = await models.document.findByPk(id);
+    if (!document) {
+      throw new Error('文档不存在');
     }
-    return blog.update({
-      title,
+    return document.update({
+      name,
       content,
       status,
-      publishTime,
       isPublic,
       groups
     });
   };
 
   const remove = async ({ id }) => {
-    const blog = await models.blog.findByPk(id);
-    if (!blog) {
-      throw new Error('博客不存在');
+    const document = await models.document.findByPk(id);
+    if (!document) {
+      throw new Error('文档不存在');
     }
-    return blog.destroy();
+    return document.destroy();
   };
 
   const detail = async ({ id }) => {
-    return models.blog.findByPk(id, {
+    return models.document.findByPk(id, {
       include: [
         {
           model: fastify.account.models.user,
@@ -51,11 +49,11 @@ module.exports = fp(async (fastify, options) => {
     });
   };
 
-  const list = async ({ keyword, status, isPublic, groups, pageSize, current, createdUserId, publishTimeStart, publishTimeEnd }) => {
+  const list = async ({ keyword, status, isPublic, group, pageSize, current, createdUserId, createdAtStart, createdAtEnd }) => {
     const where = {};
 
     if (keyword) {
-      where[Op.or] = ['title', 'content'].map(name => ({ [name]: { [Op.like]: `%${keyword}%` } }));
+      where[Op.or] = ['name', 'content'].map(name => ({ [name]: { [Op.like]: `%${keyword}%` } }));
     }
 
     if (status) {
@@ -70,32 +68,26 @@ module.exports = fp(async (fastify, options) => {
       where.createdUserId = createdUserId;
     }
 
-    if (publishTimeStart || publishTimeEnd) {
-      where.publishTime = {};
-      if (publishTimeStart) {
-        where.publishTime[Op.gte] = publishTimeStart;
+    if (createdAtStart || createdAtEnd) {
+      where.createdAt = {};
+      if (createdAtStart) {
+        where.createdAt[Op.gte] = createdAtStart;
       }
-      if (publishTimeEnd) {
-        where.publishTime[Op.lte] = publishTimeEnd;
+      if (createdAtEnd) {
+        where.createdAt[Op.lte] = createdAtEnd;
       }
     }
 
-    if (groups && groups.length > 0) {
-      // 获取所有分组及其后代分组的 id
-      const allGroupIds = [];
-      for (const groupId of groups) {
-        const descendantIds = await fastify.group.services.getDescendantIds({ id: groupId, type: 'blog' });
-        allGroupIds.push(...descendantIds);
-      }
-      // 去重
-      const uniqueGroupIds = [...new Set(allGroupIds)];
+    if (group) {
+      // 获取该分组及其所有后代分组的 id
+      const groupIds = await fastify.group.services.getDescendantIds({ id: group, type: 'document' });
       // PostgreSQL JSONB 数组查询：使用 @> 操作符
-      where[Op.and] = [literal(`(${uniqueGroupIds.map(id => `groups @> '[{"id":"${id}"}]'`).join(' OR ')})`)];
+      where[Op.and] = [literal(`(${groupIds.map(id => `groups @> '[{"id":"${id}"}]'`).join(' OR ')})`)];
     }
 
     const offset = (current - 1) * pageSize;
 
-    const { count, rows } = await models.blog.findAndCountAll({
+    const { count, rows } = await models.document.findAndCountAll({
       where,
       limit: pageSize,
       offset,
@@ -115,25 +107,23 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
-  const publish = async ({ id, publishTime }) => {
-    const blog = await models.blog.findByPk(id);
-    if (!blog) {
-      throw new Error('博客不存在');
+  const publish = async ({ id }) => {
+    const document = await models.document.findByPk(id);
+    if (!document) {
+      throw new Error('文档不存在');
     }
-    return blog.update({
-      status: 'published',
-      publishTime: publishTime || new Date()
+    return document.update({
+      status: 'published'
     });
   };
 
   const unpublish = async ({ id }) => {
-    const blog = await models.blog.findByPk(id);
-    if (!blog) {
-      throw new Error('博客不存在');
+    const document = await models.document.findByPk(id);
+    if (!document) {
+      throw new Error('文档不存在');
     }
-    return blog.update({
-      status: 'draft',
-      publishTime: null
+    return document.update({
+      status: 'draft'
     });
   };
 
@@ -144,14 +134,14 @@ module.exports = fp(async (fastify, options) => {
     };
 
     if (keyword) {
-      where[Op.or] = ['title', 'content'].map(name => ({ [name]: { [Op.like]: `%${keyword}%` } }));
+      where[Op.or] = ['name', 'content'].map(name => ({ [Op.like]: { [name]: `%${keyword}%` } }));
     }
 
     if (groups && groups.length > 0) {
       // 获取所有分组及其后代分组的 id
       const allGroupIds = [];
       for (const groupId of groups) {
-        const descendantIds = await fastify.group.services.getDescendantIds({ id: groupId, type: 'blog' });
+        const descendantIds = await fastify.group.services.getDescendantIds({ id: groupId, type: 'document' });
         allGroupIds.push(...descendantIds);
       }
       // 去重
@@ -162,11 +152,11 @@ module.exports = fp(async (fastify, options) => {
 
     const offset = (current - 1) * pageSize;
 
-    const { count, rows } = await models.blog.findAndCountAll({
+    const { count, rows } = await models.document.findAndCountAll({
       where,
       limit: pageSize,
       offset,
-      order: [['publishTime', 'DESC']],
+      order: [['createdAt', 'DESC']],
       include: [
         {
           model: fastify.account.models.user,
@@ -185,7 +175,7 @@ module.exports = fp(async (fastify, options) => {
   };
 
   Object.assign(fastify[options.name].services, {
-    blog: {
+    document: {
       create,
       update,
       remove,

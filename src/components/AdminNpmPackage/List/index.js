@@ -10,11 +10,7 @@ const List = props => {
     <AdminEntityTablePage
       {...props}
       getApi={apis => apis.npmPackage.list}
-      getFilterList={({ InputFilterItem, SelectFilterItem }) => [
-        [<InputFilterItem label="Package Name" name="packageName" />],
-        [<InputFilterItem label="显示名称" name="name" />],
-        [<SelectFilterItem label="类型" name="type" options={NPM_PACKAGE_TYPE_OPTIONS} />]
-      ]}
+      getFilterList={({ SuperSelectFilterItem }) => [[<SuperSelectFilterItem single label="类型" name="type" options={NPM_PACKAGE_TYPE_OPTIONS} />]]}
       renderTitleExtra={({ SearchInput, reload }) => {
         return (
           <Space align="center">

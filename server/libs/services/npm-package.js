@@ -17,6 +17,7 @@ const outputPath = path.resolve(process.cwd(), 'build');
 
 module.exports = fp(async (fastify, options) => {
   const { models } = fastify[options.name];
+  const { Op } = fastify.sequelize.Sequelize;
 
   const create = async ({ packageName, registry, name, description, type, keywords, isPublic }) => {
     return models.npmPackage.create({
@@ -71,7 +72,7 @@ module.exports = fp(async (fastify, options) => {
     await fs.ensureDir(path.resolve(outputPath, pkg.packageName));
     if (/^@kne\//.test(pkg.packageName)) {
       const allVersions = Object.keys(npmInfo.versions);
-      
+
       // 按大版本分组
       const majorVersionMap = new Map();
       allVersions.forEach(version => {
@@ -81,20 +82,20 @@ module.exports = fp(async (fastify, options) => {
         }
         majorVersionMap.get(major).push(version);
       });
-      
+
       // 获取排序后的大版本列表（降序）
       const sortedMajors = Array.from(majorVersionMap.keys()).sort((a, b) => {
         const numA = parseInt(a.replace(/^\D/, ''), 10);
         const numB = parseInt(b.replace(/^\D/, ''), 10);
         return numB - numA;
       });
-      
+
       // 最多保留最近10个大版本
       const recentMajors = sortedMajors.slice(0, 10);
-      
+
       // 构建要部署的版本列表
       const versionsToDeploy = [];
-      
+
       recentMajors.forEach((major, index) => {
         const versions = majorVersionMap.get(major);
         // 版本排序（降序，最新的在前）
@@ -108,7 +109,7 @@ module.exports = fp(async (fastify, options) => {
           }
           return 0;
         });
-        
+
         if (index === 0) {
           // 最后一个大版本，最多保留5个最近小版本
           versionsToDeploy.push(...versions.slice(0, 5));
@@ -117,10 +118,11 @@ module.exports = fp(async (fastify, options) => {
           versionsToDeploy.push(versions[0]);
         }
       });
-      
+
       for (let currentVersion of versionsToDeploy) {
         const packageName = `@kne-components/${npmInfo.name}@${currentVersion}`;
-        if (await fs.pathExists(path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`))) {
+        if (await fs.exists(path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`))) {
+          examples.push(currentVersion);
           continue;
         }
         try {
@@ -142,12 +144,11 @@ module.exports = fp(async (fastify, options) => {
     return pkg;
   };
 
-  const list = async ({ packageName, name, type, keyword, isPublic, pageSize, current }) => {
+  const list = async ({ type, keyword, isPublic, pageSize, current }) => {
     const where = {};
 
-    const searchValue = packageName || name || keyword;
-    if (searchValue) {
-      where[Op.or] = [{ packageName: { [Op.like]: `%${searchValue}%` } }, { name: { [Op.like]: `%${searchValue}%` } }];
+    if (keyword) {
+      where[Op.or] = ['packageName', 'name', 'description', 'readme', 'registry'].map(field => ({ [field]: { [Op.like]: `%${keyword}%` } }));
     }
 
     if (type) {
@@ -183,7 +184,7 @@ module.exports = fp(async (fastify, options) => {
     }
 
     if (keyword) {
-      where[Op.or] = [{ packageName: { [Op.like]: `%${keyword}%` } }, { name: { [Op.like]: `%${keyword}%` } }, { description: { [Op.like]: `%${keyword}%` } }];
+      where[Op.or] = ['packageName', 'name', 'description', 'readme', 'registry'].map(field => ({ [field]: { [Op.like]: `%${keyword}%` } }));
     }
 
     // 查询所有符合条件的数据，然后在应用层过滤

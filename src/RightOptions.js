@@ -1,7 +1,7 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 
 const RightOptions = createWithRemoteLoader({
-  modules: ['components-core:Global@GetGlobal', 'components-account:UserTool']
+  modules: ['components-core:Global@GetGlobal', 'components-admin:UserTool']
 })(({ remoteModules }) => {
   const [GetGlobal, UserTool] = remoteModules;
 

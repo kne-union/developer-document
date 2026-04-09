@@ -62,12 +62,11 @@ module.exports = fp(async (fastify, options) => {
     return models.remoteComponent.findByPk(id);
   };
 
-  const list = async ({ remote, name, keyword, group, isPublic, pageSize, current }) => {
+  const list = async ({ keyword, group, isPublic, pageSize, current }) => {
     const where = {};
 
-    const searchValue = remote || name || keyword;
-    if (searchValue) {
-      where[Op.or] = [{ remote: { [Op.like]: `%${searchValue}%` } }, { name: { [Op.like]: `%${searchValue}%` } }, { packageName: { [Op.like]: `%${searchValue}%` } }];
+    if (keyword) {
+      where[Op.or] = ['remote', 'name', 'packageName', 'description', 'registry', 'tpl'].map(field => ({ [field]: { [Op.like]: `%${keyword}%` } }));
     }
 
     if (group) {
@@ -103,7 +102,7 @@ module.exports = fp(async (fastify, options) => {
     }
 
     if (keyword) {
-      where[Op.or] = [{ remote: { [Op.like]: `%${keyword}%` } }, { name: { [Op.like]: `%${keyword}%` } }, { description: { [Op.like]: `%${keyword}%` } }, { packageName: { [Op.like]: `%${keyword}%` } }];
+      where[Op.or] = ['remote', 'name', 'packageName', 'description', 'registry', 'tpl'].map(field => ({ [field]: { [Op.like]: `%${keyword}%` } }));
     }
 
     const offset = (current - 1) * pageSize;
@@ -130,7 +129,7 @@ module.exports = fp(async (fastify, options) => {
     if (!component || !component.packageName) {
       return;
     }
-    let examples = [];
+    let examples = component.examples;
     const npmInfo = await loadNpmInfo(component.packageName, { registry: component.registry });
     await fs.ensureDir(path.resolve(outputPath, component.packageName));
     if (/^@kne-components\//.test(component.packageName)) {
@@ -184,7 +183,8 @@ module.exports = fp(async (fastify, options) => {
 
       for (let currentVersion of versionsToDeploy) {
         const packageName = `@kne-components/${npmInfo.name}@${currentVersion}`;
-        if (await fs.pathExists(path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`))) {
+        if (await fs.exists(path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`))) {
+          examples.push(currentVersion);
           continue;
         }
         try {

@@ -119,6 +119,64 @@ const getApis = options => {
         url: `${prefix}/task/npm-package-sync`,
         method: 'POST'
       }
+    },
+    document: {
+      create: {
+        url: `${prefix}/document/create`,
+        method: 'POST'
+      },
+      update: {
+        url: `${prefix}/document/update`,
+        method: 'POST'
+      },
+      delete: {
+        url: `${prefix}/document/delete`,
+        method: 'POST'
+      },
+      detail: {
+        url: `${prefix}/document/detail`,
+        method: 'GET'
+      },
+      list: {
+        url: `${prefix}/document/list`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      publish: {
+        url: `${prefix}/document/publish`,
+        method: 'POST'
+      },
+      unpublish: {
+        url: `${prefix}/document/unpublish`,
+        method: 'POST'
+      },
+      publicList: {
+        url: `${prefix}/document/public/list`,
+        method: 'GET',
+        paramsType: 'params'
+      }
+    },
+    group: {
+      create: {
+        url: `${prefix}/group/save`,
+        method: 'POST'
+      },
+      list: {
+        url: `${prefix}/group/list`,
+        method: 'GET'
+      },
+      groupList: {
+        url: `${prefix}/group/group-list`,
+        method: 'GET'
+      },
+      save: {
+        url: `${prefix}/group/save`,
+        method: 'POST'
+      },
+      remove: {
+        url: `${prefix}/group/remove`,
+        method: 'POST'
+      }
     }
   };
 };

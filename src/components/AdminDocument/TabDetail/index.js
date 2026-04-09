@@ -3,14 +3,30 @@ import Fetch from '@kne/react-fetch';
 import { useSearchParams } from 'react-router-dom';
 import Actions from '../Actions';
 import { Tag, Space } from 'antd';
-import { CheckCircleOutlined, ClockCircleOutlined, EyeInvisibleOutlined, EyeOutlined, ReadOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, ClockCircleOutlined, EyeInvisibleOutlined, EyeOutlined, FileTextOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import styles from '../style.module.scss';
+
+const groupTagClassMap = {
+  tech: styles.groupTagTech,
+  life: styles.groupTagLife,
+  product: styles.groupTagProduct,
+  design: styles.groupTagDesign,
+  other: styles.groupTagOther
+};
 
 const Basic = createWithRemoteLoader({
   modules: ['components-core:InfoPage', 'components-core:Descriptions']
 })(({ remoteModules, data }) => {
   const [InfoPage, Descriptions] = remoteModules;
+
+  const groupsMap = {
+    tech: '技术',
+    life: '生活',
+    product: '产品',
+    design: '设计',
+    other: '其他'
+  };
 
   return (
     <InfoPage>
@@ -18,7 +34,7 @@ const Basic = createWithRemoteLoader({
         <Descriptions
           dataSource={[
             [{ label: 'ID', content: data.id }],
-            [{ label: '标题', content: data.title }],
+            [{ label: '名称', content: data.name }],
             [
               {
                 label: '状态',
@@ -51,12 +67,6 @@ const Basic = createWithRemoteLoader({
             ],
             [
               {
-                label: '发布时间',
-                content: data.publishTime ? dayjs(data.publishTime).format('YYYY-MM-DD HH:mm:ss') : '-'
-              }
-            ],
-            [
-              {
                 label: '创建时间',
                 content: data.createdAt ? dayjs(data.createdAt).format('YYYY-MM-DD HH:mm:ss') : '-'
               }
@@ -75,7 +85,7 @@ const Content = createWithRemoteLoader({
 
   return (
     <InfoPage>
-      <InfoPage.Part title="博客内容">
+      <InfoPage.Part title="文档正文">
         <CKEditor.Content>{data.content}</CKEditor.Content>
       </InfoPage.Part>
     </InfoPage>
@@ -96,7 +106,7 @@ const TabDetail = createWithRemoteLoader({
 
   return (
     <Fetch
-      {...Object.assign({}, apis.blog.detail, { params: { id: searchParams.get('id') } })}
+      {...Object.assign({}, apis.document.detail, { params: { id: searchParams.get('id') } })}
       render={({ data, reload }) => {
         const activeKey = searchParams.get('tab') || 'basic';
         const ContentComponent = contentMap[activeKey] || Basic;
@@ -126,11 +136,11 @@ const TabDetail = createWithRemoteLoader({
             headerFixed={false}
             header={
               <PageHeader
-                title={data.title}
+                title={data.name}
                 info={`ID: ${data.id}`}
                 tags={[
-                  <Tag className={styles.domainTag} icon={<ReadOutlined />} key="domain">
-                    博客管理
+                  <Tag className={styles.domainTag} icon={<FileTextOutlined />} key="domain">
+                    文档管理
                   </Tag>,
                   statusTag,
                   visibilityTag
@@ -153,7 +163,7 @@ const TabDetail = createWithRemoteLoader({
               },
               stateOption: [
                 { tab: '基本信息', key: 'basic' },
-                { tab: '博客内容', key: 'content' }
+                { tab: '文档正文', key: 'content' }
               ]
             }}
           >

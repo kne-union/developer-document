@@ -10,11 +10,7 @@ const List = props => {
     <AdminEntityTablePage
       {...props}
       getApi={apis => apis.remoteComponent.list}
-      getFilterList={({ InputFilterItem, SelectFilterItem }) => [
-        [<InputFilterItem label="组件名称" name="remote" />],
-        [<InputFilterItem label="显示名称" name="name" />],
-        [<SelectFilterItem label="组件分类" name="group" options={REMOTE_COMPONENT_GROUP_OPTIONS} />]
-      ]}
+      getFilterList={({ SuperSelectFilterItem }) => [[<SuperSelectFilterItem label="组件分类" name="group" options={REMOTE_COMPONENT_GROUP_OPTIONS} />]]}
       renderTitleExtra={({ SearchInput, reload }) => {
         return (
           <Space align="center">

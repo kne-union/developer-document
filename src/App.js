@@ -1,6 +1,6 @@
 import RemoteLoader, { createWithRemoteLoader } from '@kne/remote-loader';
 import AppChildrenRouter from '@kne/app-children-router';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import './index.scss';
 import '@kne/react-box/dist/index.css';
 
@@ -20,6 +20,28 @@ const Blog = createWithRemoteLoader({
         {
           path: 'detail',
           loader: () => import('@components/Blog/Detail')
+        }
+      ]}
+    />
+  );
+});
+
+const Document = createWithRemoteLoader({
+  modules: []
+})(({ remoteModules, baseUrl }) => {
+  return (
+    <AppChildrenRouter
+      errorPage
+      notFoundPage
+      baseUrl={baseUrl}
+      list={[
+        {
+          index: true,
+          loader: () => import('@components/Document/List')
+        },
+        {
+          path: 'detail',
+          loader: () => import('@components/Document/Detail')
         }
       ]}
     />
@@ -76,6 +98,9 @@ const App = createWithRemoteLoader({
   const [Global, Layout, AfterUserLoginLayout, MainLayout, AfterAdminUserLoginLayout] = remoteModules;
   const baseUrl = '';
   const currentYear = new Date().getFullYear();
+  const location = useLocation();
+
+  const shouldShowFooter = !(location.pathname.startsWith('/account') || location.pathname.startsWith('/admin') || location.pathname === '/remote-components/detail');
 
   return (
     <Global preset={globalPreset} themeToken={globalPreset.themeToken}>
@@ -86,7 +111,7 @@ const App = createWithRemoteLoader({
         list={[
           {
             path: 'account/*',
-            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" />
+            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" systemName="Developer Document" allowLanguageSwitch={false} />
           },
           {
             path: 'admin/initAdmin',
@@ -136,6 +161,11 @@ const App = createWithRemoteLoader({
                           path: '/admin/blog'
                         },
                         {
+                          key: 'document',
+                          title: '文档管理',
+                          path: '/admin/document'
+                        },
+                        {
                           key: 'task',
                           title: '任务管理',
                           path: '/admin/task'
@@ -171,6 +201,10 @@ const App = createWithRemoteLoader({
                   {
                     path: 'blog/*',
                     loader: () => import('@components/AdminBlog')
+                  },
+                  {
+                    path: 'document/*',
+                    loader: () => import('@components/AdminDocument')
                   },
                   {
                     path: 'remote-component/*',
@@ -231,6 +265,11 @@ const App = createWithRemoteLoader({
                     path: '/blog'
                   },
                   {
+                    key: 'documents',
+                    title: '文档',
+                    path: '/documents'
+                  },
+                  {
                     key: 'about',
                     title: '关于我们',
                     path: '/about'
@@ -253,6 +292,10 @@ const App = createWithRemoteLoader({
               element: <Blog baseUrl={baseUrl + '/blog'} />
             },
             {
+              path: 'documents/*',
+              element: <Document baseUrl={baseUrl + '/documents'} />
+            },
+            {
               path: 'remote-components/*',
               element: <RemoteComponent baseUrl={baseUrl + '/remote-components'} />
             },
@@ -263,15 +306,17 @@ const App = createWithRemoteLoader({
           ]}
         />
       </AppChildrenRouter>
-      <footer className="global-page-footer">
-        <div className="global-page-footer__inner">
-          <div className="global-page-footer__brand">
-            <div className="global-page-footer__title">Developer Document</div>
-            <div className="global-page-footer__desc">组件与工程实践沉淀</div>
+      {shouldShowFooter && (
+        <footer className="global-page-footer">
+          <div className="global-page-footer__inner">
+            <div className="global-page-footer__brand">
+              <div className="global-page-footer__title">Developer Document</div>
+              <div className="global-page-footer__desc">组件与工程实践沉淀</div>
+            </div>
+            <div className="global-page-footer__meta">© {currentYear} Developer Document. All rights reserved.</div>
           </div>
-          <div className="global-page-footer__meta">© {currentYear} Developer Document. All rights reserved.</div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </Global>
   );
 });
