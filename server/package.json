@@ -31,7 +31,7 @@
     "@kne/fastify-account": "^2.0.7",
     "@kne/fastify-aliyun": "^1.1.7",
     "@kne/fastify-file-manager": "^2.0.10",
-    "@kne/fastify-group": "^0.1.0-alpha.2",
+    "@kne/fastify-group": "^0.1.0",
     "@kne/fastify-message": "^1.0.3",
     "@kne/fastify-namespace": "^1.1.2",
     "@kne/fastify-response-data-format": "^1.0.0",
@@ -47,8 +47,7 @@
     "fs-extra": "^11.3.4",
     "lodash": "^4.17.21",
     "pg": "^8.20.0",
-    "qs": "^6.12.1",
-    "sqlite3": "^5.1.7"
+    "qs": "^6.12.1"
   },
   "devDependencies": {
     "husky": "^9.0.11",
