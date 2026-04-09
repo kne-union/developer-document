@@ -166,7 +166,7 @@ const CatalogPage = createWithRemoteLoader({
 
           <Fetch
             {...Object.assign({}, getApi(apis), {
-              data: buildRequestData({ keyword, selectedFilter, filterParam })
+              params: buildRequestData({ keyword, selectedFilter, filterParam })
             })}
             render={({ data, loading }) => {
               const list = data?.pageData || [];

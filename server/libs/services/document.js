@@ -49,13 +49,11 @@ module.exports = fp(async (fastify, options) => {
     });
   };
 
-  const list = async ({ name, keyword, status, isPublic, group, pageSize, current, createdUserId }) => {
+  const list = async ({ keyword, status, isPublic, group, pageSize, current, createdUserId, createdAtStart, createdAtEnd }) => {
     const where = {};
 
-    // 支持 name 和 keyword 两种搜索参数
-    const searchValue = name || keyword;
-    if (searchValue) {
-      where.name = { [Op.like]: `%${searchValue}%` };
+    if (keyword) {
+      where[Op.or] = ['name', 'content'].map(name => ({ [name]: { [Op.like]: `%${keyword}%` } }));
     }
 
     if (status) {
@@ -68,6 +66,16 @@ module.exports = fp(async (fastify, options) => {
 
     if (createdUserId) {
       where.createdUserId = createdUserId;
+    }
+
+    if (createdAtStart || createdAtEnd) {
+      where.createdAt = {};
+      if (createdAtStart) {
+        where.createdAt[Op.gte] = createdAtStart;
+      }
+      if (createdAtEnd) {
+        where.createdAt[Op.lte] = createdAtEnd;
+      }
     }
 
     if (group) {
@@ -119,14 +127,14 @@ module.exports = fp(async (fastify, options) => {
     });
   };
 
-  const getPublicList = async ({ name, groups, pageSize, current }) => {
+  const getPublicList = async ({ keyword, groups, pageSize, current }) => {
     const where = {
       status: 'published',
       isPublic: true
     };
 
-    if (name) {
-      where.name = { [Op.like]: `%${name}%` };
+    if (keyword) {
+      where[Op.or] = ['name', 'content'].map(name => ({ [Op.like]: { [name]: `%${keyword}%` } }));
     }
 
     if (groups && groups.length > 0) {

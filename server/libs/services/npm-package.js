@@ -17,6 +17,7 @@ const outputPath = path.resolve(process.cwd(), 'build');
 
 module.exports = fp(async (fastify, options) => {
   const { models } = fastify[options.name];
+  const { Op } = fastify.sequelize.Sequelize;
 
   const create = async ({ packageName, registry, name, description, type, keywords, isPublic }) => {
     return models.npmPackage.create({
@@ -120,7 +121,8 @@ module.exports = fp(async (fastify, options) => {
 
       for (let currentVersion of versionsToDeploy) {
         const packageName = `@kne-components/${npmInfo.name}@${currentVersion}`;
-        if (examples.indexOf(currentVersion) > -1 && (await fs.exists(path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`)))) {
+        if (await fs.exists(path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`))) {
+          examples.push(currentVersion);
           continue;
         }
         try {
@@ -142,12 +144,11 @@ module.exports = fp(async (fastify, options) => {
     return pkg;
   };
 
-  const list = async ({ packageName, name, type, keyword, isPublic, pageSize, current }) => {
+  const list = async ({ type, keyword, isPublic, pageSize, current }) => {
     const where = {};
 
-    const searchValue = packageName || name || keyword;
-    if (searchValue) {
-      where[Op.or] = [{ packageName: { [Op.like]: `%${searchValue}%` } }, { name: { [Op.like]: `%${searchValue}%` } }];
+    if (keyword) {
+      where[Op.or] = ['packageName', 'name', 'description', 'readme', 'registry'].map(field => ({ [field]: { [Op.like]: `%${keyword}%` } }));
     }
 
     if (type) {
@@ -183,7 +184,7 @@ module.exports = fp(async (fastify, options) => {
     }
 
     if (keyword) {
-      where[Op.or] = [{ packageName: { [Op.like]: `%${keyword}%` } }, { name: { [Op.like]: `%${keyword}%` } }, { description: { [Op.like]: `%${keyword}%` } }];
+      where[Op.or] = ['packageName', 'name', 'description', 'readme', 'registry'].map(field => ({ [field]: { [Op.like]: `%${keyword}%` } }));
     }
 
     // 查询所有符合条件的数据，然后在应用层过滤

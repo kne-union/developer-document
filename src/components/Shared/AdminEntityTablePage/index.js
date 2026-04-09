@@ -30,7 +30,7 @@ const AdminEntityTablePage = createWithRemoteLoader({
   return (
     <TablePage
       {...Object.assign({}, getApi(apis), {
-        data: buildRequestData(filterValue, { apis, ajax })
+        params: buildRequestData(filterValue, { apis, ajax })
       })}
       ref={ref}
       name="list"

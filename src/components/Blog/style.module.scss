@@ -601,3 +601,11 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.user-select {
+  border-radius: 12px;
+}
+
+.range-picker {
+  height: 28px;
+}

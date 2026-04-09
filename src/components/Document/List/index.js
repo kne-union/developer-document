@@ -3,7 +3,7 @@ import Fetch from '@kne/react-fetch';
 import classNames from 'classnames';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useMemo, useState } from 'react';
-import { Tag, Typography, Empty, Pagination, Input, Tree } from 'antd';
+import { Tag, Typography, Empty, Pagination, Input, Tree, Space, DatePicker } from 'antd';
 import { FileTextOutlined, FolderOutlined, FolderOpenOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { hasUserToken } from '@components/Shared/auth';
@@ -11,13 +11,14 @@ import styles from '../style.module.scss';
 
 const { Title, Paragraph, Text } = Typography;
 const { Search } = Input;
+const { RangePicker } = DatePicker;
 
 const pageSize = 12;
 
 const DocumentList = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:Layout@Page', 'components-core:Global@useGlobalValue']
+  modules: ['components-core:Global@usePreset', 'components-core:Layout@Page', 'components-core:Global@useGlobalValue', 'components-admin:UserSelect']
 })(({ remoteModules, baseUrl: propsBaseUrl }) => {
-  const [usePreset, Page, useGlobalValue] = remoteModules;
+  const [usePreset, Page, useGlobalValue, UserSelect] = remoteModules;
   const { apis } = usePreset();
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,6 +28,8 @@ const DocumentList = createWithRemoteLoader({
   const locale = useGlobalValue('locale');
   const isLoggedIn = useMemo(() => hasUserToken(), []);
   const selectedGroup = searchParams.get('group');
+  const [createdUserId, setCreatedUserId] = useState(null);
+  const [createdAtRange, setCreatedAtRange] = useState(null);
 
   const baseUrl = useMemo(() => {
     if (propsBaseUrl) return propsBaseUrl;
@@ -48,18 +51,24 @@ const DocumentList = createWithRemoteLoader({
 
   const requestParams = useMemo(() => {
     const params = {
-      name: keyword || undefined,
+      keyword: keyword,
       current,
       pageSize,
-      status: isLoggedIn ? 'published' : undefined
+      status: isLoggedIn ? 'published' : undefined,
+      createdUserId: createdUserId || undefined
     };
 
     if (selectedGroup) {
       params.group = selectedGroup;
     }
 
+    if (createdAtRange && createdAtRange[0] && createdAtRange[1]) {
+      params.createdAtStart = createdAtRange[0].startOf('day').toISOString();
+      params.createdAtEnd = createdAtRange[1].endOf('day').toISOString();
+    }
+
     return params;
-  }, [keyword, current, selectedGroup, isLoggedIn]);
+  }, [keyword, current, selectedGroup, isLoggedIn, createdUserId, createdAtRange]);
 
   return (
     <Page name="document" noMargin>
@@ -98,6 +107,36 @@ const DocumentList = createWithRemoteLoader({
                 }}
               />
             </div>
+          </div>
+
+          <div className={styles.filterRow}>
+            <Text className={styles.filterLabel}>筛选：</Text>
+            <Space wrap className={styles.filterList} align="center">
+              {isLoggedIn && (
+                <UserSelect.Field
+                  className={styles['user-select']}
+                  single
+                  allowClear
+                  size="small"
+                  placeholder="发布用户"
+                  style={{ minWidth: 120 }}
+                  onChange={item => {
+                    setCreatedUserId(item?.id);
+                    setCurrent(1);
+                  }}
+                />
+              )}
+              <RangePicker
+                className={styles['range-picker']}
+                size="small"
+                placeholder={['创建开始', '创建结束']}
+                value={createdAtRange}
+                onChange={dates => {
+                  setCreatedAtRange(dates);
+                  setCurrent(1);
+                }}
+              />
+            </Space>
           </div>
         </section>
 
@@ -161,6 +200,7 @@ const DocumentList = createWithRemoteLoader({
 
           <main className={styles.mainContent}>
             <Fetch
+              key={`${keyword}-${current}-${selectedGroup}-${createdUserId}-${createdAtRange?.[0]?.valueOf()}-${createdAtRange?.[1]?.valueOf()}`}
               {...Object.assign({}, apiConfig, { params: requestParams })}
               render={({ data, loading }) => {
                 const list = data?.list || data?.pageData || [];

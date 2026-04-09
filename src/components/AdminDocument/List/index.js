@@ -1,4 +1,5 @@
 import { Space, Button } from 'antd';
+import { createWithRemoteLoader } from '@kne/remote-loader';
 import Create from '../Actions/Create';
 import Actions from '../Actions';
 import getColumns from './getColumns';
@@ -12,7 +13,11 @@ const statusOptions = [
 
 const statusMap = new Map(statusOptions.map(item => [item.key, item]));
 
-const List = props => {
+const List = createWithRemoteLoader({
+  modules: ['components-core:Global@usePreset']
+})(({ remoteModules, ...props }) => {
+  const [usePreset] = remoteModules;
+  const { apis } = usePreset();
   const createStatusFilter = ({ value, label }) => {
     return { name: 'status', value: { label, value } };
   };
@@ -22,11 +27,42 @@ const List = props => {
       {...props}
       getApi={apis => apis.document.list}
       buildRequestData={filterValue => {
-        return Object.assign({}, filterValue, {
+        const result = Object.assign({}, filterValue, {
           status: filterValue.status && filterValue.status !== 'all' ? filterValue.status : undefined
         });
+
+        if (filterValue.createdAt?.value?.[0] && filterValue.createdAt?.value?.[1]) {
+          result.createdAtStart = filterValue.createdAt.value[0];
+          result.createdAtEnd = filterValue.createdAt.value[1];
+        }
+        delete result.createdAt;
+
+        return result;
       }}
-      getFilterList={({ InputFilterItem }) => [[<InputFilterItem label="名称" name="name" />]]}
+      getFilterList={({ SuperSelectUserFilterItem, TypeDateRangePickerFilterItem }) => {
+        return [
+          [
+            <SuperSelectUserFilterItem
+              single
+              label="发布用户"
+              name="createdUserId"
+              api={Object.assign({}, apis.admin.getUserList, {
+                transformData: data => {
+                  return Object.assign({}, data, {
+                    pageData: (data.pageData || []).map(item =>
+                      Object.assign({}, item, {
+                        value: item.id,
+                        label: item.nickname || item.email || item.phone
+                      })
+                    )
+                  });
+                }
+              })}
+            />,
+            <TypeDateRangePickerFilterItem label="创建时间" name="createdAt" />
+          ]
+        ];
+      }}
       renderTopArea={({ filterValue, setFilter, StateBar }) => {
         return (
           <StateBar
@@ -70,6 +106,6 @@ const List = props => {
       renderActions={({ item, reload }) => <Actions data={item} onSuccess={reload} />}
     />
   );
-};
+});
 
 export default List;

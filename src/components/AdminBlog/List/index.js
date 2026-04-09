@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Space, Button, message } from 'antd';
 import { SyncOutlined } from '@ant-design/icons';
+import { createWithRemoteLoader } from '@kne/remote-loader';
 import Create from '../Actions/Create';
 import Actions from '../Actions';
 import getColumns from './getColumns';
@@ -14,7 +15,11 @@ const statusOptions = [
 
 const statusMap = new Map(statusOptions.map(item => [item.key, item]));
 
-const List = props => {
+const List = createWithRemoteLoader({
+  modules: ['components-core:Global@usePreset']
+})(({ remoteModules, ...props }) => {
+  const [usePreset] = remoteModules;
+  const { apis } = usePreset();
   const [loading, setLoading] = useState(false);
 
   const createStatusFilter = ({ value, label }) => {
@@ -26,11 +31,42 @@ const List = props => {
       {...props}
       getApi={apis => apis.blog.list}
       buildRequestData={filterValue => {
-        return Object.assign({}, filterValue, {
+        const result = Object.assign({}, filterValue, {
           status: filterValue.status && filterValue.status !== 'all' ? filterValue.status : undefined
         });
+
+        if (filterValue.publishTime?.value?.[0] && filterValue.publishTime?.value?.[1]) {
+          result.publishTimeStart = filterValue.publishTime.value[0];
+          result.publishTimeEnd = filterValue.publishTime.value[1];
+        }
+        delete result.publishTime;
+
+        return result;
       }}
-      getFilterList={({ InputFilterItem }) => [[<InputFilterItem label="标题" name="title" />]]}
+      getFilterList={({ SuperSelectUserFilterItem, TypeDateRangePickerFilterItem }) => {
+        return [
+          [
+            <SuperSelectUserFilterItem
+              single
+              label="发布用户"
+              name="createdUserId"
+              api={Object.assign({}, apis.admin.getUserList, {
+                transformData: data => {
+                  return Object.assign({}, data, {
+                    pageData: (data.pageData || []).map(item =>
+                      Object.assign({}, item, {
+                        value: item.id,
+                        label: item.nickname || item.email || item.phone
+                      })
+                    )
+                  });
+                }
+              })}
+            />,
+            <TypeDateRangePickerFilterItem label="发布时间" name="publishTime" />
+          ]
+        ];
+      }}
       renderTopArea={({ filterValue, setFilter, StateBar }) => {
         return (
           <StateBar
@@ -93,6 +129,6 @@ const List = props => {
       renderActions={({ item, reload }) => <Actions data={item} onSuccess={reload} />}
     />
   );
-};
+});
 
 export default List;

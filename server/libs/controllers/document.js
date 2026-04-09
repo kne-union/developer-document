@@ -110,7 +110,6 @@ module.exports = fp(async (fastify, options) => {
         query: {
           type: 'object',
           properties: {
-            name: { type: 'string' },
             keyword: { type: 'string' },
             status: { type: 'string', enum: ['draft', 'published'] },
             isPublic: { type: 'boolean' },
@@ -178,7 +177,7 @@ module.exports = fp(async (fastify, options) => {
         query: {
           type: 'object',
           properties: {
-            name: { type: 'string' },
+            keyword: { type: 'string' },
             groups: { type: 'array', items: { type: 'string' } },
             pageSize: { type: 'number', default: 10 },
             current: { type: 'number', default: 1 }

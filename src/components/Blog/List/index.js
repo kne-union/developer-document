@@ -3,7 +3,7 @@ import Fetch from '@kne/react-fetch';
 import classNames from 'classnames';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useMemo, useState } from 'react';
-import { Tag, Typography, Empty, Pagination, Input, Button, Space } from 'antd';
+import { Tag, Typography, Empty, Pagination, Input, Button, Space, DatePicker, Select } from 'antd';
 import { ReadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { hasUserToken } from '@components/Shared/auth';
@@ -11,20 +11,24 @@ import styles from '../style.module.scss';
 
 const { Title, Paragraph, Text } = Typography;
 const { Search } = Input;
+const { RangePicker } = DatePicker;
 
 const pageSize = 12;
 
 const BlogList = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:Layout@Page']
+  modules: ['components-core:Global@usePreset', 'components-core:Layout@Page', 'components-admin:UserSelect']
 })(({ remoteModules, baseUrl: propsBaseUrl }) => {
-  const [usePreset, Page] = remoteModules;
-  const { apis } = usePreset();
+  const [usePreset, Page, UserSelect] = remoteModules;
+  const { apis, ajax } = usePreset();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [keyword, setKeyword] = useState('');
   const [current, setCurrent] = useState(1);
   const [selectedGroup, setSelectedGroup] = useState(searchParams.get('group') || null);
+  const [createdUserId, setCreatedUserId] = useState(null);
+  const [publishTimeRange, setPublishTimeRange] = useState(null);
+  const [userList, setUserList] = useState([]);
 
   const isLoggedIn = useMemo(() => hasUserToken(), []);
 
@@ -48,18 +52,24 @@ const BlogList = createWithRemoteLoader({
 
   const requestParams = useMemo(() => {
     const params = {
-      title: keyword || undefined,
+      keyword: keyword || undefined,
       current,
       pageSize,
-      status: isLoggedIn ? 'published' : undefined
+      status: isLoggedIn ? 'published' : undefined,
+      createdUserId: createdUserId || undefined
     };
 
     if (selectedGroup) {
       params.groups = [selectedGroup];
     }
 
+    if (publishTimeRange && publishTimeRange[0] && publishTimeRange[1]) {
+      params.publishTimeStart = publishTimeRange[0].startOf('day').toISOString();
+      params.publishTimeEnd = publishTimeRange[1].endOf('day').toISOString();
+    }
+
     return params;
-  }, [keyword, current, selectedGroup, isLoggedIn]);
+  }, [keyword, current, selectedGroup, isLoggedIn, createdUserId, publishTimeRange]);
 
   return (
     <Page name="blog" noMargin>
@@ -147,9 +157,40 @@ const BlogList = createWithRemoteLoader({
               }}
             />
           </div>
+
+          <div className={styles.filterRow}>
+            <Text className={styles.filterLabel}>筛选：</Text>
+            <Space wrap className={styles.filterList} align="center">
+              {isLoggedIn && (
+                <UserSelect.Field
+                  className={styles['user-select']}
+                  single
+                  allowClear
+                  size="small"
+                  placeholder="发布用户"
+                  style={{ minWidth: 120 }}
+                  onChange={item => {
+                    setCreatedUserId(item?.id);
+                    setCurrent(1);
+                  }}
+                />
+              )}
+              <RangePicker
+                className={styles['range-picker']}
+                size="small"
+                placeholder={['发布开始', '发布结束']}
+                value={publishTimeRange}
+                onChange={dates => {
+                  setPublishTimeRange(dates);
+                  setCurrent(1);
+                }}
+              />
+            </Space>
+          </div>
         </section>
 
         <Fetch
+          key={`${keyword}-${current}-${selectedGroup}-${createdUserId}-${publishTimeRange?.[0]?.valueOf()}-${publishTimeRange?.[1]?.valueOf()}`}
           {...Object.assign({}, apiConfig, { params: requestParams })}
           render={({ data, loading }) => {
             const list = data?.list || data?.pageData || [];

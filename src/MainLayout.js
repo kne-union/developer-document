@@ -42,7 +42,7 @@ const MainLayout = props => {
 export default MainLayout;
 
 export const AfterUserLoginLayout = createWithRemoteLoader({
-  modules: ['components-account:Authenticate@UserInfo']
+  modules: ['components-admin:Authenticate@UserInfo']
 })(({ remoteModules, ...props }) => {
   const [UserInfo] = remoteModules;
   return (
@@ -55,7 +55,7 @@ export const AfterUserLoginLayout = createWithRemoteLoader({
 });
 
 export const AfterTenantUserLoginLayout = createWithRemoteLoader({
-  modules: ['components-account:Authenticate@TenantUserInfo', 'Global@GetGlobal']
+  modules: ['components-admin:Authenticate@TenantUserInfo', 'Global@GetGlobal']
 })(({ remoteModules, ...props }) => {
   const [TenantUserInfo, GetGlobal] = remoteModules;
   return (
@@ -72,7 +72,7 @@ export const AfterTenantUserLoginLayout = createWithRemoteLoader({
 });
 
 export const AfterAdminUserLoginLayout = createWithRemoteLoader({
-  modules: ['components-account:Authenticate@SuperAdminInfo']
+  modules: ['components-admin:Authenticate@SuperAdminInfo']
 })(({ remoteModules, ...props }) => {
   const [SuperAdminInfo] = remoteModules;
   return (

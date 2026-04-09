@@ -22,8 +22,10 @@ export const globalInit = async () => {
     },
     registerInterceptors: interceptors => {
       interceptors.response.use(response => {
-        if (response.config.ignoreRedirect !== true && (response.status === 401 || response.data.code === 401)) {
+        if (response.status === 401 || response.data.code === 401) {
           response.config.showError = false;
+        }
+        if (response.config.ignoreRedirect !== true && (response.status === 401 || response.data.code === 401)) {
           const searchParams = new URLSearchParams(window.location.search);
           const referer = encodeURIComponent(window.location.pathname + window.location.search);
           searchParams.append('referer', referer);
