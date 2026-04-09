@@ -24,8 +24,8 @@ const createServer = () => {
     schema: {
       type: 'object',
       properties: {
-        DB_DIALECT: { type: 'string', default: 'sqlite' },
-        DB_HOST: { type: 'string', default: 'data.db' },
+        DB_DIALECT: { type: 'string', default: 'postgres' },
+        DB_HOST: { type: 'string' },
         DB_PORT: { type: 'number' },
         DB_USERNAME: { type: 'string' },
         DB_PASSWORD: { type: 'string' },
