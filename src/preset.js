@@ -22,8 +22,8 @@ export const globalInit = async () => {
     },
     registerInterceptors: interceptors => {
       interceptors.response.use(response => {
-        response.config.showError = false;
         if (response.config.ignoreRedirect !== true && (response.status === 401 || response.data.code === 401)) {
+          response.config.showError = false;
           const searchParams = new URLSearchParams(window.location.search);
           const referer = encodeURIComponent(window.location.pathname + window.location.search);
           searchParams.append('referer', referer);
@@ -85,8 +85,8 @@ export const globalInit = async () => {
       },
       'components-admin': {
         ...registry,
-        //url: 'http://localhost:3016',
-        //tpl: '{{url}}',
+        url: 'http://localhost:3016',
+        tpl: '{{url}}',
         remote: 'components-admin',
         defaultVersion: '1.1.28'
       },
@@ -104,8 +104,9 @@ export const globalInit = async () => {
               defaultVersion: process.env.DEFAULT_VERSION
             }
           : {
-              ...registry,
               remote: 'developer-document',
+              url: '/',
+              tpl: '{{url}}',
               defaultVersion: process.env.DEFAULT_VERSION
             }
     }

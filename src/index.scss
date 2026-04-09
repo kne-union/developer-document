@@ -147,3 +147,8 @@ body {
     white-space: normal;
   }
 }
+
+.ant-modal-wrap,
+.ant-modal-mask {
+  z-index: 1000 !important;
+}

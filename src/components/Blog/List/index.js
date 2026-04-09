@@ -4,33 +4,15 @@ import classNames from 'classnames';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { Tag, Typography, Empty, Pagination, Input, Button, Space } from 'antd';
-import { ReadOutlined, CodeOutlined, HeartOutlined, AppstoreOutlined, BgColorsOutlined, FileTextOutlined } from '@ant-design/icons';
+import { ReadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { BLOG_GROUP_OPTIONS, BLOG_GROUP_LABELS } from '@components/Shared/blogMeta';
 import { hasUserToken } from '@components/Shared/auth';
 import styles from '../style.module.scss';
 
 const { Title, Paragraph, Text } = Typography;
 const { Search } = Input;
 
-const iconMap = {
-  all: ReadOutlined,
-  tech: CodeOutlined,
-  life: HeartOutlined,
-  product: AppstoreOutlined,
-  design: BgColorsOutlined,
-  other: FileTextOutlined
-};
-
 const pageSize = 12;
-
-const groupTagClassMap = {
-  tech: 'tagTech',
-  design: 'tagDesign',
-  product: 'tagProduct',
-  life: 'tagLife',
-  other: 'tagOther'
-};
 
 const BlogList = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-core:Layout@Page']
@@ -42,7 +24,7 @@ const BlogList = createWithRemoteLoader({
   const [searchParams, setSearchParams] = useSearchParams();
   const [keyword, setKeyword] = useState('');
   const [current, setCurrent] = useState(1);
-  const [selectedGroup, setSelectedGroup] = useState(searchParams.get('group') || 'all');
+  const [selectedGroup, setSelectedGroup] = useState(searchParams.get('group') || null);
 
   const isLoggedIn = useMemo(() => hasUserToken(), []);
 
@@ -56,7 +38,7 @@ const BlogList = createWithRemoteLoader({
 
   const syncGroupToSearch = nextGroup => {
     const nextSearchParams = new URLSearchParams(searchParams);
-    if (nextGroup && nextGroup !== 'all') {
+    if (nextGroup) {
       nextSearchParams.set('group', nextGroup);
     } else {
       nextSearchParams.delete('group');
@@ -72,7 +54,7 @@ const BlogList = createWithRemoteLoader({
       status: isLoggedIn ? 'published' : undefined
     };
 
-    if (selectedGroup !== 'all') {
+    if (selectedGroup) {
       params.groups = [selectedGroup];
     }
 
@@ -117,31 +99,53 @@ const BlogList = createWithRemoteLoader({
               />
             </div>
           </div>
+
           <div className={styles.filterRow}>
             <Text className={styles.filterLabel}>分类：</Text>
-            <div className={styles.filterList}>
-              {BLOG_GROUP_OPTIONS.map(item => {
-                const Icon = iconMap[item.value];
+            <Fetch
+              {...apis.group.groupList}
+              params={{ type: 'blog', output: 'list' }}
+              render={({ data, loading }) => {
+                if (loading) {
+                  return <Text className={styles.filterLabel}>加载中...</Text>;
+                }
+
+                const flatGroups = data || [];
+
                 return (
-                  <Button
-                    className={styles['filterButton']}
-                    key={item.value}
-                    size="small"
-                    type={selectedGroup === item.value ? 'primary' : 'default'}
-                    onClick={() => {
-                      setSelectedGroup(item.value);
-                      setCurrent(1);
-                      syncGroupToSearch(item.value);
-                    }}
-                  >
-                    <Space size={4}>
-                      <Icon />
-                      <span>{item.label}</span>
-                    </Space>
-                  </Button>
+                  <Space wrap className={styles.filterList}>
+                    <Button
+                      type={selectedGroup === null ? 'primary' : 'default'}
+                      shape="round"
+                      size="small"
+                      onClick={() => {
+                        setSelectedGroup(null);
+                        setCurrent(1);
+                        syncGroupToSearch(null);
+                      }}
+                    >
+                      全部
+                    </Button>
+                    {flatGroups.map(group => (
+                      <Button
+                        key={group.id}
+                        type={selectedGroup === group.id ? 'primary' : 'default'}
+                        shape="round"
+                        size="small"
+                        style={group.level > 0 ? { marginLeft: group.level * 16 } : {}}
+                        onClick={() => {
+                          setSelectedGroup(group.id);
+                          setCurrent(1);
+                          syncGroupToSearch(group.id);
+                        }}
+                      >
+                        {group.name}
+                      </Button>
+                    ))}
+                  </Space>
                 );
-              })}
-            </div>
+              }}
+            />
           </div>
         </section>
 
@@ -171,10 +175,6 @@ const BlogList = createWithRemoteLoader({
                     <Text className={styles.summaryValue}>{total}</Text>
                   </div>
                   <div className={styles.summaryItem}>
-                    <Text className={styles.summaryLabel}>当前分类</Text>
-                    <Text className={styles.summaryValue}>{selectedGroup === 'all' ? '全部' : BLOG_GROUP_LABELS[selectedGroup]}</Text>
-                  </div>
-                  <div className={styles.summaryItem}>
                     <Text className={styles.summaryLabel}>浏览模式</Text>
                     <Text className={styles.summaryValue}>{isLoggedIn ? '登录' : '公开'}</Text>
                   </div>
@@ -190,8 +190,8 @@ const BlogList = createWithRemoteLoader({
                       </div>
                       <div className={styles.tagRow}>
                         {item.groups?.slice(0, 3).map(group => (
-                          <Tag key={group} className={classNames(styles['blogTag'], styles[groupTagClassMap[group] || 'tagOther'])} style={{ margin: 0 }}>
-                            {BLOG_GROUP_LABELS[group] || group}
+                          <Tag key={group.id} className={classNames(styles['blogTag'])} style={{ margin: 0 }}>
+                            {group.name}
                           </Tag>
                         ))}
                         {!item.isPublic && isLoggedIn && (

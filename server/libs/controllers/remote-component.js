@@ -131,7 +131,7 @@ module.exports = fp(async (fastify, options) => {
   fastify.get(
     `${options.prefix}/remote-component/list`,
     {
-      onRequest: [authenticate.user, authenticate.admin],
+      onRequest: [authenticate.user],
       schema: {
         summary: '获取远程组件列表',
         query: {

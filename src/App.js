@@ -26,6 +26,28 @@ const Blog = createWithRemoteLoader({
   );
 });
 
+const Document = createWithRemoteLoader({
+  modules: []
+})(({ remoteModules, baseUrl }) => {
+  return (
+    <AppChildrenRouter
+      errorPage
+      notFoundPage
+      baseUrl={baseUrl}
+      list={[
+        {
+          index: true,
+          loader: () => import('@components/Document/List')
+        },
+        {
+          path: 'detail',
+          loader: () => import('@components/Document/Detail')
+        }
+      ]}
+    />
+  );
+});
+
 const RemoteComponent = createWithRemoteLoader({
   modules: []
 })(({ remoteModules, baseUrl }) => {
@@ -86,7 +108,7 @@ const App = createWithRemoteLoader({
         list={[
           {
             path: 'account/*',
-            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" />
+            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" systemName="Developer Document" allowLanguageSwitch={false} />
           },
           {
             path: 'admin/initAdmin',
@@ -136,6 +158,11 @@ const App = createWithRemoteLoader({
                           path: '/admin/blog'
                         },
                         {
+                          key: 'document',
+                          title: '文档管理',
+                          path: '/admin/document'
+                        },
+                        {
                           key: 'task',
                           title: '任务管理',
                           path: '/admin/task'
@@ -171,6 +198,10 @@ const App = createWithRemoteLoader({
                   {
                     path: 'blog/*',
                     loader: () => import('@components/AdminBlog')
+                  },
+                  {
+                    path: 'document/*',
+                    loader: () => import('@components/AdminDocument')
                   },
                   {
                     path: 'remote-component/*',
@@ -231,6 +262,11 @@ const App = createWithRemoteLoader({
                     path: '/blog'
                   },
                   {
+                    key: 'documents',
+                    title: '文档',
+                    path: '/documents'
+                  },
+                  {
                     key: 'about',
                     title: '关于我们',
                     path: '/about'
@@ -251,6 +287,10 @@ const App = createWithRemoteLoader({
             {
               path: 'blog/*',
               element: <Blog baseUrl={baseUrl + '/blog'} />
+            },
+            {
+              path: 'documents/*',
+              element: <Document baseUrl={baseUrl + '/documents'} />
             },
             {
               path: 'remote-components/*',

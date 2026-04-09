@@ -71,7 +71,7 @@ module.exports = fp(async (fastify, options) => {
     await fs.ensureDir(path.resolve(outputPath, pkg.packageName));
     if (/^@kne\//.test(pkg.packageName)) {
       const allVersions = Object.keys(npmInfo.versions);
-      
+
       // 按大版本分组
       const majorVersionMap = new Map();
       allVersions.forEach(version => {
@@ -81,20 +81,20 @@ module.exports = fp(async (fastify, options) => {
         }
         majorVersionMap.get(major).push(version);
       });
-      
+
       // 获取排序后的大版本列表（降序）
       const sortedMajors = Array.from(majorVersionMap.keys()).sort((a, b) => {
         const numA = parseInt(a.replace(/^\D/, ''), 10);
         const numB = parseInt(b.replace(/^\D/, ''), 10);
         return numB - numA;
       });
-      
+
       // 最多保留最近10个大版本
       const recentMajors = sortedMajors.slice(0, 10);
-      
+
       // 构建要部署的版本列表
       const versionsToDeploy = [];
-      
+
       recentMajors.forEach((major, index) => {
         const versions = majorVersionMap.get(major);
         // 版本排序（降序，最新的在前）
@@ -108,7 +108,7 @@ module.exports = fp(async (fastify, options) => {
           }
           return 0;
         });
-        
+
         if (index === 0) {
           // 最后一个大版本，最多保留5个最近小版本
           versionsToDeploy.push(...versions.slice(0, 5));
@@ -117,10 +117,10 @@ module.exports = fp(async (fastify, options) => {
           versionsToDeploy.push(versions[0]);
         }
       });
-      
+
       for (let currentVersion of versionsToDeploy) {
         const packageName = `@kne-components/${npmInfo.name}@${currentVersion}`;
-        if (await fs.pathExists(path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`))) {
+        if (examples.indexOf(currentVersion) > -1 && (await fs.exists(path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`)))) {
           continue;
         }
         try {

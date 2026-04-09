@@ -31,6 +31,7 @@
     "@kne/fastify-account": "^2.0.7",
     "@kne/fastify-aliyun": "^1.1.7",
     "@kne/fastify-file-manager": "^2.0.10",
+    "@kne/fastify-group": "^0.1.0-alpha.2",
     "@kne/fastify-message": "^1.0.3",
     "@kne/fastify-namespace": "^1.1.2",
     "@kne/fastify-response-data-format": "^1.0.0",

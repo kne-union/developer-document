@@ -4,50 +4,48 @@ module.exports = fp(async (fastify, options) => {
   const { services } = fastify[options.name];
   const { authenticate } = fastify.account;
 
-  // 创建博客
+  // 创建文档
   fastify.post(
-    `${options.prefix}/blog/create`,
+    `${options.prefix}/document/create`,
     {
       onRequest: [authenticate.user, authenticate.admin],
       schema: {
-        summary: '创建博客',
+        summary: '创建文档',
         body: {
           type: 'object',
           properties: {
-            title: { type: 'string' },
+            name: { type: 'string' },
             content: { type: 'string' },
             status: { type: 'string', enum: ['draft', 'published'] },
-            publishTime: { type: 'string', format: 'date-time' },
             isPublic: { type: 'boolean' },
             groups: { type: 'array', items: { type: 'object' } }
           },
-          required: ['title', 'content']
+          required: ['name']
         }
       }
     },
     async request => {
-      return services.blog.create({
+      return services.document.create({
         ...request.body,
         createdUserId: request.user.id
       });
     }
   );
 
-  // 更新博客
+  // 更新文档
   fastify.post(
-    `${options.prefix}/blog/update`,
+    `${options.prefix}/document/update`,
     {
       onRequest: [authenticate.user, authenticate.admin],
       schema: {
-        summary: '更新博客',
+        summary: '更新文档',
         body: {
           type: 'object',
           properties: {
             id: { type: 'string' },
-            title: { type: 'string' },
+            name: { type: 'string' },
             content: { type: 'string' },
             status: { type: 'string', enum: ['draft', 'published'] },
-            publishTime: { type: 'string', format: 'date-time' },
             isPublic: { type: 'boolean' },
             groups: { type: 'array', items: { type: 'object' } }
           },
@@ -56,17 +54,17 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => {
-      return services.blog.update(request.body);
+      return services.document.update(request.body);
     }
   );
 
-  // 删除博客
+  // 删除文档
   fastify.post(
-    `${options.prefix}/blog/delete`,
+    `${options.prefix}/document/delete`,
     {
       onRequest: [authenticate.user, authenticate.admin],
       schema: {
-        summary: '删除博客',
+        summary: '删除文档',
         body: {
           type: 'object',
           properties: {
@@ -77,17 +75,17 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => {
-      await services.blog.remove(request.body);
+      await services.document.remove(request.body);
       return { success: true };
     }
   );
 
-  // 获取博客详情
+  // 获取文档详情
   fastify.get(
-    `${options.prefix}/blog/detail`,
+    `${options.prefix}/document/detail`,
     {
       schema: {
-        summary: '获取博客详情',
+        summary: '获取文档详情',
         query: {
           type: 'object',
           properties: {
@@ -98,25 +96,25 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => {
-      return services.blog.detail(request.query);
+      return services.document.detail(request.query);
     }
   );
 
-  // 获取博客列表（管理后台）
+  // 获取文档列表（管理后台）
   fastify.get(
-    `${options.prefix}/blog/list`,
+    `${options.prefix}/document/list`,
     {
       onRequest: [authenticate.user],
       schema: {
-        summary: '获取博客列表（管理后台）',
+        summary: '获取文档列表（管理后台）',
         query: {
           type: 'object',
           properties: {
-            title: { type: 'string' },
+            name: { type: 'string' },
             keyword: { type: 'string' },
             status: { type: 'string', enum: ['draft', 'published'] },
             isPublic: { type: 'boolean' },
-            groups: { type: 'array', items: { type: 'string' } },
+            group: { type: 'string' },
             pageSize: { type: 'number', default: 10 },
             current: { type: 'number', default: 1 },
             createdUserId: { type: 'string' }
@@ -125,39 +123,17 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => {
-      return services.blog.list(request.query);
+      return services.document.list(request.query);
     }
   );
 
-  // 发布博客
+  // 发布文档
   fastify.post(
-    `${options.prefix}/blog/publish`,
+    `${options.prefix}/document/publish`,
     {
       onRequest: [authenticate.user, authenticate.admin],
       schema: {
-        summary: '发布博客',
-        body: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            publishTime: { type: 'string', format: 'date-time' }
-          },
-          required: ['id']
-        }
-      }
-    },
-    async request => {
-      return services.blog.publish(request.body);
-    }
-  );
-
-  // 取消发布博客
-  fastify.post(
-    `${options.prefix}/blog/unpublish`,
-    {
-      onRequest: [authenticate.user, authenticate.admin],
-      schema: {
-        summary: '取消发布博客',
+        summary: '发布文档',
         body: {
           type: 'object',
           properties: {
@@ -168,20 +144,41 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => {
-      return services.blog.unpublish(request.body);
+      return services.document.publish(request.body);
     }
   );
 
-  // 获取公开博客列表（前台）
+  // 取消发布文档
+  fastify.post(
+    `${options.prefix}/document/unpublish`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: '取消发布文档',
+        body: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' }
+          },
+          required: ['id']
+        }
+      }
+    },
+    async request => {
+      return services.document.unpublish(request.body);
+    }
+  );
+
+  // 获取公开文档列表（前台）
   fastify.get(
-    `${options.prefix}/blog/public/list`,
+    `${options.prefix}/document/public/list`,
     {
       schema: {
-        summary: '获取公开博客列表（前台）',
+        summary: '获取公开文档列表（前台）',
         query: {
           type: 'object',
           properties: {
-            title: { type: 'string' },
+            name: { type: 'string' },
             groups: { type: 'array', items: { type: 'string' } },
             pageSize: { type: 'number', default: 10 },
             current: { type: 'number', default: 1 }
@@ -190,7 +187,7 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => {
-      return services.blog.getPublicList(request.query);
+      return services.document.getPublicList(request.query);
     }
   );
 });

@@ -184,7 +184,7 @@ module.exports = fp(async (fastify, options) => {
 
       for (let currentVersion of versionsToDeploy) {
         const packageName = `@kne-components/${npmInfo.name}@${currentVersion}`;
-        if (await fs.pathExists(path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`))) {
+        if (examples.indexOf(currentVersion) > -1 && (await fs.exists(path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`)))) {
           continue;
         }
         try {

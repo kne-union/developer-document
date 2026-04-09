@@ -26,7 +26,7 @@ module.exports = ({ DataTypes, options }) => {
         defaultValue: true
       },
       groups: {
-        type: DataTypes.JSON,
+        type: DataTypes.JSONB,
         comment: '分组列表',
         defaultValue: []
       }

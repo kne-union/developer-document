@@ -126,6 +126,17 @@ const createServer = () => {
         templateDir: path.join(__dirname, './messageTemplate')
       });
 
+      fastify.register(require('@kne/fastify-group'), {
+        prefix: `${options.prefix}/group`,
+        getAuthenticate: name => {
+          if (name === 'read') {
+            return [];
+          }
+          const { authenticate } = fastify.account;
+          return [authenticate.user, authenticate.admin];
+        }
+      });
+
       fastify.register(require('fastify-cron'), {
         jobs: [
           {
@@ -268,7 +279,19 @@ module.exports = {
       console.log('开始部署示例代码');
       const list = await fastify[options.name].models.npmPackage.findAll();
       for (const item of list) {
-        await fastify[options.name].services.npmPackage.deployExamples({ id: item.id });
+        try {
+          await fastify[options.name].services.npmPackage.deployExamples({ id: item.id });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      const remoteList = await fastify[options.name].models.remoteComponent.findAll();
+      for (const item of remoteList) {
+        try {
+          await fastify[options.name].services.remoteComponent.deployComponents({ id: item.id });
+        } catch (e) {
+          console.error(e);
+        }
       }
       console.log('示例代码部署完成');
     });

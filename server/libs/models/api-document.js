@@ -31,7 +31,7 @@ module.exports = ({ DataTypes, options }) => {
         comment: '是否公开'
       },
       groups: {
-        type: DataTypes.JSON,
+        type: DataTypes.JSONB,
         comment: '分组列表',
         defaultValue: []
       }

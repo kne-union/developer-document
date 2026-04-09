@@ -119,7 +119,7 @@ module.exports = fp(async (fastify, options) => {
   fastify.get(
     `${options.prefix}/npm-package/list`,
     {
-      onRequest: [authenticate.user, authenticate.admin],
+      onRequest: [authenticate.user],
       schema: {
         summary: '获取 npm package 列表',
         query: {

@@ -6,6 +6,11 @@ module.exports = ({ DataTypes, options }) => {
         comment: '名称',
         allowNull: false
       },
+      content: {
+        type: DataTypes.TEXT,
+        comment: '正文',
+        allowNull: true
+      },
       status: {
         type: DataTypes.ENUM('draft', 'published'),
         defaultValue: 'published',
@@ -17,7 +22,7 @@ module.exports = ({ DataTypes, options }) => {
         comment: '是否公开'
       },
       groups: {
-        type: DataTypes.JSON,
+        type: DataTypes.JSONB,
         comment: '分组列表',
         defaultValue: []
       }
