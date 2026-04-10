@@ -144,7 +144,7 @@ module.exports = fp(async (fastify, options) => {
     return pkg;
   };
 
-  const list = async ({ type, keyword, isPublic, pageSize, current }) => {
+  const list = async ({ type, keyword, isPublic, perPage, currentPage }) => {
     const where = {};
 
     if (keyword) {
@@ -159,11 +159,11 @@ module.exports = fp(async (fastify, options) => {
       where.isPublic = isPublic;
     }
 
-    const offset = (current - 1) * pageSize;
+    const offset = (currentPage - 1) * perPage;
 
     const { count, rows } = await models.npmPackage.findAndCountAll({
       where,
-      limit: pageSize,
+      limit: perPage,
       offset,
       order: [['createdAt', 'DESC']]
     });
@@ -174,7 +174,7 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
-  const getPublicList = async ({ type, keyword, pageSize, current }) => {
+  const getPublicList = async ({ type, keyword, perPage, currentPage }) => {
     const where = {
       isPublic: true
     };

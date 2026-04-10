@@ -15,16 +15,16 @@ module.exports = fp(async (fastify, options) => {
           type: 'object',
           properties: {
             remote: { type: 'string' },
-            url: { type: 'string' },
-            packageName: { type: 'string' },
-            registry: { type: 'string' },
-            tpl: { type: 'string' },
-            name: { type: 'string' },
-            description: { type: 'string' },
-            group: { type: 'string' },
-            versions: { type: 'array', items: { type: 'string' } },
-            defaultVersion: { type: 'string' },
-            isPublic: { type: 'boolean' }
+            url: { type: 'string', default: '' },
+            packageName: { type: 'string', default: '' },
+            registry: { type: 'string', default: 'https://registry.npmjs.org' },
+            tpl: { type: 'string', default: '' },
+            name: { type: 'string', default: '' },
+            description: { type: 'string', default: '' },
+            group: { type: 'string', default: '' },
+            versions: { type: 'array', items: { type: 'string' }, default: [] },
+            defaultVersion: { type: 'string', default: '' },
+            isPublic: { type: 'boolean', default: false }
           },
           required: ['remote']
         }
@@ -56,16 +56,16 @@ module.exports = fp(async (fastify, options) => {
           properties: {
             id: { type: 'string' },
             remote: { type: 'string' },
-            url: { type: 'string' },
-            packageName: { type: 'string' },
-            registry: { type: 'string' },
-            tpl: { type: 'string' },
-            name: { type: 'string' },
-            description: { type: 'string' },
-            group: { type: 'string' },
-            versions: { type: 'array', items: { type: 'string' } },
-            defaultVersion: { type: 'string' },
-            isPublic: { type: 'boolean' }
+            url: { type: 'string', default: '' },
+            packageName: { type: 'string', default: '' },
+            registry: { type: 'string', default: 'https://registry.npmjs.org' },
+            tpl: { type: 'string', default: '' },
+            name: { type: 'string', default: '' },
+            description: { type: 'string', default: '' },
+            group: { type: 'string', default: '' },
+            versions: { type: 'array', items: { type: 'string' }, default: [] },
+            defaultVersion: { type: 'string', default: '' },
+            isPublic: { type: 'boolean', default: false }
           },
           required: ['id']
         }
@@ -142,8 +142,8 @@ module.exports = fp(async (fastify, options) => {
             keyword: { type: 'string' },
             group: { type: 'string' },
             isPublic: { type: 'boolean' },
-            pageSize: { type: 'number', default: 10 },
-            current: { type: 'number', default: 1 }
+            perPage: { type: 'number', default: 20 },
+            currentPage: { type: 'number', default: 1 }
           }
         }
       }
@@ -164,8 +164,8 @@ module.exports = fp(async (fastify, options) => {
           properties: {
             keyword: { type: 'string' },
             group: { type: 'string' },
-            pageSize: { type: 'number', default: 20 },
-            current: { type: 'number', default: 1 }
+            perPage: { type: 'number', default: 20 },
+            currentPage: { type: 'number', default: 1 }
           }
         }
       }

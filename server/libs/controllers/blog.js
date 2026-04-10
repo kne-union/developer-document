@@ -15,19 +15,23 @@ module.exports = fp(async (fastify, options) => {
           type: 'object',
           properties: {
             title: { type: 'string' },
-            content: { type: 'string' },
-            status: { type: 'string', enum: ['draft', 'published'] },
+            content: { type: 'string', default: '' },
+            status: { type: 'string', enum: ['draft', 'published'], default: 'draft' },
             publishTime: { type: 'string', format: 'date-time' },
-            isPublic: { type: 'boolean' },
-            groups: { type: 'array', items: { type: 'object' } }
+            isPublic: { type: 'boolean', default: true },
+            groups: { type: 'array', items: { type: 'object' }, default: [] }
           },
-          required: ['title', 'content']
+          required: ['title']
         }
       }
     },
     async request => {
       return services.blog.create({
         ...request.body,
+        content: request.body.content ?? '',
+        status: request.body.status ?? 'draft',
+        isPublic: request.body.isPublic ?? true,
+        groups: request.body.groups ?? [],
         createdUserId: request.user.id
       });
     }
@@ -45,11 +49,11 @@ module.exports = fp(async (fastify, options) => {
           properties: {
             id: { type: 'string' },
             title: { type: 'string' },
-            content: { type: 'string' },
-            status: { type: 'string', enum: ['draft', 'published'] },
+            content: { type: 'string', default: '' },
+            status: { type: 'string', enum: ['draft', 'published'], default: 'draft' },
             publishTime: { type: 'string', format: 'date-time' },
-            isPublic: { type: 'boolean' },
-            groups: { type: 'array', items: { type: 'object' } }
+            isPublic: { type: 'boolean', default: true },
+            groups: { type: 'array', items: { type: 'object' }, default: [] }
           },
           required: ['id']
         }
@@ -117,8 +121,8 @@ module.exports = fp(async (fastify, options) => {
             status: { type: 'string', enum: ['draft', 'published'] },
             isPublic: { type: 'boolean' },
             groups: { type: 'array', items: { type: 'string' } },
-            pageSize: { type: 'number', default: 10 },
-            current: { type: 'number', default: 1 },
+            perPage: { type: 'number', default: 20 },
+            currentPage: { type: 'number', default: 1 },
             createdUserId: { type: 'string' }
           }
         }
@@ -183,8 +187,8 @@ module.exports = fp(async (fastify, options) => {
           properties: {
             title: { type: 'string' },
             groups: { type: 'array', items: { type: 'string' } },
-            pageSize: { type: 'number', default: 10 },
-            current: { type: 'number', default: 1 }
+            perPage: { type: 'number', default: 20 },
+            currentPage: { type: 'number', default: 1 }
           }
         }
       }

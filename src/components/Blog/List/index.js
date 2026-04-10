@@ -53,8 +53,8 @@ const BlogList = createWithRemoteLoader({
   const requestParams = useMemo(() => {
     const params = {
       keyword: keyword || undefined,
-      current,
-      pageSize,
+      currentPage: current,
+      perPage: pageSize,
       status: isLoggedIn ? 'published' : undefined,
       createdUserId: createdUserId || undefined
     };

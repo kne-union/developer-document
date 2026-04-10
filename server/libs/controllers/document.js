@@ -15,10 +15,10 @@ module.exports = fp(async (fastify, options) => {
           type: 'object',
           properties: {
             name: { type: 'string' },
-            content: { type: 'string' },
-            status: { type: 'string', enum: ['draft', 'published'] },
-            isPublic: { type: 'boolean' },
-            groups: { type: 'array', items: { type: 'object' } }
+            content: { type: 'string', default: '' },
+            status: { type: 'string', enum: ['draft', 'published'], default: 'draft' },
+            isPublic: { type: 'boolean', default: false },
+            groups: { type: 'array', items: { type: 'object' }, default: [] }
           },
           required: ['name']
         }
@@ -44,10 +44,10 @@ module.exports = fp(async (fastify, options) => {
           properties: {
             id: { type: 'string' },
             name: { type: 'string' },
-            content: { type: 'string' },
-            status: { type: 'string', enum: ['draft', 'published'] },
-            isPublic: { type: 'boolean' },
-            groups: { type: 'array', items: { type: 'object' } }
+            content: { type: 'string', default: '' },
+            status: { type: 'string', enum: ['draft', 'published'], default: 'draft' },
+            isPublic: { type: 'boolean', default: false },
+            groups: { type: 'array', items: { type: 'object' }, default: [] }
           },
           required: ['id']
         }
@@ -114,8 +114,8 @@ module.exports = fp(async (fastify, options) => {
             status: { type: 'string', enum: ['draft', 'published'] },
             isPublic: { type: 'boolean' },
             group: { type: 'string' },
-            pageSize: { type: 'number', default: 10 },
-            current: { type: 'number', default: 1 },
+            perPage: { type: 'number', default: 20 },
+            currentPage: { type: 'number', default: 1 },
             createdUserId: { type: 'string' }
           }
         }
@@ -179,8 +179,8 @@ module.exports = fp(async (fastify, options) => {
           properties: {
             keyword: { type: 'string' },
             groups: { type: 'array', items: { type: 'string' } },
-            pageSize: { type: 'number', default: 10 },
-            current: { type: 'number', default: 1 }
+            perPage: { type: 'number', default: 20 },
+            currentPage: { type: 'number', default: 1 }
           }
         }
       }

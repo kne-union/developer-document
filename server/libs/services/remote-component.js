@@ -62,7 +62,7 @@ module.exports = fp(async (fastify, options) => {
     return models.remoteComponent.findByPk(id);
   };
 
-  const list = async ({ keyword, group, isPublic, pageSize, current }) => {
+  const list = async ({ keyword, group, isPublic, perPage, currentPage }) => {
     const where = {};
 
     if (keyword) {
@@ -77,11 +77,11 @@ module.exports = fp(async (fastify, options) => {
       where.isPublic = isPublic;
     }
 
-    const offset = (current - 1) * pageSize;
+    const offset = (currentPage - 1) * perPage;
 
     const { count, rows } = await models.remoteComponent.findAndCountAll({
       where,
-      limit: pageSize,
+      limit: perPage,
       offset,
       order: [['createdAt', 'DESC']]
     });
@@ -92,7 +92,7 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
-  const getPublicList = async ({ keyword, group, pageSize, current }) => {
+  const getPublicList = async ({ keyword, group, perPage, currentPage }) => {
     const where = {
       isPublic: true
     };
@@ -105,11 +105,11 @@ module.exports = fp(async (fastify, options) => {
       where[Op.or] = ['remote', 'name', 'packageName', 'description', 'registry', 'tpl'].map(field => ({ [field]: { [Op.like]: `%${keyword}%` } }));
     }
 
-    const offset = (current - 1) * pageSize;
+    const offset = (currentPage - 1) * perPage;
 
     const { count, rows } = await models.remoteComponent.findAndCountAll({
       where,
-      limit: pageSize,
+      limit: perPage,
       offset,
       order: [['createdAt', 'DESC']]
     });

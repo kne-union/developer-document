@@ -15,12 +15,12 @@ module.exports = fp(async (fastify, options) => {
           type: 'object',
           properties: {
             packageName: { type: 'string' },
-            registry: { type: 'string' },
-            name: { type: 'string' },
-            description: { type: 'string' },
-            type: { type: 'string' },
-            keywords: { type: 'array', items: { type: 'string' } },
-            isPublic: { type: 'boolean' }
+            registry: { type: 'string', default: 'https://registry.npmjs.org' },
+            name: { type: 'string', default: '' },
+            description: { type: 'string', default: '' },
+            type: { type: 'string', default: '' },
+            keywords: { type: 'array', items: { type: 'string' }, default: [] },
+            isPublic: { type: 'boolean', default: false }
           },
           required: ['packageName']
         }
@@ -50,12 +50,12 @@ module.exports = fp(async (fastify, options) => {
           properties: {
             id: { type: 'string' },
             packageName: { type: 'string' },
-            registry: { type: 'string' },
-            name: { type: 'string' },
-            description: { type: 'string' },
-            type: { type: 'string' },
-            keywords: { type: 'array', items: { type: 'string' } },
-            isPublic: { type: 'boolean' }
+            registry: { type: 'string', default: 'https://registry.npmjs.org' },
+            name: { type: 'string', default: '' },
+            description: { type: 'string', default: '' },
+            type: { type: 'string', default: '' },
+            keywords: { type: 'array', items: { type: 'string' }, default: [] },
+            isPublic: { type: 'boolean', default: false }
           },
           required: ['id']
         }
@@ -130,8 +130,8 @@ module.exports = fp(async (fastify, options) => {
             type: { type: 'string' },
             keyword: { type: 'string' },
             isPublic: { type: 'boolean' },
-            pageSize: { type: 'number', default: 10 },
-            current: { type: 'number', default: 1 }
+            perPage: { type: 'number', default: 20 },
+            currentPage: { type: 'number', default: 1 }
           }
         }
       }
@@ -152,8 +152,8 @@ module.exports = fp(async (fastify, options) => {
           properties: {
             type: { type: 'string' },
             keyword: { type: 'string' },
-            pageSize: { type: 'number', default: 20 },
-            current: { type: 'number', default: 1 }
+            perPage: { type: 'number', default: 20 },
+            currentPage: { type: 'number', default: 1 }
           }
         }
       }
