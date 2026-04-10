@@ -114,6 +114,17 @@ const createServer = () => {
         )
       );
 
+      fastify.register(require('@kne/fastify-aliyun'), {
+        prefix: `${options.prefix}/aliyun`,
+        oss: {
+          baseDir: 'developer-document',
+          region: fastify.config.OSS_REGION,
+          accessKeyId: fastify.config.OSS_ACCESS_KEY_ID,
+          accessKeySecret: fastify.config.OSS_ACCESS_KEY_SECRET,
+          bucket: fastify.config.OSS_BUCKET
+        }
+      });
+
       fastify.register(require('@kne/fastify-message'), {
         isTest: fastify.config.IS_TEST,
         emailConfig: {

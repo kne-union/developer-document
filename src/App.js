@@ -93,9 +93,9 @@ const NpmPackage = createWithRemoteLoader({
 });
 
 const App = createWithRemoteLoader({
-  modules: ['components-core:Global', 'components-admin:Authenticate@Layout', 'components-admin:Authenticate@AfterUserLoginLayout', 'components-admin:Authenticate@MainLayout', 'components-admin:Authenticate@AfterAdminUserLoginLayout']
+  modules: ['components-core:Global', 'components-admin:Authenticate@Layout', 'components-admin:Authenticate@AfterUserLoginLayout', 'components-admin:Authenticate@AfterAdminUserLoginLayout']
 })(({ remoteModules, globalPreset }) => {
-  const [Global, Layout, AfterUserLoginLayout, MainLayout, AfterAdminUserLoginLayout] = remoteModules;
+  const [Global, Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout] = remoteModules;
   const baseUrl = '';
   const currentYear = new Date().getFullYear();
   const location = useLocation();
@@ -139,6 +139,7 @@ const App = createWithRemoteLoader({
                   <AfterAdminUserLoginLayout
                     navigation={{
                       base: `${baseUrl}/admin`,
+                      defaultTitle: 'Developer Document',
                       list: [
                         {
                           key: 'npm-package',
@@ -243,6 +244,7 @@ const App = createWithRemoteLoader({
                 window.location.href = '/account/login?' + searchParams.toString();
               }}
               navigation={{
+                defaultTitle: 'Developer Document',
                 list: [
                   {
                     key: 'npm-packages',
