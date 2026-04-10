@@ -34,7 +34,7 @@ export const FeatureSection = ({ data = [] }) => {
           <Title level={2} className={styles.sectionTitle}>
             核心能力
           </Title>
-          <Paragraph className={styles.sectionDescription}>围绕企业级前端开发场景，统一沉淀可复用、可扩展、可快速落地的基础能力。</Paragraph>
+          <Paragraph className={styles.sectionDescription}>围绕企业级开发场景，统一沉淀可复用、可扩展、可快速落地的基础能力。</Paragraph>
         </div>
       </div>
       <Row gutter={[16, 16]}>
@@ -112,7 +112,7 @@ const HomePage = createWithRemoteLoader({
         <div className={styles['heroContent']}>
           <Tag bordered={false} className={styles.heroTag}>
             <AppstoreOutlined />
-            企业级前端资源中心
+            企业级开发资源中心
           </Tag>
           <Title className={styles.heroTitle}>{data.name || 'KNE UNION'}</Title>
           <Paragraph className={styles.heroDescription}>{data.description || data.slogan || '统一沉淀组件、远程模块、文档示例与最佳实践，帮助团队构建更稳定、更高效的前端交付体系。'}</Paragraph>
