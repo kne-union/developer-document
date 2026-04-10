@@ -22,7 +22,7 @@ const FormInner = createWithRemoteLoader({
       <Select name="type" label="组件类型" options={TYPE_OPTIONS} defaultValue="other" />
       <Input name="registry" label="Registry" rule="LEN-0-500" placeholder="npm registry 地址" block />
       <TextArea name="description" label="描述" rule="LEN-0-1000" placeholder="组件描述信息" block />
-      <Switch name="isPublic" label="是否公开" defaultValue={true} />
+      <Switch name="isPublic" label="是否公开" />
     </>
   );
 });

@@ -13,7 +13,7 @@ const FormInner = createWithRemoteLoader({
           <Input name="name" label="名称" rule="REQ LEN-0-200" block />,
           <Editor name="content" label="正文" rows={8} block isMarkdown />,
           <GroupSelect name="groups" type="document" label="分组" showAdd />,
-          <Switch name="isPublic" label="是否公开" defaultValue={false} />
+          <Switch name="isPublic" label="是否公开" />
         ]}
       />
     </>

@@ -20,7 +20,7 @@ const FormInner = createWithRemoteLoader({
           <TextArea name="description" label="组件描述" rule="LEN-0-500" rows={3} block />,
           <Input name="tpl" label="加载地址模版" placeholder="{{url}}/components/@kne-components/{{remote}}/{{version}}/build" block />,
           <Input name="defaultVersion" label="默认版本" placeholder="例如: 1.0.0" />,
-          <Switch name="isPublic" label="是否公开" defaultValue={true} />
+          <Switch name="isPublic" label="是否公开" />
         ]}
       />
     </>

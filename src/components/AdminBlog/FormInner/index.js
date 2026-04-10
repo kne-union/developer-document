@@ -14,7 +14,7 @@ const FormInner = createWithRemoteLoader({
           <Editor name="content" label="内容" rule="REQ" rows={8} block />,
           <DatePicker name="publishTime" label="发布时间" placeholder="留空则立即发布" showTime />,
           <GroupSelect name="groups" type="blog" label="分组" showAdd />,
-          <Switch name="isPublic" label="是否公开" defaultValue={true} />
+          <Switch name="isPublic" label="是否公开" />
         ]}
       />
     </>
