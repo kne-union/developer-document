@@ -14,7 +14,7 @@ const List = () => {
       filterParam="group"
       groupOptions={REMOTE_COMPONENT_GROUP_OPTIONS}
       groupFallback="common"
-      getApi={apis => apis.remoteComponent.publicList}
+      getApi={(apis, isLoggedIn) => (isLoggedIn ? apis.remoteComponent.list : apis.remoteComponent.publicList)}
       getGroupKey={item => item.group || 'common'}
       getItemTitle={item => item.name || item.remote}
       getItemDescription={item => item.description}

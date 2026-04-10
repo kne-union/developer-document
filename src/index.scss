@@ -22,8 +22,8 @@ body {
   .ant-menu-submenu-title .ant-space-item,
   .user-tool-username,
   .right-options-login,
-  .style_navigation-mobile-title__Zm6bU__urHvB,
-  .style_mobile-menu-trigger__xStQw__urHvB {
+  .navigation-mobile-title,
+  .navigation-mobile-menu-trigger {
     color: #000 !important;
   }
 
@@ -123,6 +123,26 @@ body {
   line-height: 1.5;
   text-align: right;
   white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .container-body > .ant-layout {
+    --margin-width: 0 !important;
+    --padding-width: 0 !important;
+  }
+  .example-driver-preview {
+    padding: 0 !important;
+  }
+  .example-driver-inner {
+    margin: 0 0 10px 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+  }
+  .example-driver-item {
+    width: 100% !important;
+    min-width: auto !important;
+  }
 }
 
 @media (max-width: 640px) {

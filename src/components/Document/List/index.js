@@ -52,8 +52,8 @@ const DocumentList = createWithRemoteLoader({
   const requestParams = useMemo(() => {
     const params = {
       keyword: keyword,
-      current,
-      pageSize,
+      currentPage: current,
+      perPage: pageSize,
       status: isLoggedIn ? 'published' : undefined,
       createdUserId: createdUserId || undefined
     };

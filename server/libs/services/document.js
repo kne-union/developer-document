@@ -49,7 +49,7 @@ module.exports = fp(async (fastify, options) => {
     });
   };
 
-  const list = async ({ keyword, status, isPublic, group, pageSize, current, createdUserId, createdAtStart, createdAtEnd }) => {
+  const list = async ({ keyword, status, isPublic, group, perPage, currentPage, createdUserId, createdAtStart, createdAtEnd }) => {
     const where = {};
 
     if (keyword) {
@@ -85,11 +85,11 @@ module.exports = fp(async (fastify, options) => {
       where[Op.and] = [literal(`(${groupIds.map(id => `groups @> '[{"id":"${id}"}]'`).join(' OR ')})`)];
     }
 
-    const offset = (current - 1) * pageSize;
+    const offset = (currentPage - 1) * perPage;
 
     const { count, rows } = await models.document.findAndCountAll({
       where,
-      limit: pageSize,
+      limit: perPage,
       offset,
       order: [['createdAt', 'DESC']],
       include: [
@@ -127,7 +127,7 @@ module.exports = fp(async (fastify, options) => {
     });
   };
 
-  const getPublicList = async ({ keyword, groups, pageSize, current }) => {
+  const getPublicList = async ({ keyword, groups, perPage, currentPage }) => {
     const where = {
       status: 'published',
       isPublic: true
@@ -150,11 +150,11 @@ module.exports = fp(async (fastify, options) => {
       where[Op.and] = [literal(`(${uniqueGroupIds.map(id => `groups @> '[{"id":"${id}"}]'`).join(' OR ')})`)];
     }
 
-    const offset = (current - 1) * pageSize;
+    const offset = (currentPage - 1) * perPage;
 
     const { count, rows } = await models.document.findAndCountAll({
       where,
-      limit: pageSize,
+      limit: perPage,
       offset,
       order: [['createdAt', 'DESC']],
       include: [
@@ -169,8 +169,8 @@ module.exports = fp(async (fastify, options) => {
     return {
       total: count,
       list: rows,
-      pageSize,
-      current
+      perPage,
+      currentPage
     };
   };
 

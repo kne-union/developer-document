@@ -5,6 +5,7 @@ import { Button, Empty, Input, Skeleton, Space, Tag, Typography } from 'antd';
 import { ApiOutlined, AppstoreOutlined, CloudServerOutlined } from '@ant-design/icons';
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { hasUserToken } from '@components/Shared/auth';
 import styles from './style.module.scss';
 
 const { Search } = Input;
@@ -48,7 +49,9 @@ const CatalogPage = createWithRemoteLoader({
   getApi,
   buildRequestData = ({ keyword, selectedFilter, filterParam }) => ({
     keyword,
-    [filterParam]: selectedFilter || undefined
+    [filterParam]: selectedFilter || undefined,
+    perPage: 20,
+    currentPage: 1
   }),
   getGroupKey,
   getItemTitle,
@@ -65,6 +68,8 @@ const CatalogPage = createWithRemoteLoader({
   const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
   const [selectedFilter, setSelectedFilter] = useState(searchParams.get(filterParam) || '');
+
+  const isLoggedIn = useMemo(() => hasUserToken(), []);
 
   const optionMap = useMemo(() => {
     return groupOptions.reduce((result, item) => {
@@ -165,7 +170,7 @@ const CatalogPage = createWithRemoteLoader({
           </section>
 
           <Fetch
-            {...Object.assign({}, getApi(apis), {
+            {...Object.assign({}, getApi(apis, isLoggedIn), {
               params: buildRequestData({ keyword, selectedFilter, filterParam })
             })}
             render={({ data, loading }) => {

@@ -4,6 +4,7 @@ import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { Tag, Space, Typography, Button, Empty } from 'antd';
 import { ArrowLeftOutlined, CalendarOutlined, ClockCircleOutlined, EyeInvisibleOutlined, EyeOutlined, LockOutlined, LoginOutlined, FileTextOutlined, UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import MarkdownRender from '@kne/markdown-components-render';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 import { hasUserToken } from '@components/Shared/auth';
@@ -56,8 +57,6 @@ const DocumentDetail = createWithRemoteLoader({
               </div>
             );
           }
-
-          const isRichContent = /<\/?[a-z][\s\S]*>/i.test(data.content || '');
 
           return (
             <div className={styles.detailPage}>
@@ -127,7 +126,9 @@ const DocumentDetail = createWithRemoteLoader({
                   <FileTextOutlined />
                   <span>正文内容</span>
                 </div>
-                <div className={styles.detailContentBody}>{isRichContent ? <CKEditor.Content>{data.content}</CKEditor.Content> : <div className={styles.articleContent}>{data.content}</div>}</div>
+                <div className={styles.detailContentBody}>
+                  <MarkdownRender>{data.content}</MarkdownRender>
+                </div>
               </section>
 
               <div className={styles.detailActions}>

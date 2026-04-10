@@ -14,7 +14,7 @@ const List = () => {
       filterParam="type"
       groupOptions={NPM_PACKAGE_TYPE_OPTIONS}
       groupFallback="other"
-      getApi={apis => apis.npmPackage.publicList}
+      getApi={(apis, isLoggedIn) => (isLoggedIn ? apis.npmPackage.list : apis.npmPackage.publicList)}
       getGroupKey={item => item.type || 'other'}
       getItemTitle={item => item.name || item.packageName}
       getItemDescription={item => item.description}

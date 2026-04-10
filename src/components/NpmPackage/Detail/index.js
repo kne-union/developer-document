@@ -1,13 +1,14 @@
 import { createWithRemoteLoader, useLoader } from '@kne/remote-loader';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import Fetch from '@kne/react-fetch';
 import { Button, Empty, Select, Space, Tag, Typography } from 'antd';
 import { GithubOutlined, LinkOutlined } from '@ant-design/icons';
 import createEntry from '@kne/modules-dev/dist/create-entry.modern';
 import '@kne/modules-dev/dist/create-entry.css';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import MarkdownComponentsRender from '@kne/markdown-components-render';
 import { NPM_PACKAGE_TYPE_LABELS } from '@components/Shared/catalogMeta';
+import { hasUserToken } from '@components/Shared/auth';
 import styles from '@components/Shared/detailPage.module.scss';
 
 const ExampleContent = createEntry.ExampleContent;
@@ -57,11 +58,15 @@ const Detail = createWithRemoteLoader({
   const [usePreset, Page] = remoteModules;
   const { apis } = usePreset();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [selectedVersion, setSelectedVersion] = useState(null);
+
+  const isLoggedIn = useMemo(() => hasUserToken(), []);
+  const apiConfig = isLoggedIn ? apis.npmPackage.detail : apis.npmPackage.publicDetail || apis.npmPackage.detail;
 
   return (
     <Fetch
-      {...Object.assign({}, apis.npmPackage.detail, {
+      {...Object.assign({}, apiConfig, {
         params: { id: searchParams.get('id') }
       })}
       render={({ data }) => {
@@ -71,6 +76,22 @@ const Detail = createWithRemoteLoader({
               <div className={styles.page}>
                 <div className={styles.emptyCard}>
                   <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="未找到对应组件" />
+                </div>
+              </div>
+            </Page>
+          );
+        }
+
+        if (!isLoggedIn && !data.isPublic) {
+          return (
+            <Page name="npm-package-detail">
+              <div className={styles.page}>
+                <div className={styles.emptyCard}>
+                  <Title level={4}>该组件未公开</Title>
+                  <Paragraph>登录后可查看完整信息与示例。</Paragraph>
+                  <Button type="primary" onClick={() => navigate('/account/login')}>
+                    去登录
+                  </Button>
                 </div>
               </div>
             </Page>
