@@ -94,6 +94,7 @@
     "@kne/antd-icon-select": "^1.0.0",
     "@kne/app-children-router": "^0.1.8",
     "@kne/axios-fetch": "^1.0.7",
+    "@kne/ensure-slash": "^0.1.0",
     "@kne/markdown-components-render": "^0.1.10",
     "@kne/react-box": "^0.1.6",
     "@kne/token-storage": "^1.0.0",

@@ -6,6 +6,7 @@ import createAjax from '@kne/axios-fetch';
 import { getToken } from '@kne/token-storage';
 import transform from 'lodash/transform';
 import { getApis } from '@components/Apis';
+import ensureSlash from '@kne/ensure-slash';
 
 window.PUBLIC_URL = window.runtimePublicUrl || process.env.PUBLIC_URL;
 
@@ -161,6 +162,19 @@ export const globalInit = async () => {
           url: `/api/v1/static/file-url/{id}`,
           paramsType: 'urlParams',
           ignoreSuccessState: true
+        },
+        uploadForEditor: ({ file }) => {
+          return ajax
+            .postForm({
+              url: `/api/v1/static/upload`,
+              data: { file }
+            })
+            .then(response => {
+              if (response.data.code === 0) {
+                response.data.data = `${ensureSlash(baseApiUrl)}/api/v1/static/file-id/${response.data.data.id}`;
+              }
+              return response;
+            });
         },
         upload: ({ file }) => {
           return ajax.postForm({
