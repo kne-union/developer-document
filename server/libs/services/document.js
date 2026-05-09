@@ -4,14 +4,14 @@ const { Op, literal } = require('sequelize');
 module.exports = fp(async (fastify, options) => {
   const { models } = fastify[options.name];
 
-  const create = async ({ name, content, status, isPublic, groups, createdUserId }) => {
+  const create = async (userInfo, { name, content, status, isPublic, groups }) => {
     return models.document.create({
       name,
       content,
       status: status || 'draft',
       isPublic: isPublic !== undefined ? isPublic : false,
       groups: groups || [],
-      createdUserId
+      createdUserId: userInfo.id
     });
   };
 
