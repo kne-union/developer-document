@@ -61,6 +61,10 @@
 }
 
 .headerCardNpm {
+  --npm-primary: #2563eb;
+  --npm-soft-bg: #eaf2ff;
+  --npm-soft-border: #cfe1ff;
+  --npm-soft-text: #1d4ed8;
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(14, 165, 233, 0.08) 45%, rgba(255, 255, 255, 0.92) 100%), linear-gradient(145deg, #ffffff 0%, #f7fbff 100%);
 }
 
@@ -76,6 +80,10 @@
 }
 
 .headerCardRemote {
+  --remote-primary: #0d9488;
+  --remote-soft-bg: #e8fbf7;
+  --remote-soft-border: #c5efe8;
+  --remote-soft-text: #0f766e;
   background: linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(16, 185, 129, 0.1) 48%, rgba(255, 255, 255, 0.92) 100%), linear-gradient(145deg, #ffffff 0%, #f3fcf9 100%);
 }
 
@@ -102,6 +110,49 @@
 .headerContent {
   min-width: 0;
   flex: 1;
+}
+
+.headerIdentity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.headerIdentityIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+
+.headerCardNpm .headerIdentityIcon {
+  background: var(--npm-soft-bg);
+  border: 1px solid var(--npm-soft-border);
+  color: var(--npm-primary);
+}
+
+.headerCardRemote .headerIdentityIcon {
+  background: var(--remote-soft-bg);
+  border: 1px solid var(--remote-soft-border);
+  color: var(--remote-primary);
+}
+
+.headerIdentityText {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.headerCardNpm .headerIdentityText {
+  color: var(--npm-soft-text);
+}
+
+.headerCardRemote .headerIdentityText {
+  color: var(--remote-soft-text);
 }
 
 .headerActions {

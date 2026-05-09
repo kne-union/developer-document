@@ -6,27 +6,12 @@ import { Tag, Space } from 'antd';
 import { CheckCircleOutlined, ClockCircleOutlined, EyeInvisibleOutlined, EyeOutlined, FileTextOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import styles from '../style.module.scss';
-
-const groupTagClassMap = {
-  tech: styles.groupTagTech,
-  life: styles.groupTagLife,
-  product: styles.groupTagProduct,
-  design: styles.groupTagDesign,
-  other: styles.groupTagOther
-};
+import { ShareButton, DocumentDetailView } from '@components/Shared';
 
 const Basic = createWithRemoteLoader({
   modules: ['components-core:InfoPage', 'components-core:Descriptions']
 })(({ remoteModules, data }) => {
   const [InfoPage, Descriptions] = remoteModules;
-
-  const groupsMap = {
-    tech: '技术',
-    life: '生活',
-    product: '产品',
-    design: '设计',
-    other: '其他'
-  };
 
   return (
     <InfoPage>
@@ -78,23 +63,13 @@ const Basic = createWithRemoteLoader({
   );
 });
 
-const Content = createWithRemoteLoader({
-  modules: ['components-core:InfoPage', 'components-thirdparty:CKEditor']
-})(({ remoteModules, data }) => {
-  const [InfoPage, CKEditor] = remoteModules;
-
-  return (
-    <InfoPage>
-      <InfoPage.Part title="文档正文">
-        <CKEditor.Content>{data.content}</CKEditor.Content>
-      </InfoPage.Part>
-    </InfoPage>
-  );
-});
+const Preview = ({ data }) => {
+  return <DocumentDetailView data={data} headerExtra={<ShareButton type="document" id={data.id} disabled={data.status !== 'published' || !data.isPublic} disabledReason={!data.isPublic ? '私密文档无法分享' : '未发布文档无法分享'} />} />;
+};
 
 const contentMap = {
   basic: Basic,
-  content: Content
+  preview: Preview
 };
 
 const TabDetail = createWithRemoteLoader({
@@ -163,7 +138,7 @@ const TabDetail = createWithRemoteLoader({
               },
               stateOption: [
                 { tab: '基本信息', key: 'basic' },
-                { tab: '文档正文', key: 'content' }
+                { tab: '内容预览', key: 'preview' }
               ]
             }}
           >

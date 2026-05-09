@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Space, Button, message } from 'antd';
+import { Space, Button, App } from 'antd';
 import { SyncOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Create from '../Actions/Create';
@@ -21,6 +21,7 @@ const List = createWithRemoteLoader({
   const [usePreset] = remoteModules;
   const { apis } = usePreset();
   const [loading, setLoading] = useState(false);
+  const { message } = App.useApp();
 
   const createStatusFilter = ({ value, label }) => {
     return { name: 'status', value: { label, value } };
@@ -41,11 +42,33 @@ const List = createWithRemoteLoader({
         }
         delete result.publishTime;
 
+        if (filterValue.groups) {
+          const code = filterValue.groups.value || filterValue.groups;
+          if (code) {
+            result.group = code;
+          }
+        }
+        delete result.groups;
+
         return result;
       }}
-      getFilterList={({ SuperSelectUserFilterItem, TypeDateRangePickerFilterItem }) => {
+      getFilterList={({ SuperSelectUserFilterItem, SuperSelectFilterItem, TypeDateRangePickerFilterItem }) => {
         return [
           [
+            <SuperSelectFilterItem
+              label="标签"
+              name="groups"
+              single
+              api={Object.assign({}, apis.group.list, { params: { type: 'blog' } })}
+              getSearchProps={({ searchText }) => ({ filter: { keyword: searchText } })}
+              interceptor={{
+                input: value => value && { code: value.value, name: value.label },
+                output: value => value && { value: value.code, label: value.name }
+              }}
+              pagination={{ paramsType: 'params' }}
+              valueKey="code"
+              labelKey="name"
+            />,
             <SuperSelectUserFilterItem
               single
               label="发布用户"

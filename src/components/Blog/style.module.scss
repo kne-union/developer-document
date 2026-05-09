@@ -391,10 +391,21 @@
   background-image: radial-gradient(circle at center, rgba(109, 93, 252, 0.14) 0%, rgba(109, 93, 252, 0.02) 70%);
 }
 
+.headerTitleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
 .detailTitle {
   position: relative;
   z-index: 1;
   margin: 0 !important;
+  flex: 1;
+  min-width: 0;
 }
 
 .detailDesc {
@@ -472,6 +483,12 @@
 
 .detailContentBody {
   padding: 16px 18px;
+
+  img,
+  video {
+    max-width: 100% !important;
+    height: auto !important;
+  }
 }
 
 .detailContentBody :global(.ck-content) {

@@ -6,6 +6,7 @@ import { Tag, Space } from 'antd';
 import { CheckCircleOutlined, ClockCircleOutlined, EyeInvisibleOutlined, EyeOutlined, ReadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import styles from '../style.module.scss';
+import { ShareButton, BlogDetailView } from '@components/Shared';
 
 const Basic = createWithRemoteLoader({
   modules: ['components-core:InfoPage', 'components-core:Descriptions']
@@ -68,23 +69,15 @@ const Basic = createWithRemoteLoader({
   );
 });
 
-const Content = createWithRemoteLoader({
-  modules: ['components-core:InfoPage', 'components-thirdparty:CKEditor']
+const Preview = createWithRemoteLoader({
+  modules: ['components-thirdparty:CKEditor']
 })(({ remoteModules, data }) => {
-  const [InfoPage, CKEditor] = remoteModules;
-
-  return (
-    <InfoPage>
-      <InfoPage.Part title="博客内容">
-        <CKEditor.Content>{data.content}</CKEditor.Content>
-      </InfoPage.Part>
-    </InfoPage>
-  );
+  return <BlogDetailView data={data} headerExtra={<ShareButton type="blog" id={data.id} disabled={data.status !== 'published' || !data.isPublic} disabledReason={!data.isPublic ? '私密文章无法分享' : '未发布文章无法分享'} />} />;
 });
 
 const contentMap = {
   basic: Basic,
-  content: Content
+  preview: Preview
 };
 
 const TabDetail = createWithRemoteLoader({
@@ -153,7 +146,7 @@ const TabDetail = createWithRemoteLoader({
               },
               stateOption: [
                 { tab: '基本信息', key: 'basic' },
-                { tab: '博客内容', key: 'content' }
+                { tab: '内容预览', key: 'preview' }
               ]
             }}
           >

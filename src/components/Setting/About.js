@@ -9,8 +9,8 @@ const About = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-core:InfoPage', 'components-core:FormInfo']
 })(({ remoteModules }) => {
   const [usePreset, InfoPage, FormInfo] = remoteModules;
-  const { Form, List, TableList, SubmitButton, CancelButton } = FormInfo;
-  const { Input, InputNumber, DatePicker, TextArea, Avatar } = FormInfo.fields;
+  const { Form, List, SubmitButton, CancelButton } = FormInfo;
+  const { Input, InputNumber, TextArea, Avatar, Upload } = FormInfo.fields;
   const [isEdit, setIsEdit] = useState(false);
   const { apis, ajax, setting } = usePreset();
   const { message } = App.useApp();
@@ -53,7 +53,12 @@ const About = createWithRemoteLoader({
               minLength={1}
               list={[<IconSelect name="icon" label="图标" />, <Input name="title" label="标题" rule="REQ LEN-0-100" />, <TextArea name="description" label="描述" rule="LEN-0-500" block />]}
             />
-            <TableList title="发展历程" name="history" minLength={1} list={[<DatePicker name="time" label="时间" rule="REQ" />, <Input name="event" label="事件" rule="REQ LEN-0-500" />]} />
+            <List
+              title="发展历程"
+              name="history"
+              minLength={1}
+              list={[<Input name="time" label="时间标题" rule="REQ LEN-0-100" />, <TextArea name="event" label="事件内容" rule="REQ LEN-0-500" block />, <Upload name="images" label="相关图片" interceptor="photo-string-list" />]}
+            />
             <List
               title="核心团队"
               name="coreTeam"
