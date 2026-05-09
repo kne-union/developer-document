@@ -112,7 +112,7 @@ const App = createWithRemoteLoader({
         list={[
           {
             path: 'account/*',
-            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" systemName="Developer Document" allowLanguageSwitch={false} registerOpen={false} />
+            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" systemName="Developer Document" registerOpen={false} />
           },
           {
             path: 'admin/initAdmin',

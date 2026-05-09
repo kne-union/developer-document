@@ -27,7 +27,7 @@ const DocumentList = createWithRemoteLoader({
   const [current, setCurrent] = useState(1);
   const locale = useGlobalValue('locale');
   const isLoggedIn = useMemo(() => hasUserToken(), []);
-  const selectedGroup = searchParams.get('group');
+  const [selectedGroup, setSelectedGroup] = useState(searchParams.get('group') || null);
   const [createdUserId, setCreatedUserId] = useState(null);
   const [createdAtRange, setCreatedAtRange] = useState(null);
 
@@ -40,6 +40,8 @@ const DocumentList = createWithRemoteLoader({
   const apiConfig = isLoggedIn ? apis.document.list : apis.document.publicList;
 
   const syncGroupToSearch = nextGroup => {
+    setSelectedGroup(nextGroup);
+    setCurrent(1);
     const nextSearchParams = new URLSearchParams(searchParams);
     if (nextGroup) {
       nextSearchParams.set('group', nextGroup);
@@ -156,39 +158,26 @@ const DocumentList = createWithRemoteLoader({
 
                 const treeData = [
                   {
-                    id: 'root',
+                    code: 'root',
                     name: '全部文档',
                     children: data
                   }
                 ];
 
-                // 获取所有节点 id 用于默认展开
-                const getAllNodeIds = nodes => {
-                  const ids = [];
-                  nodes.forEach(node => {
-                    ids.push(node.id);
-                    if (node.children && node.children.length > 0) {
-                      ids.push(...getAllNodeIds(node.children));
-                    }
-                  });
-                  return ids;
-                };
-
                 return (
                   <Tree
                     showIcon
                     defaultExpandAll
-                    selectedKeys={[selectedGroup]}
+                    selectedKeys={[selectedGroup || 'root']}
                     treeData={treeData}
                     titleRender={item => item.name}
-                    fieldNames={{ title: 'name', key: 'id', children: 'children' }}
+                    fieldNames={{ title: 'name', key: 'code', children: 'children' }}
                     onSelect={keys => {
                       const selectedKey = keys[0];
-                      setCurrent(1);
                       syncGroupToSearch(selectedKey === 'root' ? null : selectedKey);
                     }}
                     icon={props => {
-                      if (props.key === null) return <FileTextOutlined />;
+                      if (props.code === 'root') return <FileTextOutlined />;
                       return props.expanded ? <FolderOpenOutlined /> : <FolderOutlined />;
                     }}
                     className={styles.folderTree}

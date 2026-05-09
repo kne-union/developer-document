@@ -138,15 +138,15 @@ const BlogList = createWithRemoteLoader({
                     </Button>
                     {flatGroups.map(group => (
                       <Button
-                        key={group.id}
-                        type={selectedGroup === group.id ? 'primary' : 'default'}
+                        key={group.code}
+                        type={selectedGroup === group.code ? 'primary' : 'default'}
                         shape="round"
                         size="small"
                         style={group.level > 0 ? { marginLeft: group.level * 16 } : {}}
                         onClick={() => {
-                          setSelectedGroup(group.id);
+                          setSelectedGroup(group.code);
                           setCurrent(1);
-                          syncGroupToSearch(group.id);
+                          syncGroupToSearch(group.code);
                         }}
                       >
                         {group.name}
