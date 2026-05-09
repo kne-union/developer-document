@@ -40,7 +40,7 @@ const RightOptions = createWithRemoteLoader({
           const userInfo = value.value;
 
           return (
-            <Space size={0}>
+            <Space size={8}>
               <LanguageSwitch />
               <UserTool
                 avatar={userInfo.avatar}
