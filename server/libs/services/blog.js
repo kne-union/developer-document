@@ -4,7 +4,7 @@ const { Op, literal } = require('sequelize');
 module.exports = fp(async (fastify, options) => {
   const { models } = fastify[options.name];
 
-  const create = async ({ title, content, status, publishTime, isPublic, groups, createdUserId }) => {
+  const create = async (userInfo, { title, content, status, publishTime, isPublic, groups }) => {
     return models.blog.create({
       title,
       content,
@@ -12,7 +12,7 @@ module.exports = fp(async (fastify, options) => {
       publishTime,
       isPublic: isPublic !== undefined ? isPublic : true,
       groups: groups || [],
-      createdUserId
+      createdUserId: userInfo.id
     });
   };
 

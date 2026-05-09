@@ -25,9 +25,8 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => {
-      return services.document.create({
-        ...request.body,
-        createdUserId: request.user.id
+      return services.document.create(request.userInfo, {
+        ...request.body
       });
     }
   );

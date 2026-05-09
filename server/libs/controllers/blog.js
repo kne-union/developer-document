@@ -26,13 +26,12 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => {
-      return services.blog.create({
+      return services.blog.create(request.userInfo, {
         ...request.body,
         content: request.body.content ?? '',
         status: request.body.status ?? 'draft',
         isPublic: request.body.isPublic ?? false,
-        groups: request.body.groups ?? [],
-        createdUserId: request.user.id
+        groups: request.body.groups ?? []
       });
     }
   );
