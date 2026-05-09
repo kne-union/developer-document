@@ -6,12 +6,12 @@ const toMetaMap = (options, key) => {
 };
 
 export const NPM_PACKAGE_TYPE_OPTIONS = [
-  { value: 'frontend', label: '前端组件', color: 'blue' },
-  { value: 'nodejs', label: 'NodeJS', color: 'green' },
-  { value: 'engineering', label: '工程化', color: 'orange' },
-  { value: 'miniprogram', label: '小程序', color: 'cyan' },
-  { value: 'prompts', label: 'Prompts', color: 'purple' },
-  { value: 'other', label: '其他', color: 'default' }
+  { value: 'frontend', label: 'shared.catalogMeta.frontend', color: 'blue' },
+  { value: 'nodejs', label: 'shared.catalogMeta.nodejs', color: 'green' },
+  { value: 'engineering', label: 'shared.catalogMeta.engineering', color: 'orange' },
+  { value: 'miniprogram', label: 'shared.catalogMeta.miniprogram', color: 'cyan' },
+  { value: 'prompts', label: 'shared.catalogMeta.prompts', color: 'purple' },
+  { value: 'other', label: 'shared.catalogMeta.other', color: 'default' }
 ];
 
 export const NPM_PACKAGE_TYPE_ORDER = NPM_PACKAGE_TYPE_OPTIONS.map(item => item.value);
@@ -19,8 +19,8 @@ export const NPM_PACKAGE_TYPE_LABELS = toMetaMap(NPM_PACKAGE_TYPE_OPTIONS, 'labe
 export const NPM_PACKAGE_TYPE_COLORS = toMetaMap(NPM_PACKAGE_TYPE_OPTIONS, 'color');
 
 export const REMOTE_COMPONENT_GROUP_OPTIONS = [
-  { value: 'business', label: '业务', color: 'blue' },
-  { value: 'common', label: '通用', color: 'green' }
+  { value: 'business', label: 'shared.catalogMeta.business', color: 'blue' },
+  { value: 'common', label: 'shared.catalogMeta.common', color: 'green' }
 ];
 
 export const REMOTE_COMPONENT_GROUP_ORDER = REMOTE_COMPONENT_GROUP_OPTIONS.map(item => item.value);

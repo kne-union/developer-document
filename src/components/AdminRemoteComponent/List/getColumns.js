@@ -1,7 +1,7 @@
 import { Tag, Space } from 'antd';
-import { REMOTE_COMPONENT_GROUP_LABELS, REMOTE_COMPONENT_GROUP_COLORS } from '@components/Shared/catalogMeta';
+import { REMOTE_COMPONENT_GROUP_COLORS } from '@components/Shared/catalogMeta';
 
-const getColumns = ({ navigate, baseUrl }) => {
+const getColumns = ({ navigate, baseUrl, formatMessage }) => {
   return [
     {
       name: 'id',
@@ -15,7 +15,7 @@ const getColumns = ({ navigate, baseUrl }) => {
     },
     {
       name: 'remote',
-      title: '组件名称',
+      title: formatMessage({ id: 'adminRemoteComponent.getColumns.componentName' }),
       type: 'mainInfo',
       hover: true,
       onClick: ({ colItem }) => {
@@ -24,7 +24,7 @@ const getColumns = ({ navigate, baseUrl }) => {
     },
     {
       name: 'name',
-      title: '显示名称',
+      title: formatMessage({ id: 'adminNpmPackage.getColumns.displayName' }),
       type: 'text',
       valueOf: item => {
         return item.name || '-';
@@ -32,15 +32,15 @@ const getColumns = ({ navigate, baseUrl }) => {
     },
     {
       name: 'group',
-      title: '分类',
+      title: formatMessage({ id: 'common.category' }),
       valueOf: item => {
         const group = item.group || 'common';
-        return <Tag color={REMOTE_COMPONENT_GROUP_COLORS[group] || 'default'}>{REMOTE_COMPONENT_GROUP_LABELS[group] || group}</Tag>;
+        return <Tag color={REMOTE_COMPONENT_GROUP_COLORS[group] || 'default'}>{formatMessage({ id: `shared.catalogMeta.${group}` })}</Tag>;
       }
     },
     {
       name: 'packageName',
-      title: 'NPM包名',
+      title: formatMessage({ id: 'adminRemoteComponent.getColumns.npmPackageName' }),
       type: 'text',
       valueOf: item => {
         return item.packageName || '-';
@@ -56,7 +56,7 @@ const getColumns = ({ navigate, baseUrl }) => {
     },
     {
       name: 'defaultVersion',
-      title: '默认版本',
+      title: formatMessage({ id: 'adminRemoteComponent.getColumns.deployedVersions' }),
       type: 'text',
       valueOf: item => {
         return item.defaultVersion || '-';
@@ -64,15 +64,15 @@ const getColumns = ({ navigate, baseUrl }) => {
     },
     {
       name: 'isPublic',
-      title: '是否公开',
+      title: formatMessage({ id: 'common.isPublic' }),
       type: 'tag',
       valueOf: item => {
-        return item.isPublic ? { type: 'success', text: '公开' } : { type: 'default', text: '私密' };
+        return item.isPublic ? { type: 'success', text: formatMessage({ id: 'common.public' }) } : { type: 'default', text: formatMessage({ id: 'common.private' }) };
       }
     },
     {
       name: 'examples',
-      title: '部署版本',
+      title: formatMessage({ id: 'adminRemoteComponent.getColumns.deployedVersions' }),
       valueOf: item => {
         const examples = item.examples || [];
         if (examples.length === 0) return '-';
@@ -87,7 +87,7 @@ const getColumns = ({ navigate, baseUrl }) => {
     },
     {
       name: 'createdAt',
-      title: '创建时间',
+      title: formatMessage({ id: 'common.createdAt' }),
       type: 'datetime'
     }
   ];

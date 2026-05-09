@@ -1,24 +1,29 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const FormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo', 'components-admin:Editor', 'components-admin:GroupSelect']
-})(({ remoteModules }) => {
-  const [FormInfo, Editor, GroupSelect] = remoteModules;
-  const { Input, Switch, DatePicker } = FormInfo.fields;
+})(
+  withLocale(({ remoteModules }) => {
+    const [FormInfo, Editor, GroupSelect] = remoteModules;
+    const { Input, Switch, DatePicker } = FormInfo.fields;
+    const { formatMessage } = useIntl();
 
-  return (
-    <>
-      <FormInfo
-        list={[
-          <Input name="title" label="标题" rule="REQ LEN-0-200" block />,
-          <Editor name="content" label="内容" rule="REQ" rows={8} block />,
-          <DatePicker name="publishTime" label="发布时间" placeholder="留空则立即发布" showTime />,
-          <GroupSelect name="groups" type="blog" label="分组" showAdd />,
-          <Switch name="isPublic" label="是否公开" />
-        ]}
-      />
-    </>
-  );
-});
+    return (
+      <>
+        <FormInfo
+          list={[
+            <Input name="title" label={formatMessage({ id: 'common.title' })} rule="REQ LEN-0-200" block />,
+            <Editor name="content" label={formatMessage({ id: 'adminBlog.formInner.contentLabel' })} rule="REQ" rows={8} block />,
+            <DatePicker name="publishTime" label={formatMessage({ id: 'common.publishTime' })} placeholder={formatMessage({ id: 'adminBlog.formInner.publishTimePlaceholder' })} showTime />,
+            <GroupSelect name="groups" type="blog" label={formatMessage({ id: 'common.group' })} showAdd />,
+            <Switch name="isPublic" label={formatMessage({ id: 'common.isPublic' })} />
+          ]}
+        />
+      </>
+    );
+  })
+);
 
 export default FormInner;

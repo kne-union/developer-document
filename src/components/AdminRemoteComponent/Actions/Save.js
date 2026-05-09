@@ -1,42 +1,47 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { App, Button } from 'antd';
 import FormInner from '../FormInner';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const Save = createWithRemoteLoader({
   modules: ['components-core:FormInfo@useFormModal', 'components-core:Global@usePreset']
-})(({ remoteModules, data, onSuccess, ...props }) => {
-  const [useFormModal, usePreset] = remoteModules;
-  const formModal = useFormModal();
-  const { ajax, apis } = usePreset();
-  const { message } = App.useApp();
+})(
+  withLocale(({ remoteModules, data, onSuccess, ...props }) => {
+    const [useFormModal, usePreset] = remoteModules;
+    const formModal = useFormModal();
+    const { ajax, apis } = usePreset();
+    const { message } = App.useApp();
+    const { formatMessage } = useIntl();
 
-  return (
-    <Button
-      {...props}
-      onClick={() => {
-        formModal({
-          title: '编辑远程组件',
-          size: 'small',
-          formProps: {
-            data: Object.assign({}, data),
-            onSubmit: async formData => {
-              const { data: resData } = await ajax(
-                Object.assign({}, apis.remoteComponent.update, {
-                  data: Object.assign({}, formData, { id: data.id })
-                })
-              );
-              if (resData.code !== 0) {
-                return false;
+    return (
+      <Button
+        {...props}
+        onClick={() => {
+          formModal({
+            title: formatMessage({ id: 'adminRemoteComponent.save.modalTitle' }),
+            size: 'small',
+            formProps: {
+              data: Object.assign({}, data),
+              onSubmit: async formData => {
+                const { data: resData } = await ajax(
+                  Object.assign({}, apis.remoteComponent.update, {
+                    data: Object.assign({}, formData, { id: data.id })
+                  })
+                );
+                if (resData.code !== 0) {
+                  return false;
+                }
+                message.success(formatMessage({ id: 'common.saveSuccess' }));
+                onSuccess && onSuccess();
               }
-              message.success('保存成功');
-              onSuccess && onSuccess();
-            }
-          },
-          children: <FormInner />
-        });
-      }}
-    />
-  );
-});
+            },
+            children: <FormInner />
+          });
+        }}
+      />
+    );
+  })
+);
 
 export default Save;

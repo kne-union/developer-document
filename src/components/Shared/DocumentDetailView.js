@@ -3,11 +3,15 @@ import { CalendarOutlined, ClockCircleOutlined, EyeInvisibleOutlined, EyeOutline
 import dayjs from 'dayjs';
 import MarkdownRender from '@kne/markdown-components-render';
 import classNames from 'classnames';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 import styles from '@components/Document/style.module.scss';
 
 const { Title } = Typography;
 
-const DocumentDetailView = ({ data, headerExtra, footer, simple }) => {
+const DocumentDetailView = withLocale(({ data, headerExtra, footer, simple }) => {
+  const { formatMessage } = useIntl();
+
   return (
     <div className={styles.detailPage}>
       <section className={styles.detailHeader}>
@@ -15,7 +19,7 @@ const DocumentDetailView = ({ data, headerExtra, footer, simple }) => {
           <span className={styles.headerIdentityIcon}>
             <FileTextOutlined />
           </span>
-          <span className={styles.headerIdentityText}>文档中心</span>
+          <span className={styles.headerIdentityText}>{formatMessage({ id: 'shared.documentDetail.identityLabel' })}</span>
         </div>
         <div className={styles.headerTitleRow}>
           <Title level={2} className={styles.detailTitle}>
@@ -31,10 +35,12 @@ const DocumentDetailView = ({ data, headerExtra, footer, simple }) => {
                   {group.name}
                 </Tag>
               ))}
-              <Tag className={classNames(styles.documentTag, data.status === 'published' ? styles.tagLife : styles.tagProduct)}>{data.status === 'published' ? '已发布' : '草稿'}</Tag>
+              <Tag className={classNames(styles.documentTag, data.status === 'published' ? styles.tagLife : styles.tagProduct)}>
+                {data.status === 'published' ? formatMessage({ id: 'common.published' }) : formatMessage({ id: 'common.draft' })}
+              </Tag>
               {!data.isPublic && (
                 <Tag icon={<LockOutlined />} className={classNames(styles.documentTag, styles.tagPrivate)}>
-                  私密
+                  {formatMessage({ id: 'common.private' })}
                 </Tag>
               )}
             </div>
@@ -44,8 +50,8 @@ const DocumentDetailView = ({ data, headerExtra, footer, simple }) => {
                   <UserOutlined />
                 </span>
                 <div>
-                  <div className={styles.detailMetaLabel}>作者</div>
-                  <div className={styles.detailMetaValue}>{data.createdUser?.email || '匿名'}</div>
+                  <div className={styles.detailMetaLabel}>{formatMessage({ id: 'shared.documentDetail.authorLabel' })}</div>
+                  <div className={styles.detailMetaValue}>{data.createdUser?.email || formatMessage({ id: 'common.anonymous' })}</div>
                 </div>
               </div>
               <div className={styles.detailMetaItem}>
@@ -53,7 +59,7 @@ const DocumentDetailView = ({ data, headerExtra, footer, simple }) => {
                   <CalendarOutlined />
                 </span>
                 <div>
-                  <div className={styles.detailMetaLabel}>创建时间</div>
+                  <div className={styles.detailMetaLabel}>{formatMessage({ id: 'shared.documentDetail.createdTimeLabel' })}</div>
                   <div className={styles.detailMetaValue}>{dayjs(data.createdAt).format('YYYY-MM-DD HH:mm')}</div>
                 </div>
               </div>
@@ -62,15 +68,15 @@ const DocumentDetailView = ({ data, headerExtra, footer, simple }) => {
                   <ClockCircleOutlined />
                 </span>
                 <div>
-                  <div className={styles.detailMetaLabel}>更新时间</div>
+                  <div className={styles.detailMetaLabel}>{formatMessage({ id: 'shared.documentDetail.updateTimeLabel' })}</div>
                   <div className={styles.detailMetaValue}>{dayjs(data.updatedAt || data.createdAt).format('YYYY-MM-DD HH:mm')}</div>
                 </div>
               </div>
               <div className={styles.detailMetaItem}>
                 <span className={styles.detailMetaIcon}>{data.isPublic ? <EyeOutlined /> : <EyeInvisibleOutlined />}</span>
                 <div>
-                  <div className={styles.detailMetaLabel}>可见性</div>
-                  <div className={styles.detailMetaValue}>{data.isPublic ? '公开' : '私密'}</div>
+                  <div className={styles.detailMetaLabel}>{formatMessage({ id: 'shared.documentDetail.visibilityLabel' })}</div>
+                  <div className={styles.detailMetaValue}>{data.isPublic ? formatMessage({ id: 'common.public' }) : formatMessage({ id: 'common.private' })}</div>
                 </div>
               </div>
             </div>
@@ -81,7 +87,7 @@ const DocumentDetailView = ({ data, headerExtra, footer, simple }) => {
       <section className={styles.detailContent}>
         <div className={styles.detailContentHeader}>
           <FileTextOutlined />
-          <span>正文内容</span>
+          <span>{formatMessage({ id: 'shared.documentDetail.contentLabel' })}</span>
         </div>
         <div className={styles.detailContentBody}>
           <MarkdownRender>{data.content}</MarkdownRender>
@@ -91,6 +97,6 @@ const DocumentDetailView = ({ data, headerExtra, footer, simple }) => {
       {footer}
     </div>
   );
-};
+});
 
 export default DocumentDetailView;

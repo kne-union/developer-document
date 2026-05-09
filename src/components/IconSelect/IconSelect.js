@@ -2,6 +2,8 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import { Select } from 'antd';
 import * as icons from '@ant-design/icons';
 import style from './style.module.scss';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const iconList = Object.keys(icons)
   .filter(name => /(Outlined|Filled|TwoTone)$/.test(name))
@@ -31,10 +33,13 @@ const IconSelectField = props => {
 };
 const IconSelect = createWithRemoteLoader({
   modules: ['components-core:FormInfo']
-})(({ remoteModules, ...props }) => {
-  const [FormInfo] = remoteModules;
-  const { useOnChange } = FormInfo.hooks;
-  const render = useOnChange(Object.assign({}, { placeholder: '请选择' + (props.label || '') }, props));
-  return render(IconSelectField);
-});
+})(
+  withLocale(({ remoteModules, ...props }) => {
+    const [FormInfo] = remoteModules;
+    const { useOnChange } = FormInfo.hooks;
+    const { formatMessage } = useIntl();
+    const render = useOnChange(Object.assign({}, { placeholder: formatMessage({ id: 'iconSelect.placeholder' }) + (props.label || '') }, props));
+    return render(IconSelectField);
+  })
+);
 export default IconSelect;

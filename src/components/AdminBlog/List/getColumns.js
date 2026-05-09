@@ -1,4 +1,4 @@
-const getColumns = ({ navigate, baseUrl }) => {
+const getColumns = ({ navigate, baseUrl, formatMessage }) => {
   return [
     {
       name: 'id',
@@ -12,7 +12,7 @@ const getColumns = ({ navigate, baseUrl }) => {
     },
     {
       name: 'title',
-      title: '标题',
+      title: formatMessage({ id: 'common.title' }),
       type: 'mainInfo',
       hover: true,
       onClick: ({ colItem }) => {
@@ -21,29 +21,29 @@ const getColumns = ({ navigate, baseUrl }) => {
     },
     {
       name: 'status',
-      title: '状态',
+      title: formatMessage({ id: 'common.status' }),
       type: 'tag',
       valueOf: item => {
         if (item.status === 'published') {
-          return { type: 'success', text: '已发布' };
+          return { type: 'success', text: formatMessage({ id: 'common.published' }) };
         }
         if (item.status === 'draft') {
-          return { type: 'warning', text: '草稿' };
+          return { type: 'warning', text: formatMessage({ id: 'common.draft' }) };
         }
-        return { type: 'default', text: '未知' };
+        return { type: 'default', text: formatMessage({ id: 'common.unknown' }) };
       }
     },
     {
       name: 'isPublic',
-      title: '是否公开',
+      title: formatMessage({ id: 'common.isPublic' }),
       type: 'tag',
       valueOf: item => {
-        return item.isPublic ? { type: 'success', text: '公开' } : { type: 'default', text: '私密' };
+        return item.isPublic ? { type: 'success', text: formatMessage({ id: 'common.public' }) } : { type: 'default', text: formatMessage({ id: 'common.private' }) };
       }
     },
     {
       name: 'groups',
-      title: '标签',
+      title: formatMessage({ id: 'adminBlog.getColumns.tags' }),
       type: 'tag',
       valueOf: item => {
         const groups = item.groups || [];
@@ -54,7 +54,7 @@ const getColumns = ({ navigate, baseUrl }) => {
     },
     {
       name: 'createdUser',
-      title: '创建人',
+      title: formatMessage({ id: 'common.creator' }),
       type: 'text',
       valueOf: item => {
         return item.createdUser?.email || '-';
@@ -62,7 +62,7 @@ const getColumns = ({ navigate, baseUrl }) => {
     },
     {
       name: 'publishTime',
-      title: '发布时间',
+      title: formatMessage({ id: 'adminBlog.getColumns.publishTime' }),
       type: 'datetime',
       valueOf: item => {
         return item.publishTime ? item.publishTime : '-';
@@ -70,7 +70,7 @@ const getColumns = ({ navigate, baseUrl }) => {
     },
     {
       name: 'createdAt',
-      title: '创建时间',
+      title: formatMessage({ id: 'common.createdAt' }),
       type: 'datetime'
     }
   ];

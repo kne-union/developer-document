@@ -1,37 +1,42 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { App, Button } from 'antd';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const Remove = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']
-})(({ remoteModules, data, onSuccess, ...props }) => {
-  const [usePreset] = remoteModules;
-  const { ajax, apis } = usePreset();
-  const { message, modal } = App.useApp();
+})(
+  withLocale(({ remoteModules, data, onSuccess, ...props }) => {
+    const [usePreset] = remoteModules;
+    const { ajax, apis } = usePreset();
+    const { message, modal } = App.useApp();
+    const { formatMessage } = useIntl();
 
-  return (
-    <Button
-      {...props}
-      onClick={() => {
-        modal.confirm({
-          title: '确认删除',
-          content: '确定要删除此远程组件吗？',
-          onOk: async () => {
-            const { data: resData } = await ajax(
-              Object.assign({}, apis.remoteComponent.delete, {
-                data: { id: data.id }
-              })
-            );
-            if (resData.code !== 0) {
-              message.error('删除失败');
-              return;
+    return (
+      <Button
+        {...props}
+        onClick={() => {
+          modal.confirm({
+            title: formatMessage({ id: 'adminRemoteComponent.remove.confirmTitle' }),
+            content: formatMessage({ id: 'adminRemoteComponent.actions.removeConfirm' }),
+            onOk: async () => {
+              const { data: resData } = await ajax(
+                Object.assign({}, apis.remoteComponent.delete, {
+                  data: { id: data.id }
+                })
+              );
+              if (resData.code !== 0) {
+                message.error(formatMessage({ id: 'common.deleteFailed' }));
+                return;
+              }
+              message.success(formatMessage({ id: 'common.deleteSuccess' }));
+              onSuccess && onSuccess();
             }
-            message.success('删除成功');
-            onSuccess && onSuccess();
-          }
-        });
-      }}
-    />
-  );
-});
+          });
+        }}
+      />
+    );
+  })
+);
 
 export default Remove;

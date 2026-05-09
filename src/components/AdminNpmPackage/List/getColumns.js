@@ -1,7 +1,7 @@
 import { Tag } from 'antd';
-import { NPM_PACKAGE_TYPE_LABELS, NPM_PACKAGE_TYPE_COLORS } from '@components/Shared/catalogMeta';
+import { NPM_PACKAGE_TYPE_COLORS } from '@components/Shared/catalogMeta';
 
-const getColumns = ({ navigate, baseUrl }) => {
+const getColumns = ({ navigate, baseUrl, formatMessage }) => {
   return [
     {
       name: 'packageName',
@@ -13,32 +13,32 @@ const getColumns = ({ navigate, baseUrl }) => {
     },
     {
       name: 'name',
-      title: '显示名称',
+      title: formatMessage({ id: 'adminNpmPackage.getColumns.displayName' }),
       valueOf: item => item.name || '-',
       hover: true,
       onClick: ({ colItem }) => navigate(`${baseUrl}/detail?id=${colItem.id}`)
     },
     {
       name: 'type',
-      title: '类型',
+      title: formatMessage({ id: 'common.type' }),
       valueOf: item => {
         const type = item.type || 'other';
-        return <Tag color={NPM_PACKAGE_TYPE_COLORS[type] || 'default'}>{NPM_PACKAGE_TYPE_LABELS[type] || type}</Tag>;
+        return <Tag color={NPM_PACKAGE_TYPE_COLORS[type] || 'default'}>{formatMessage({ id: `shared.catalogMeta.${type}` })}</Tag>;
       }
     },
     {
       name: 'latestVersion',
-      title: '最新版本',
+      title: formatMessage({ id: 'adminNpmPackage.getColumns.latestVersion' }),
       valueOf: item => item.latestVersion || '-'
     },
     {
       name: 'isPublic',
-      title: '公开',
-      valueOf: item => <Tag color={item.isPublic ? 'success' : 'warning'}>{item.isPublic ? '是' : '否'}</Tag>
+      title: formatMessage({ id: 'common.isPublic' }),
+      valueOf: item => <Tag color={item.isPublic ? 'success' : 'warning'}>{item.isPublic ? formatMessage({ id: 'common.yes' }) : formatMessage({ id: 'common.no' })}</Tag>
     },
     {
       name: 'description',
-      title: '描述',
+      title: formatMessage({ id: 'common.description' }),
       type: 'description',
       ellipsis: true,
       valueOf: item => item.description || '-'

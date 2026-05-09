@@ -5,6 +5,8 @@ import { Button, Empty, Input, Skeleton, Space, Tag, Typography } from 'antd';
 import { ApiOutlined, AppstoreOutlined, CloudServerOutlined } from '@ant-design/icons';
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 import { hasUserToken } from '@components/Shared/auth';
 import styles from './style.module.scss';
 
@@ -34,254 +36,262 @@ const SummaryItem = ({ label, value }) => {
 
 const CatalogPage = createWithRemoteLoader({
   modules: ['components-core:Layout@Page', 'components-core:Global@usePreset']
-})(({
-  remoteModules,
-  pageName = 'catalog-page',
-  title,
-  description,
-  headerVariant = 'default',
-  searchPlaceholder = '请输入关键字',
-  emptyDescription = '暂无内容',
-  filterLabel = '分类',
-  filterParam = 'type',
-  groupOptions = [],
-  groupFallback,
-  getApi,
-  buildRequestData = ({ keyword, selectedFilter, filterParam }) => ({
-    keyword,
-    [filterParam]: selectedFilter || undefined,
-    perPage: 20,
-    currentPage: 1
-  }),
-  getGroupKey,
-  getItemTitle,
-  getItemDescription,
-  getItemIdentifier,
-  getItemVersion,
-  getNavigateTo,
-  isPublic = item => item.isPublic !== false
-}) => {
-  const [Page, usePreset] = remoteModules;
-  const { apis } = usePreset();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
-  const [selectedFilter, setSelectedFilter] = useState(searchParams.get(filterParam) || '');
+})(
+  withLocale(
+    ({
+      remoteModules,
+      pageName = 'catalog-page',
+      title,
+      description,
+      headerVariant = 'default',
+      searchPlaceholder,
+      emptyDescription,
+      filterLabel,
+      filterParam = 'type',
+      groupOptions = [],
+      groupFallback,
+      getApi,
+      buildRequestData = ({ keyword, selectedFilter, filterParam }) => ({
+        keyword,
+        [filterParam]: selectedFilter || undefined,
+        perPage: 20,
+        currentPage: 1
+      }),
+      getGroupKey,
+      getItemTitle,
+      getItemDescription,
+      getItemIdentifier,
+      getItemVersion,
+      getNavigateTo,
+      isPublic = item => item.isPublic !== false
+    }) => {
+      const [Page, usePreset] = remoteModules;
+      const { apis } = usePreset();
+      const { formatMessage } = useIntl();
+      const navigate = useNavigate();
+      const location = useLocation();
+      const [searchParams] = useSearchParams();
+      const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
+      const [selectedFilter, setSelectedFilter] = useState(searchParams.get(filterParam) || '');
 
-  const isLoggedIn = useMemo(() => hasUserToken(), []);
+      const isLoggedIn = useMemo(() => hasUserToken(), []);
 
-  const optionMap = useMemo(() => {
-    return groupOptions.reduce((result, item) => {
-      result[item.value] = item;
-      return result;
-    }, {});
-  }, [groupOptions]);
+      const optionMap = useMemo(() => {
+        return groupOptions.reduce((result, item) => {
+          result[item.value] = item;
+          return result;
+        }, {});
+      }, [groupOptions]);
 
-  const syncParams = ({ nextKeyword = keyword, nextFilter = selectedFilter }) => {
-    const nextSearchParams = new URLSearchParams(searchParams);
+      const syncParams = ({ nextKeyword = keyword, nextFilter = selectedFilter }) => {
+        const nextSearchParams = new URLSearchParams(searchParams);
 
-    if (nextKeyword) {
-      nextSearchParams.set('keyword', nextKeyword);
-    } else {
-      nextSearchParams.delete('keyword');
-    }
+        if (nextKeyword) {
+          nextSearchParams.set('keyword', nextKeyword);
+        } else {
+          nextSearchParams.delete('keyword');
+        }
 
-    if (nextFilter) {
-      nextSearchParams.set(filterParam, nextFilter);
-    } else {
-      nextSearchParams.delete(filterParam);
-    }
+        if (nextFilter) {
+          nextSearchParams.set(filterParam, nextFilter);
+        } else {
+          nextSearchParams.delete(filterParam);
+        }
 
-    const queryString = nextSearchParams.toString();
-    navigate(`${location.pathname}${queryString ? `?${queryString}` : ''}`, { replace: true });
-  };
+        const queryString = nextSearchParams.toString();
+        navigate(`${location.pathname}${queryString ? `?${queryString}` : ''}`, { replace: true });
+      };
 
-  const handleSearch = value => {
-    const nextKeyword = value.trim();
-    setKeyword(nextKeyword);
-    syncParams({ nextKeyword });
-  };
+      const handleSearch = value => {
+        const nextKeyword = value.trim();
+        setKeyword(nextKeyword);
+        syncParams({ nextKeyword });
+      };
 
-  const handleFilterChange = value => {
-    setSelectedFilter(value);
-    syncParams({ nextFilter: value });
-  };
+      const handleFilterChange = value => {
+        setSelectedFilter(value);
+        syncParams({ nextFilter: value });
+      };
 
-  const variantMetaMap = {
-    npm: { label: 'NPM 生态' },
-    remote: { label: '远程模块' },
-    default: { label: '资源目录' }
-  };
-  const variantMeta = variantMetaMap[headerVariant] || variantMetaMap.default;
-  const headerIconNode = headerVariant === 'npm' ? <ApiOutlined /> : headerVariant === 'remote' ? <CloudServerOutlined /> : <AppstoreOutlined />;
+      const variantMetaMap = {
+        npm: { label: formatMessage({ id: 'shared.catalogPage.variantNpmLabel' }) },
+        remote: { label: formatMessage({ id: 'shared.catalogPage.variantRemoteLabel' }) },
+        default: { label: formatMessage({ id: 'shared.catalogPage.variantDefaultLabel' }) }
+      };
+      const variantMeta = variantMetaMap[headerVariant] || variantMetaMap.default;
+      const headerIconNode = headerVariant === 'npm' ? <ApiOutlined /> : headerVariant === 'remote' ? <CloudServerOutlined /> : <AppstoreOutlined />;
 
-  const contentClassName = classNames(styles.content, headerVariant === 'npm' && styles['themeNpm'], headerVariant === 'remote' && styles['themeRemote'], headerVariant !== 'npm' && headerVariant !== 'remote' && styles['themeDefault']);
+      const contentClassName = classNames(styles.content, headerVariant === 'npm' && styles['themeNpm'], headerVariant === 'remote' && styles['themeRemote'], headerVariant !== 'npm' && headerVariant !== 'remote' && styles['themeDefault']);
 
-  const headerPanelClassName = classNames(styles.headerPanel, headerVariant === 'npm' && styles['headerPanelNpm'], headerVariant === 'remote' && styles['headerPanelRemote']);
+      const headerPanelClassName = classNames(styles.headerPanel, headerVariant === 'npm' && styles['headerPanelNpm'], headerVariant === 'remote' && styles['headerPanelRemote']);
 
-  return (
-    <Page name={pageName} noMargin>
-      <div className={styles.page}>
-        <div className={contentClassName}>
-          <section className={headerPanelClassName}>
-            <div className={styles.headerTop}>
-              <div className={styles.headerText}>
-                <div className={styles['headerIdentity']}>
-                  <span className={styles['headerIdentityIcon']}>{headerIconNode}</span>
-                  <Text className={styles['headerIdentityText']}>{variantMeta.label}</Text>
+      return (
+        <Page name={pageName} noMargin>
+          <div className={styles.page}>
+            <div className={contentClassName}>
+              <section className={headerPanelClassName}>
+                <div className={styles.headerTop}>
+                  <div className={styles.headerText}>
+                    <div className={styles['headerIdentity']}>
+                      <span className={styles['headerIdentityIcon']}>{headerIconNode}</span>
+                      <Text className={styles['headerIdentityText']}>{variantMeta.label}</Text>
+                    </div>
+                    <Title level={2} className={styles.pageTitle}>
+                      {title}
+                    </Title>
+                    <Paragraph className={styles.pageDescription}>{description}</Paragraph>
+                  </div>
+                  <div className={styles.searchBox}>
+                    <Search
+                      allowClear
+                      enterButton={formatMessage({ id: 'shared.catalogPage.searchButton' })}
+                      size="large"
+                      placeholder={searchPlaceholder || formatMessage({ id: 'common.search' })}
+                      value={keyword}
+                      onChange={event => {
+                        const nextValue = event.target.value;
+                        setKeyword(nextValue);
+                        if (!nextValue) {
+                          handleSearch('');
+                        }
+                      }}
+                      onSearch={handleSearch}
+                    />
+                  </div>
                 </div>
-                <Title level={2} className={styles.pageTitle}>
-                  {title}
-                </Title>
-                <Paragraph className={styles.pageDescription}>{description}</Paragraph>
-              </div>
-              <div className={styles.searchBox}>
-                <Search
-                  allowClear
-                  enterButton="搜索"
-                  size="large"
-                  placeholder={searchPlaceholder}
-                  value={keyword}
-                  onChange={event => {
-                    const nextValue = event.target.value;
-                    setKeyword(nextValue);
-                    if (!nextValue) {
-                      handleSearch('');
+                <div className={styles.filterRow}>
+                  <Text className={styles.filterLabel}>{filterLabel || formatMessage({ id: 'common.category' })}：</Text>
+                  <div className={styles.filterList}>
+                    <Button className={styles['filterButton']} size="small" type={selectedFilter ? 'default' : 'primary'} onClick={() => handleFilterChange('')}>
+                      {formatMessage({ id: 'shared.catalogPage.allFilter' })}
+                    </Button>
+                    {groupOptions.map(item => (
+                      <Button className={styles['filterButton']} key={item.value} size="small" type={selectedFilter === item.value ? 'primary' : 'default'} onClick={() => handleFilterChange(item.value)}>
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <Fetch
+                {...Object.assign({}, getApi(apis, isLoggedIn), {
+                  params: buildRequestData({ keyword, selectedFilter, filterParam })
+                })}
+                render={({ data, loading }) => {
+                  const list = data?.pageData || [];
+                  const groupedData = list.reduce((result, item) => {
+                    const currentGroup = getGroupKey(item) || groupFallback;
+                    if (!result[currentGroup]) {
+                      result[currentGroup] = [];
                     }
-                  }}
-                  onSearch={handleSearch}
-                />
-              </div>
-            </div>
-            <div className={styles.filterRow}>
-              <Text className={styles.filterLabel}>{filterLabel}：</Text>
-              <div className={styles.filterList}>
-                <Button className={styles['filterButton']} size="small" type={selectedFilter ? 'default' : 'primary'} onClick={() => handleFilterChange('')}>
-                  全部
-                </Button>
-                {groupOptions.map(item => (
-                  <Button className={styles['filterButton']} key={item.value} size="small" type={selectedFilter === item.value ? 'primary' : 'default'} onClick={() => handleFilterChange(item.value)}>
-                    {item.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </section>
+                    result[currentGroup].push(item);
+                    return result;
+                  }, {});
 
-          <Fetch
-            {...Object.assign({}, getApi(apis, isLoggedIn), {
-              params: buildRequestData({ keyword, selectedFilter, filterParam })
-            })}
-            render={({ data, loading }) => {
-              const list = data?.pageData || [];
-              const groupedData = list.reduce((result, item) => {
-                const currentGroup = getGroupKey(item) || groupFallback;
-                if (!result[currentGroup]) {
-                  result[currentGroup] = [];
-                }
-                result[currentGroup].push(item);
-                return result;
-              }, {});
+                  const entries = (selectedFilter ? [[selectedFilter, groupedData[selectedFilter] || []]] : Object.entries(groupedData))
+                    .filter(([, items]) => items.length > 0)
+                    .sort((a, b) => {
+                      const indexA = groupOptions.findIndex(item => item.value === a[0]);
+                      const indexB = groupOptions.findIndex(item => item.value === b[0]);
+                      if (indexA === -1 && indexB === -1) return a[0].localeCompare(b[0]);
+                      if (indexA === -1) return 1;
+                      if (indexB === -1) return -1;
+                      return indexA - indexB;
+                    });
 
-              const entries = (selectedFilter ? [[selectedFilter, groupedData[selectedFilter] || []]] : Object.entries(groupedData))
-                .filter(([, items]) => items.length > 0)
-                .sort((a, b) => {
-                  const indexA = groupOptions.findIndex(item => item.value === a[0]);
-                  const indexB = groupOptions.findIndex(item => item.value === b[0]);
-                  if (indexA === -1 && indexB === -1) return a[0].localeCompare(b[0]);
-                  if (indexA === -1) return 1;
-                  if (indexB === -1) return -1;
-                  return indexA - indexB;
-                });
+                  if (loading) {
+                    return <CatalogSkeleton />;
+                  }
 
-              if (loading) {
-                return <CatalogSkeleton />;
-              }
-
-              if (entries.length === 0) {
-                return (
-                  <div className={styles.emptyState}>
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={keyword || selectedFilter ? emptyDescription : '暂无可展示内容'} />
-                  </div>
-                );
-              }
-
-              const activeMeta = selectedFilter ? optionMap[selectedFilter] : null;
-              const activeText = activeMeta?.label || (keyword ? `搜索：${keyword}` : '全部');
-
-              return (
-                <>
-                  <div className={styles.summaryBar}>
-                    <SummaryItem label={`${filterLabel}数`} value={Object.keys(groupedData).length} />
-                    <SummaryItem label="资源数" value={list.length} />
-                    <SummaryItem label="当前筛选" value={activeText} />
-                  </div>
-
-                  {entries.map(([group, items]) => {
-                    const currentMeta = optionMap[group] || { label: group, color: 'default' };
-
+                  if (entries.length === 0) {
                     return (
-                      <section className={styles.groupSection} key={group}>
-                        <div className={styles.groupHeader}>
-                          <Space size={8} align="center">
-                            <Title level={4} className={styles.groupTitle}>
-                              {currentMeta.label}
-                            </Title>
-                            <Tag className={styles['groupCountTag']}>{items.length}</Tag>
-                          </Space>
-                        </div>
-                        <div className={styles.cardGrid}>
-                          {items.map(item => (
-                            <button
-                              type="button"
-                              key={item.id}
-                              className={classNames(styles.card, styles.clickable)}
-                              onClick={() => {
-                                navigate(getNavigateTo({ pathname: location.pathname, item }));
-                              }}
-                            >
-                              <div className={styles.cardHeader}>
-                                <div className={styles.cardTitleBlock}>
-                                  <Title level={4} className={styles.cardTitle} ellipsis={{ rows: 1 }}>
-                                    {getItemTitle(item)}
-                                  </Title>
-                                  <Text className={styles.cardIdentifier} ellipsis>
-                                    {getItemIdentifier(item)}
-                                  </Text>
-                                </div>
-                                <Tag className={classNames(styles.versionTag, styles['semanticTagStrong'])}>{getItemVersion(item)}</Tag>
-                              </div>
-                              <Paragraph ellipsis={{ rows: 2 }} className={styles.cardDescriptionText}>
-                                {getItemDescription(item) || '暂无描述'}
-                              </Paragraph>
-                              <div className={styles.cardMeta}>
-                                <Space size={[6, 6]} wrap>
-                                  <Tag bordered={false} className={styles['semanticTagSoft']}>
-                                    {currentMeta.label}
-                                  </Tag>
-                                  {isPublic(item) && (
-                                    <Tag bordered={false} className={styles['semanticTagMuted']}>
-                                      公开
-                                    </Tag>
-                                  )}
-                                </Space>
-                                <Text className={styles.cardAction}>详情</Text>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </section>
+                      <div className={styles.emptyState}>
+                        <Empty
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                          description={keyword || selectedFilter ? emptyDescription || formatMessage({ id: 'shared.catalogPage.emptyNoContent' }) : formatMessage({ id: 'shared.catalogPage.emptyNoContent' })}
+                        />
+                      </div>
                     );
-                  })}
-                </>
-              );
-            }}
-          />
-        </div>
-      </div>
-    </Page>
-  );
-});
+                  }
+
+                  const activeMeta = selectedFilter ? optionMap[selectedFilter] : null;
+                  const activeText = activeMeta?.label || (keyword ? `${formatMessage({ id: 'shared.catalogPage.searchPrefix' })}${keyword}` : formatMessage({ id: 'shared.catalogPage.allFilter' }));
+
+                  return (
+                    <>
+                      <div className={styles.summaryBar}>
+                        <SummaryItem label={formatMessage({ id: 'shared.catalogPage.categoryCount' }, { filterLabel: filterLabel || formatMessage({ id: 'common.category' }) })} value={Object.keys(groupedData).length} />
+                        <SummaryItem label={formatMessage({ id: 'shared.catalogPage.resourceCount' })} value={list.length} />
+                        <SummaryItem label={formatMessage({ id: 'shared.catalogPage.currentFilter' })} value={activeText} />
+                      </div>
+
+                      {entries.map(([group, items]) => {
+                        const currentMeta = optionMap[group] || { label: group, color: 'default' };
+
+                        return (
+                          <section className={styles.groupSection} key={group}>
+                            <div className={styles.groupHeader}>
+                              <Space size={8} align="center">
+                                <Title level={4} className={styles.groupTitle}>
+                                  {currentMeta.label}
+                                </Title>
+                                <Tag className={styles['groupCountTag']}>{items.length}</Tag>
+                              </Space>
+                            </div>
+                            <div className={styles.cardGrid}>
+                              {items.map(item => (
+                                <button
+                                  type="button"
+                                  key={item.id}
+                                  className={classNames(styles.card, styles.clickable)}
+                                  onClick={() => {
+                                    navigate(getNavigateTo({ pathname: location.pathname, item }));
+                                  }}
+                                >
+                                  <div className={styles.cardHeader}>
+                                    <div className={styles.cardTitleBlock}>
+                                      <Title level={4} className={styles.cardTitle} ellipsis={{ rows: 1 }}>
+                                        {getItemTitle(item)}
+                                      </Title>
+                                      <Text className={styles.cardIdentifier} ellipsis>
+                                        {getItemIdentifier(item)}
+                                      </Text>
+                                    </div>
+                                    <Tag className={classNames(styles.versionTag, styles['semanticTagStrong'])}>{getItemVersion(item)}</Tag>
+                                  </div>
+                                  <Paragraph ellipsis={{ rows: 2 }} className={styles.cardDescriptionText}>
+                                    {getItemDescription(item) || formatMessage({ id: 'shared.catalogPage.noDescription' })}
+                                  </Paragraph>
+                                  <div className={styles.cardMeta}>
+                                    <Space size={[6, 6]} wrap>
+                                      <Tag bordered={false} className={styles['semanticTagSoft']}>
+                                        {currentMeta.label}
+                                      </Tag>
+                                      {isPublic(item) && (
+                                        <Tag bordered={false} className={styles['semanticTagMuted']}>
+                                          {formatMessage({ id: 'common.public' })}
+                                        </Tag>
+                                      )}
+                                    </Space>
+                                    <Text className={styles.cardAction}>{formatMessage({ id: 'shared.catalogPage.detailAction' })}</Text>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </section>
+                        );
+                      })}
+                    </>
+                  );
+                }}
+              />
+            </div>
+          </div>
+        </Page>
+      );
+    }
+  )
+);
 
 export default CatalogPage;

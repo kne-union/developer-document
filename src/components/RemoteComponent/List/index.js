@@ -1,18 +1,27 @@
 import CatalogPage from '@components/Shared/CatalogPage';
 import { REMOTE_COMPONENT_GROUP_OPTIONS } from '@components/Shared/catalogMeta';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 
-const List = () => {
+const List = withLocale(() => {
+  const { formatMessage } = useIntl();
+
+  const localizedGroupOptions = REMOTE_COMPONENT_GROUP_OPTIONS.map(item => ({
+    ...item,
+    label: formatMessage({ id: `shared.catalogMeta.${item.value}` })
+  }));
+
   return (
     <CatalogPage
       pageName="components"
-      title="远程组件中心"
-      description="集中展示远程组件能力与版本信息，方便接入、预览与联调。"
+      title={formatMessage({ id: 'remoteComponent.list.title' })}
+      description={formatMessage({ id: 'remoteComponent.list.description' })}
       headerVariant="remote"
-      searchPlaceholder="搜索组件名称、remote 标识或描述"
-      emptyDescription="未找到匹配的远程组件"
-      filterLabel="分类"
+      searchPlaceholder={formatMessage({ id: 'remoteComponent.list.searchPlaceholder' })}
+      emptyDescription={formatMessage({ id: 'remoteComponent.list.emptyDescription' })}
+      filterLabel={formatMessage({ id: 'remoteComponent.list.filterLabel' })}
       filterParam="group"
-      groupOptions={REMOTE_COMPONENT_GROUP_OPTIONS}
+      groupOptions={localizedGroupOptions}
       groupFallback="common"
       getApi={(apis, isLoggedIn) => (isLoggedIn ? apis.remoteComponent.list : apis.remoteComponent.publicList)}
       getGroupKey={item => item.group || 'common'}
@@ -23,6 +32,6 @@ const List = () => {
       getNavigateTo={({ pathname, item }) => `${pathname}/detail?id=${item.id}`}
     />
   );
-};
+});
 
 export default List;
