@@ -1,31 +1,36 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { App } from 'antd';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const Remove = createWithRemoteLoader({
   modules: ['components-core:ConfirmButton', 'components-core:Global@usePreset']
-})(({ remoteModules, data, onSuccess, ...props }) => {
-  const [ConfirmButton, usePreset] = remoteModules;
-  const { apis, ajax } = usePreset();
-  const { message } = App.useApp();
+})(
+  withLocale(({ remoteModules, data, onSuccess, ...props }) => {
+    const [ConfirmButton, usePreset] = remoteModules;
+    const { apis, ajax } = usePreset();
+    const { message } = App.useApp();
+    const { formatMessage } = useIntl();
 
-  return (
-    <ConfirmButton
-      {...props}
-      onClick={async () => {
-        const { data: resData } = await ajax(
-          Object.assign({}, apis.document.delete, {
-            data: { id: data.id }
-          })
-        );
+    return (
+      <ConfirmButton
+        {...props}
+        onClick={async () => {
+          const { data: resData } = await ajax(
+            Object.assign({}, apis.document.delete, {
+              data: { id: data.id }
+            })
+          );
 
-        if (resData.code !== 0) {
-          return;
-        }
-        message.success('删除成功');
-        onSuccess && onSuccess();
-      }}
-    />
-  );
-});
+          if (resData.code !== 0) {
+            return;
+          }
+          message.success(formatMessage({ id: 'common.deleteSuccess' }));
+          onSuccess && onSuccess();
+        }}
+      />
+    );
+  })
+);
 
 export default Remove;

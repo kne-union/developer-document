@@ -2,41 +2,46 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import Save from './Save';
 import Remove from './Remove';
 import Deploy from './Deploy';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const Actions = createWithRemoteLoader({
   modules: ['components-core:ButtonGroup']
-})(({ remoteModules, moreType, children, itemClassName, ...props }) => {
-  const [ButtonGroup] = remoteModules;
+})(
+  withLocale(({ remoteModules, moreType, children, itemClassName, ...props }) => {
+    const [ButtonGroup] = remoteModules;
+    const { formatMessage } = useIntl();
 
-  const actionList = [
-    {
-      ...props,
-      buttonComponent: Save,
-      children: '编辑'
-    },
-    {
-      ...props,
-      buttonComponent: Deploy,
-      children: '部署'
-    },
-    {
-      ...props,
-      buttonComponent: Remove,
-      children: '删除',
-      confirm: true,
-      message: '确定要删除此远程组件吗？'
+    const actionList = [
+      {
+        ...props,
+        buttonComponent: Save,
+        children: formatMessage({ id: 'common.edit' })
+      },
+      {
+        ...props,
+        buttonComponent: Deploy,
+        children: formatMessage({ id: 'adminRemoteComponent.actions.deploy' })
+      },
+      {
+        ...props,
+        buttonComponent: Remove,
+        children: formatMessage({ id: 'common.delete' }),
+        confirm: true,
+        message: formatMessage({ id: 'adminRemoteComponent.actions.removeConfirm' })
+      }
+    ];
+
+    if (typeof children === 'function') {
+      return children({
+        itemClassName,
+        moreType,
+        list: actionList
+      });
     }
-  ];
 
-  if (typeof children === 'function') {
-    return children({
-      itemClassName,
-      moreType,
-      list: actionList
-    });
-  }
-
-  return <ButtonGroup itemClassName={itemClassName} list={actionList} moreType={moreType} />;
-});
+    return <ButtonGroup itemClassName={itemClassName} list={actionList} moreType={moreType} />;
+  })
+);
 
 export default Actions;

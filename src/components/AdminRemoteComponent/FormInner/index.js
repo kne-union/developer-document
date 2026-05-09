@@ -1,30 +1,39 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { REMOTE_COMPONENT_GROUP_OPTIONS } from '@components/Shared/catalogMeta';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const FormInner = createWithRemoteLoader({
   modules: ['components-core:FormInfo']
-})(({ remoteModules }) => {
-  const [FormInfo] = remoteModules;
-  const { Input, TextArea, Switch, Select } = FormInfo.fields;
+})(
+  withLocale(({ remoteModules }) => {
+    const [FormInfo] = remoteModules;
+    const { Input, TextArea, Switch, Select } = FormInfo.fields;
+    const { formatMessage } = useIntl();
 
-  return (
-    <>
-      <FormInfo
-        list={[
-          <Input name="remote" label="组件名称" rule="REQ LEN-0-100" placeholder="例如: @kne/button" block />,
-          <Input name="name" label="显示名称" rule="LEN-0-100" placeholder="组件的中文名称" block />,
-          <Select name="group" label="组件分类" options={REMOTE_COMPONENT_GROUP_OPTIONS} defaultValue="common" />,
-          <Input name="packageName" label="NPM包名" rule="LEN-0-200" placeholder="npm package name" block />,
-          <Input name="registry" label="NPM Registry" rule="LEN-0-200" placeholder="npm registry 地址" block />,
-          <Input name="url" label="入口文件地址" rule="LEN-0-500" placeholder="远程组件入口地址" block />,
-          <TextArea name="description" label="组件描述" rule="LEN-0-500" rows={3} block />,
-          <Input name="tpl" label="加载地址模版" placeholder="{{url}}/components/@kne-components/{{remote}}/{{version}}/build" block />,
-          <Input name="defaultVersion" label="默认版本" placeholder="例如: 1.0.0" />,
-          <Switch name="isPublic" label="是否公开" />
-        ]}
-      />
-    </>
-  );
-});
+    const GROUP_OPTIONS = [
+      { label: formatMessage({ id: 'shared.catalogMeta.business' }), value: 'business' },
+      { label: formatMessage({ id: 'shared.catalogMeta.common' }), value: 'common' }
+    ];
+
+    return (
+      <>
+        <FormInfo
+          list={[
+            <Input name="remote" label={formatMessage({ id: 'adminRemoteComponent.formInner.componentName' })} rule="REQ LEN-0-100" placeholder="e.g.: @kne/button" block />,
+            <Input name="name" label={formatMessage({ id: 'adminRemoteComponent.formInner.displayNameLabel' })} rule="LEN-0-100" placeholder={formatMessage({ id: 'adminRemoteComponent.formInner.displayNamePlaceholder' })} block />,
+            <Select name="group" label={formatMessage({ id: 'adminRemoteComponent.formInner.componentCategory' })} options={GROUP_OPTIONS} defaultValue="common" />,
+            <Input name="packageName" label={formatMessage({ id: 'adminRemoteComponent.formInner.npmPackageNameLabel' })} rule="LEN-0-200" placeholder="npm package name" block />,
+            <Input name="registry" label="NPM Registry" rule="LEN-0-200" placeholder={formatMessage({ id: 'adminRemoteComponent.formInner.npmRegistryPlaceholder' })} block />,
+            <Input name="url" label={formatMessage({ id: 'adminRemoteComponent.formInner.entryUrl' })} rule="LEN-0-500" placeholder={formatMessage({ id: 'adminRemoteComponent.formInner.entryUrlPlaceholder' })} block />,
+            <TextArea name="description" label={formatMessage({ id: 'adminRemoteComponent.formInner.componentDescription' })} rule="LEN-0-500" rows={3} block />,
+            <Input name="tpl" label={formatMessage({ id: 'adminRemoteComponent.formInner.loadTemplate' })} placeholder="{{url}}/components/@kne-components/{{remote}}/{{version}}/build" block />,
+            <Input name="defaultVersion" label={formatMessage({ id: 'adminRemoteComponent.formInner.defaultVersionLabel' })} placeholder={formatMessage({ id: 'adminRemoteComponent.formInner.defaultVersionPlaceholder' })} />,
+            <Switch name="isPublic" label={formatMessage({ id: 'common.isPublic' })} />
+          ]}
+        />
+      </>
+    );
+  })
+);
 
 export default FormInner;

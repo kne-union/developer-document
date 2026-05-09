@@ -1,120 +1,128 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Space } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 import Create from '../Actions/Create';
 import Actions from '../Actions';
 import getColumns from './getColumns';
 import AdminEntityTablePage from '@components/Shared/AdminEntityTablePage';
 
-const statusOptions = [
-  { tab: '全部', key: 'all' },
-  { tab: '草稿', key: 'draft' },
-  { tab: '已发布', key: 'published' }
-];
-
-const statusMap = new Map(statusOptions.map(item => [item.key, item]));
-
 const List = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-admin:GroupSelect@GroupFolder']
-})(({ remoteModules, ...props }) => {
-  const [usePreset, GroupFolder] = remoteModules;
-  const { apis } = usePreset();
-  const [selectedGroup, setSelectedGroup] = useState(null);
+})(
+  withLocale(({ remoteModules, ...props }) => {
+    const [usePreset, GroupFolder] = remoteModules;
+    const { apis } = usePreset();
+    const { formatMessage } = useIntl();
+    const [selectedGroup, setSelectedGroup] = useState(null);
 
-  const createStatusFilter = ({ value, label }) => {
-    return { name: 'status', value: { label, value } };
-  };
+    const statusOptions = useMemo(
+      () => [
+        { tab: formatMessage({ id: 'common.all' }), key: 'all' },
+        { tab: formatMessage({ id: 'common.draft' }), key: 'draft' },
+        { tab: formatMessage({ id: 'common.published' }), key: 'published' }
+      ],
+      [formatMessage]
+    );
 
-  return (
-    <GroupFolder type="document" value={selectedGroup} onChange={key => setSelectedGroup(key)}>
-      <AdminEntityTablePage
-        {...props}
-        getApi={apis => apis.document.list}
-        buildRequestData={filterValue => {
-          const result = Object.assign({}, filterValue, {
-            status: filterValue.status && filterValue.status !== 'all' ? filterValue.status : undefined
-          });
+    const statusMap = useMemo(() => new Map(statusOptions.map(item => [item.key, item])), [statusOptions]);
 
-          if (filterValue.createdAt?.value?.[0] && filterValue.createdAt?.value?.[1]) {
-            result.createdAtStart = filterValue.createdAt.value[0];
-            result.createdAtEnd = filterValue.createdAt.value[1];
-          }
-          delete result.createdAt;
+    const createStatusFilter = ({ value, label }) => {
+      return { name: 'status', value: { label, value } };
+    };
 
-          if (selectedGroup) {
-            result.group = selectedGroup;
-          }
+    return (
+      <GroupFolder type="document" value={selectedGroup} onChange={key => setSelectedGroup(key)}>
+        <AdminEntityTablePage
+          {...props}
+          getApi={apis => apis.document.list}
+          buildRequestData={filterValue => {
+            const result = Object.assign({}, filterValue, {
+              status: filterValue.status && filterValue.status !== 'all' ? filterValue.status : undefined
+            });
 
-          return result;
-        }}
-        getFilterList={({ SuperSelectUserFilterItem, TypeDateRangePickerFilterItem }) => {
-          return [
-            [
-              <SuperSelectUserFilterItem
-                single
-                label="发布用户"
-                name="createdUserId"
-                api={Object.assign({}, apis.admin.getUserList, {
-                  transformData: data => {
-                    return Object.assign({}, data, {
-                      pageData: (data.pageData || []).map(item =>
-                        Object.assign({}, item, {
-                          value: item.id,
-                          label: item.nickname || item.email || item.phone
-                        })
-                      )
-                    });
-                  }
-                })}
-              />,
-              <TypeDateRangePickerFilterItem label="创建时间" name="createdAt" />
-            ]
-          ];
-        }}
-        renderTopArea={({ filterValue, setFilter, StateBar }) => {
-          return (
-            <StateBar
-              type="radio"
-              size="small"
-              activeKey={filterValue.status || 'all'}
-              onChange={value => {
-                const currentState = statusMap.get(value);
-                setFilter(filter => {
-                  const nextFilter = filter.slice(0);
-                  const currentIndex = filter.findIndex(item => item.name === 'status');
+            if (filterValue.createdAt?.value?.[0] && filterValue.createdAt?.value?.[1]) {
+              result.createdAtStart = filterValue.createdAt.value[0];
+              result.createdAtEnd = filterValue.createdAt.value[1];
+            }
+            delete result.createdAt;
 
-                  if (currentState.key === 'all') {
-                    if (currentIndex > -1) {
-                      nextFilter.splice(currentIndex, 1);
+            if (selectedGroup) {
+              result.group = selectedGroup;
+            }
+
+            return result;
+          }}
+          getFilterList={({ SuperSelectUserFilterItem, TypeDateRangePickerFilterItem }) => {
+            return [
+              [
+                <SuperSelectUserFilterItem
+                  single
+                  label={formatMessage({ id: 'common.publishUser' })}
+                  name="createdUserId"
+                  api={Object.assign({}, apis.admin.getUserList, {
+                    transformData: data => {
+                      return Object.assign({}, data, {
+                        pageData: (data.pageData || []).map(item =>
+                          Object.assign({}, item, {
+                            value: item.id,
+                            label: item.nickname || item.email || item.phone
+                          })
+                        )
+                      });
                     }
-                  } else if (currentIndex === -1) {
-                    nextFilter.push(createStatusFilter({ value: currentState.key, label: currentState.tab }));
-                  } else {
-                    nextFilter.splice(currentIndex, 1, createStatusFilter({ value: currentState.key, label: currentState.tab }));
-                  }
+                  })}
+                />,
+                <TypeDateRangePickerFilterItem label={formatMessage({ id: 'common.createdAt' })} name="createdAt" />
+              ]
+            ];
+          }}
+          renderTopArea={({ filterValue, setFilter, StateBar }) => {
+            return (
+              <StateBar
+                type="radio"
+                size="small"
+                activeKey={filterValue.status || 'all'}
+                onChange={value => {
+                  const currentState = statusMap.get(value);
+                  setFilter(filter => {
+                    const nextFilter = filter.slice(0);
+                    const currentIndex = filter.findIndex(item => item.name === 'status');
 
-                  return nextFilter;
-                });
-              }}
-              stateOption={statusOptions}
-            />
-          );
-        }}
-        renderTitleExtra={({ SearchInput, reload }) => {
-          return (
-            <Space align="center">
-              <SearchInput name="keyword" label="关键字" />
-              <Create type="primary" onSuccess={reload}>
-                添加文档
-              </Create>
-            </Space>
-          );
-        }}
-        getColumns={({ navigate, baseUrl }) => getColumns({ navigate, baseUrl })}
-        renderActions={({ item, reload }) => <Actions data={item} onSuccess={reload} />}
-      />
-    </GroupFolder>
-  );
-});
+                    if (currentState.key === 'all') {
+                      if (currentIndex > -1) {
+                        nextFilter.splice(currentIndex, 1);
+                      }
+                    } else if (currentIndex === -1) {
+                      nextFilter.push(createStatusFilter({ value: currentState.key, label: currentState.tab }));
+                    } else {
+                      nextFilter.splice(currentIndex, 1, createStatusFilter({ value: currentState.key, label: currentState.tab }));
+                    }
+
+                    return nextFilter;
+                  });
+                }}
+                stateOption={statusOptions}
+              />
+            );
+          }}
+          renderTitleExtra={({ SearchInput, reload }) => {
+            return (
+              <Space align="center">
+                <SearchInput name="keyword" label={formatMessage({ id: 'common.keyword' })} />
+                <Create type="primary" onSuccess={reload}>
+                  {formatMessage({ id: 'adminDocument.list.addDocument' })}
+                </Create>
+              </Space>
+            );
+          }}
+          getColumns={({ navigate, baseUrl }) => getColumns({ navigate, baseUrl, formatMessage })}
+          renderActions={({ item, reload }) => <Actions data={item} onSuccess={reload} />}
+        />
+      </GroupFolder>
+    );
+  })
+);
 
 export default List;

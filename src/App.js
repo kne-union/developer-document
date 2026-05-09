@@ -1,13 +1,15 @@
 import RemoteLoader, { createWithRemoteLoader } from '@kne/remote-loader';
 import AppChildrenRouter from '@kne/app-children-router';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import withLocale from './withLocale';
+import { useIntl } from '@kne/react-intl';
+import { useGlobalContext } from '@kne/global-context';
 import RightOptions from './RightOptions';
 import './index.scss';
 import '@kne/react-box/dist/index.css';
 
-const Blog = createWithRemoteLoader({
-  modules: []
-})(({ remoteModules, baseUrl }) => {
+const Blog = ({ baseUrl }) => {
   return (
     <AppChildrenRouter
       errorPage
@@ -25,11 +27,9 @@ const Blog = createWithRemoteLoader({
       ]}
     />
   );
-});
+};
 
-const Document = createWithRemoteLoader({
-  modules: []
-})(({ remoteModules, baseUrl }) => {
+const Document = ({ baseUrl }) => {
   return (
     <AppChildrenRouter
       errorPage
@@ -47,11 +47,9 @@ const Document = createWithRemoteLoader({
       ]}
     />
   );
-});
+};
 
-const RemoteComponent = createWithRemoteLoader({
-  modules: []
-})(({ remoteModules, baseUrl }) => {
+const RemoteComponent = ({ baseUrl }) => {
   return (
     <AppChildrenRouter
       errorPage
@@ -69,11 +67,9 @@ const RemoteComponent = createWithRemoteLoader({
       ]}
     />
   );
-});
+};
 
-const NpmPackage = createWithRemoteLoader({
-  modules: []
-})(({ remoteModules, baseUrl }) => {
+const NpmPackage = ({ baseUrl }) => {
   return (
     <AppChildrenRouter
       errorPage
@@ -91,12 +87,60 @@ const NpmPackage = createWithRemoteLoader({
       ]}
     />
   );
+};
+
+const DefaultLocaleHandler = createWithRemoteLoader({
+  modules: ['components-core:Global@usePreset']
+})(({ remoteModules }) => {
+  const [usePreset] = remoteModules;
+  const { setting } = usePreset();
+  const { locale: currentLocale } = useIntl();
+  const { setGlobalValue } = useGlobalContext();
+  const [searchParams] = useSearchParams();
+  const lang = searchParams.get('language');
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    const selected = setting?.advanced?.languages?.selected;
+    const defaultLang = setting?.advanced?.languages?.default;
+
+    if (lang === 'en' || lang === 'en-US') {
+      if (currentLocale !== 'en-US') {
+        setGlobalValue('locale', 'en-US');
+      }
+      initializedRef.current = true;
+      return;
+    }
+    if (lang === 'zh' || lang === 'zh-CN') {
+      if (currentLocale !== 'zh-CN') {
+        setGlobalValue('locale', 'zh-CN');
+      }
+      initializedRef.current = true;
+      return;
+    }
+
+    if (initializedRef.current) return;
+
+    if (selected && selected.length > 0) {
+      if (!selected.includes(currentLocale)) {
+        const target = defaultLang || selected[0];
+        if (target !== currentLocale) {
+          setGlobalValue('locale', target);
+        }
+      }
+    } else {
+      if (currentLocale !== 'zh-CN') {
+        setGlobalValue('locale', 'zh-CN');
+      }
+    }
+    initializedRef.current = true;
+  }, [lang, setting]);
+
+  return null;
 });
 
-const App = createWithRemoteLoader({
-  modules: ['components-core:Global', 'components-admin:Authenticate@Layout', 'components-admin:Authenticate@AfterUserLoginLayout', 'components-admin:Authenticate@AfterAdminUserLoginLayout']
-})(({ remoteModules, globalPreset }) => {
-  const [Global, Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout] = remoteModules;
+const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout }) => {
+  const { formatMessage, locale: currentLocale } = useIntl();
   const baseUrl = '';
   const currentYear = new Date().getFullYear();
   const location = useLocation();
@@ -104,7 +148,8 @@ const App = createWithRemoteLoader({
   const shouldShowFooter = !(location.pathname.startsWith('/account') || location.pathname.startsWith('/admin') || location.pathname === '/remote-components/detail' || location.pathname.startsWith('/share'));
 
   return (
-    <Global preset={globalPreset} themeToken={globalPreset.themeToken}>
+    <>
+      <DefaultLocaleHandler />
       <AppChildrenRouter
         notFoundPage
         errorPage
@@ -112,7 +157,7 @@ const App = createWithRemoteLoader({
         list={[
           {
             path: 'account/*',
-            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" systemName="Developer Document" registerOpen={false} />
+            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" systemName="Developer Document" registerOpen={false} allowLanguageSwitch={false} />
           },
           {
             path: 'admin/initAdmin',
@@ -144,12 +189,12 @@ const App = createWithRemoteLoader({
                       list: [
                         {
                           key: 'npm-package',
-                          title: '组件管理',
+                          title: formatMessage({ id: 'app.adminNav.npmPackage' }),
                           path: '/admin/npm-package'
                         },
                         {
                           key: 'remote-component',
-                          title: '远程组件管理',
+                          title: formatMessage({ id: 'app.adminNav.remoteComponent' }),
                           path: '/admin/remote-component'
                         },
                         /*{
@@ -159,32 +204,32 @@ const App = createWithRemoteLoader({
                         },*/
                         {
                           key: 'blog',
-                          title: '博客管理',
+                          title: formatMessage({ id: 'app.adminNav.blog' }),
                           path: '/admin/blog'
                         },
                         {
                           key: 'document',
-                          title: '文档管理',
+                          title: formatMessage({ id: 'app.adminNav.document' }),
                           path: '/admin/document'
                         },
                         {
                           key: 'task',
-                          title: '任务管理',
+                          title: formatMessage({ id: 'app.adminNav.task' }),
                           path: '/admin/task'
                         },
                         {
                           key: 'user',
-                          title: '用户管理',
+                          title: formatMessage({ id: 'app.adminNav.user' }),
                           path: '/admin/user'
                         },
                         {
                           key: 'file',
-                          title: '文件管理',
+                          title: formatMessage({ id: 'app.adminNav.file' }),
                           path: '/admin/file'
                         },
                         {
                           key: 'setting',
-                          title: '设置',
+                          title: formatMessage({ id: 'app.adminNav.setting' }),
                           path: '/admin/setting'
                         }
                       ]
@@ -256,12 +301,12 @@ const App = createWithRemoteLoader({
                 list: [
                   {
                     key: 'npm-packages',
-                    title: '组件',
+                    title: formatMessage({ id: 'app.nav.npmPackages' }),
                     path: '/npm-packages'
                   },
                   {
                     key: 'remote-components',
-                    title: '远程组件',
+                    title: formatMessage({ id: 'app.nav.remoteComponents' }),
                     path: '/remote-components'
                   },
                   /*{
@@ -271,17 +316,17 @@ const App = createWithRemoteLoader({
               },*/
                   {
                     key: 'blog',
-                    title: '博客',
+                    title: formatMessage({ id: 'app.nav.blog' }),
                     path: '/blog'
                   },
                   {
                     key: 'documents',
-                    title: '文档',
+                    title: formatMessage({ id: 'app.nav.documents' }),
                     path: '/documents'
                   },
                   {
                     key: 'about',
-                    title: '关于我们',
+                    title: formatMessage({ id: 'app.nav.about' }),
                     path: '/about'
                   }
                 ]
@@ -321,12 +366,23 @@ const App = createWithRemoteLoader({
           <div className="global-page-footer__inner">
             <div className="global-page-footer__brand">
               <div className="global-page-footer__title">Developer Document</div>
-              <div className="global-page-footer__desc">组件与工程实践沉淀</div>
+              <div className="global-page-footer__desc">{formatMessage({ id: 'app.footer.desc' })}</div>
             </div>
             <div className="global-page-footer__meta">© {currentYear} Developer Document. All rights reserved.</div>
           </div>
         </footer>
       )}
+    </>
+  );
+});
+
+const App = createWithRemoteLoader({
+  modules: ['components-core:Global', 'components-admin:Authenticate@Layout', 'components-admin:Authenticate@AfterUserLoginLayout', 'components-admin:Authenticate@AfterAdminUserLoginLayout']
+})(({ remoteModules, globalPreset }) => {
+  const [Global, Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout] = remoteModules;
+  return (
+    <Global preset={globalPreset} themeToken={globalPreset.themeToken}>
+      <AppInner Layout={Layout} AfterUserLoginLayout={AfterUserLoginLayout} AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} />
     </Global>
   );
 });

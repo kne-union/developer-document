@@ -68,6 +68,21 @@ body {
   background: transparent;
 }
 
+.language {
+  .language-icon,
+  .language-item {
+    color: #000 !important;
+  }
+
+  .language-item.is-active {
+    color: var(--primary-color) !important;
+  }
+
+  .ant-divider {
+    border-inline-start-color: #000 !important;
+  }
+}
+
 .global-page-footer {
   position: relative;
   margin-top: 36px;

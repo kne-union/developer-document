@@ -9,10 +9,13 @@ import '@kne/timeline/dist/index.css';
 import styles from './style.module.scss';
 import { IconDisplay } from '@kne/antd-icon-select';
 import '@kne/react-box/dist/index.css';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const { Title, Paragraph } = Typography;
 
-export const StatisticSection = ({ data = [] }) => {
+export const StatisticSection = withLocale(({ data = [] }) => {
+  const { formatMessage } = useIntl();
   if (!(data && data.length > 0)) {
     return null;
   }
@@ -21,7 +24,7 @@ export const StatisticSection = ({ data = [] }) => {
     <section className={styles.section}>
       <div className={styles.sectionHeader}>
         <Title level={2} className={styles.sectionTitle}>
-          数据概览
+          {formatMessage({ id: 'about.statisticSectionTitle' })}
         </Title>
       </div>
       <div className={styles.statsGrid}>
@@ -36,7 +39,7 @@ export const StatisticSection = ({ data = [] }) => {
       </div>
     </section>
   );
-};
+});
 
 const ValueCard = ({ icon, title, description, color }) => (
   <div className={styles.valueCard}>
@@ -50,7 +53,8 @@ const ValueCard = ({ icon, title, description, color }) => (
   </div>
 );
 
-export const ValueSection = ({ data = [] }) => {
+export const ValueSection = withLocale(({ data = [] }) => {
+  const { formatMessage } = useIntl();
   if (!(data && data.length > 0)) {
     return null;
   }
@@ -58,7 +62,7 @@ export const ValueSection = ({ data = [] }) => {
     <section className={styles.section}>
       <div className={styles.sectionHeader}>
         <Title level={2} className={styles.sectionTitle}>
-          核心价值观
+          {formatMessage({ id: 'about.coreValuesTitle' })}
         </Title>
       </div>
       <Row gutter={[16, 16]}>
@@ -73,7 +77,7 @@ export const ValueSection = ({ data = [] }) => {
       </Row>
     </section>
   );
-};
+});
 
 const formatTime = time => {
   if (!time) return '';
@@ -84,79 +88,86 @@ const formatTime = time => {
 
 export const HistorySection = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']
-})(({ remoteModules, data = [] }) => {
-  const [usePreset] = remoteModules;
-  const { staticUrl } = usePreset();
-  if (!(data && data.length > 0)) {
-    return null;
-  }
-  return (
-    <section className={styles.section}>
-      <div className={styles.sectionHeader}>
-        <Title level={2} className={styles.sectionTitle}>
-          发展历程
-        </Title>
-      </div>
-      <div className={styles.timelinePanel}>
-        <Timeline
-          data={data.map(item => {
-            const timelineItem = {
-              title: formatTime(item.time),
-              content: item.event
-            };
-            if (item.images && item.images.length > 0) {
-              timelineItem.images = item.images.map(id => ({
-                src: `${staticUrl}/api/v1/static/file-id/${id}`
-              }));
-            }
-            if (item.extra) {
-              timelineItem.extra = item.extra;
-            }
-            return timelineItem;
-          })}
-        />
-      </div>
-    </section>
-  );
-});
+})(
+  withLocale(({ remoteModules, data = [] }) => {
+    const [usePreset] = remoteModules;
+    const { staticUrl } = usePreset();
+    const { formatMessage } = useIntl();
+    if (!(data && data.length > 0)) {
+      return null;
+    }
+    return (
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <Title level={2} className={styles.sectionTitle}>
+            {formatMessage({ id: 'about.historyTitle' })}
+          </Title>
+        </div>
+        <div className={styles.timelinePanel}>
+          <Timeline
+            data={data.map(item => {
+              const timelineItem = {
+                title: formatTime(item.time),
+                content: item.event
+              };
+              if (item.images && item.images.length > 0) {
+                timelineItem.images = item.images.map(id => ({
+                  src: `${staticUrl || window.location.origin}/api/v1/static/file-id/${id}`
+                }));
+              }
+              if (item.extra) {
+                timelineItem.extra = item.extra;
+              }
+              return timelineItem;
+            })}
+          />
+        </div>
+      </section>
+    );
+  })
+);
 
 export const TeamMemberSection = createWithRemoteLoader({
   modules: ['components-core:Image']
-})(({ remoteModules, data = [] }) => {
-  const [Image] = remoteModules;
+})(
+  withLocale(({ remoteModules, data = [] }) => {
+    const [Image] = remoteModules;
+    const { formatMessage } = useIntl();
+    if (!(data && data.length > 0)) {
+      return null;
+    }
+    return (
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <Title level={2} className={styles.sectionTitle}>
+            {formatMessage({ id: 'about.coreTeamTitle' })}
+          </Title>
+        </div>
+        <Row gutter={[16, 16]}>
+          {data.map((item, index) => {
+            return (
+              <Col xs={24} sm={12} lg={8} key={index}>
+                <PersonalCard avatar={({ className }) => <Image.Avatar className={className} size={72} id={item.avatar} />} name={item.name} title={item.role} description={item.description} status="online" mode="vertical" />
+              </Col>
+            );
+          })}
+        </Row>
+      </section>
+    );
+  })
+);
+
+export const CompanyCultureSection = withLocale(({ data = [] }) => {
+  const { formatMessage } = useIntl();
   if (!(data && data.length > 0)) {
     return null;
   }
+
   return (
     <section className={styles.section}>
       <div className={styles.sectionHeader}>
         <Title level={2} className={styles.sectionTitle}>
-          核心团队
-        </Title>
-      </div>
-      <Row gutter={[16, 16]}>
-        {data.map((item, index) => {
-          return (
-            <Col xs={24} sm={12} lg={8} key={index}>
-              <PersonalCard avatar={({ className }) => <Image.Avatar className={className} size={72} id={item.avatar} />} name={item.name} title={item.role} description={item.description} status="online" mode="vertical" />
-            </Col>
-          );
-        })}
-      </Row>
-    </section>
-  );
-});
-
-export const CompanyCultureSection = ({ data = [] }) => {
-  if (!(data && data.length > 0)) {
-    return null;
-  }
-
-  return (
-    <section className={styles.section}>
-      <div className={styles.sectionHeader}>
-        <Title level={2} className={styles.sectionTitle}>
-          公司文化
+          {formatMessage({ id: 'about.companyCultureTitle' })}
         </Title>
       </div>
       <Row gutter={[16, 16]}>
@@ -175,38 +186,41 @@ export const CompanyCultureSection = ({ data = [] }) => {
       </Row>
     </section>
   );
-};
+});
 
 const About = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']
-})(({ remoteModules }) => {
-  const [usePreset] = remoteModules;
-  const { setting } = usePreset();
-  const about = setting.about || {};
-  const profile = setting.profile || {};
+})(
+  withLocale(({ remoteModules }) => {
+    const [usePreset] = remoteModules;
+    const { setting } = usePreset();
+    const about = setting.about || {};
+    const profile = setting.profile || {};
+    const { formatMessage } = useIntl();
 
-  return (
-    <div className={styles.page}>
-      <section className={styles.hero}>
-        <div className={styles.heroContent}>
-          <Tag bordered={false} className={styles.heroTag}>
-            <span className={styles.heroTagIcon}>
-              <TeamOutlined />
-            </span>
-            About
-          </Tag>
-          <Title className={styles.heroTitle}>关于 {profile.name || 'KNE UNION'}</Title>
-          <Paragraph className={styles.heroDescription}>围绕组件体系、远程模块与文档资源持续沉淀统一能力，帮助团队在长期交付中保持一致的开发体验与信息结构。</Paragraph>
-        </div>
-      </section>
+    return (
+      <div className={styles.page}>
+        <section className={styles.hero}>
+          <div className={styles.heroContent}>
+            <Tag bordered={false} className={styles.heroTag}>
+              <span className={styles.heroTagIcon}>
+                <TeamOutlined />
+              </span>
+              About
+            </Tag>
+            <Title className={styles.heroTitle}>{formatMessage({ id: 'about.heroTitle' }, { name: profile.name || 'KNE UNION' })}</Title>
+            <Paragraph className={styles.heroDescription}>{formatMessage({ id: 'about.heroDescription' })}</Paragraph>
+          </div>
+        </section>
 
-      <StatisticSection data={about.statistic} />
-      <ValueSection data={about.coreValues} />
-      <HistorySection data={about.history} />
-      <TeamMemberSection data={about.coreTeam} />
-      <CompanyCultureSection data={about.culture} />
-    </div>
-  );
-});
+        <StatisticSection data={about.statistic} />
+        <ValueSection data={about.coreValues} />
+        <HistorySection data={about.history} />
+        <TeamMemberSection data={about.coreTeam} />
+        <CompanyCultureSection data={about.culture} />
+      </div>
+    );
+  })
+);
 
 export default About;

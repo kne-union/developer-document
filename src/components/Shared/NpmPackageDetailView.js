@@ -5,7 +5,8 @@ import createEntry from '@kne/modules-dev/dist/create-entry.modern';
 import '@kne/modules-dev/dist/create-entry.css';
 import { useState } from 'react';
 import MarkdownComponentsRender from '@kne/markdown-components-render';
-import { NPM_PACKAGE_TYPE_LABELS } from '@components/Shared/catalogMeta';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 import styles from '@components/Shared/detailPage.module.scss';
 
 const ExampleContent = createEntry.ExampleContent;
@@ -20,7 +21,8 @@ const MetaItem = ({ label, value }) => {
   );
 };
 
-const ExampleRunner = ({ packageName, version }) => {
+const ExampleRunner = withLocale(({ packageName, version }) => {
+  const { formatMessage } = useIntl();
   const name = packageName.replace(/^@kne\//, '');
   const {
     loading,
@@ -41,15 +43,16 @@ const ExampleRunner = ({ packageName, version }) => {
   }
 
   if (error) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="示例加载失败，请稍后重试" />;
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: 'shared.npmPackage.exampleLoadFailed' })} />;
   }
 
   const target = targetModules[0];
 
   return <ExampleContent data={Object.values(target)[0]} />;
-};
+});
 
-const NpmPackageDetailView = ({ data, headerExtra, simple }) => {
+const NpmPackageDetailView = withLocale(({ data, headerExtra, simple }) => {
+  const { formatMessage } = useIntl();
   const [selectedVersion, setSelectedVersion] = useState(null);
 
   const repositoryData = data.repositoryData || [];
@@ -64,7 +67,7 @@ const NpmPackageDetailView = ({ data, headerExtra, simple }) => {
           <span className={styles.headerIdentityIcon}>
             <AppstoreOutlined />
           </span>
-          <span className={styles.headerIdentityText}>组件</span>
+          <span className={styles.headerIdentityText}>{formatMessage({ id: 'shared.npmPackage.identityLabel' })}</span>
         </div>
         <div className={styles.headerTop}>
           <div className={styles.headerContent}>
@@ -73,11 +76,11 @@ const NpmPackageDetailView = ({ data, headerExtra, simple }) => {
             </Title>
             {!simple && (
               <>
-                <Paragraph className={styles.pageDescription}>{data.description || '该组件提供标准化的能力封装，可用于快速接入和示例验证。'}</Paragraph>
+                <Paragraph className={styles.pageDescription}>{data.description || formatMessage({ id: 'shared.npmPackage.defaultDescription' })}</Paragraph>
                 <div className={styles.tagRow}>
-                  <Tag className={styles.tagTone}>{NPM_PACKAGE_TYPE_LABELS[type] || type}</Tag>
+                  <Tag className={styles.tagTone}>{formatMessage({ id: `shared.catalogMeta.${type}` })}</Tag>
                   {data.latestVersion && <Tag className={styles.tagToneSoft}>v{data.latestVersion}</Tag>}
-                  <Tag className={data.isPublic ? styles.tagStatePublic : styles.tagStatePrivate}>{data.isPublic ? '公开' : '私有'}</Tag>
+                  <Tag className={data.isPublic ? styles.tagStatePublic : styles.tagStatePrivate}>{data.isPublic ? formatMessage({ id: 'common.public' }) : formatMessage({ id: 'common.private' })}</Tag>
                 </div>
               </>
             )}
@@ -88,8 +91,8 @@ const NpmPackageDetailView = ({ data, headerExtra, simple }) => {
           <div className={styles.metaGrid}>
             <MetaItem label="Package Name" value={<Text copyable={{ text: data.packageName }}>{data.packageName}</Text>} />
             <MetaItem label="Registry" value={data.registry || 'https://registry.npmjs.org/'} />
-            <MetaItem label="示例版本" value={examples.length > 0 ? `${examples.length} 个` : '无'} />
-            <MetaItem label="仓库链接" value={`${repositoryData.length} 个`} />
+            <MetaItem label={formatMessage({ id: 'shared.npmPackage.exampleVersionLabel' })} value={examples.length > 0 ? `${examples.length}` : formatMessage({ id: 'shared.npmPackage.noExamples' })} />
+            <MetaItem label={formatMessage({ id: 'shared.npmPackage.repoLinkLabel' })} value={`${repositoryData.length}`} />
           </div>
         )}
       </section>
@@ -99,9 +102,9 @@ const NpmPackageDetailView = ({ data, headerExtra, simple }) => {
           <div className={styles.sectionHeader}>
             <div>
               <Title level={4} className={styles.sectionTitle}>
-                在线示例
+                {formatMessage({ id: 'shared.npmPackage.onlineExamplesTitle' })}
               </Title>
-              <p className={styles.sectionDesc}>支持按版本切换示例，便于对比不同版本的输出效果。</p>
+              <p className={styles.sectionDesc}>{formatMessage({ id: 'shared.npmPackage.onlineExamplesDesc' })}</p>
             </div>
             <Select style={{ width: 220 }} options={examples.map(v => ({ label: `v${v}`, value: v }))} value={currentVersion} onChange={setSelectedVersion} />
           </div>
@@ -118,11 +121,11 @@ const NpmPackageDetailView = ({ data, headerExtra, simple }) => {
               </Title>
             </div>
           </div>
-          {data.readme ? <MarkdownComponentsRender>{data.readme}</MarkdownComponentsRender> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无文档内容" />}
+          {data.readme ? <MarkdownComponentsRender>{data.readme}</MarkdownComponentsRender> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: 'shared.npmPackage.noReadme' })} />}
         </section>
       )}
     </div>
   );
-};
+});
 
 export default NpmPackageDetailView;

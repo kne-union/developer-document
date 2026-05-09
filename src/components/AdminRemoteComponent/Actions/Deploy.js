@@ -1,42 +1,46 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { App, Button } from 'antd';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const Deploy = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']
-})(({ remoteModules, data, onSuccess, ...props }) => {
-  const [usePreset] = remoteModules;
-  const { ajax, apis } = usePreset();
-  const { message, modal } = App.useApp();
+})(
+  withLocale(({ remoteModules, data, onSuccess, ...props }) => {
+    const [usePreset] = remoteModules;
+    const { ajax, apis } = usePreset();
+    const { message, modal } = App.useApp();
+    const { formatMessage } = useIntl();
 
-  // 没有 packageName 时不显示部署按钮
-  if (!data.packageName) {
-    return null;
-  }
+    if (!data.packageName) {
+      return null;
+    }
 
-  return (
-    <Button
-      {...props}
-      onClick={() => {
-        modal.confirm({
-          title: '确认部署',
-          content: `确定要部署 "${data.name || data.remote}" 的示例吗？`,
-          onOk: async () => {
-            const { data: resData } = await ajax(
-              Object.assign({}, apis.remoteComponent.triggerDeploy, {
-                data: { targetId: data.id }
-              })
-            );
-            if (resData.code !== 0) {
-              message.error('部署任务创建失败');
-              return;
+    return (
+      <Button
+        {...props}
+        onClick={() => {
+          modal.confirm({
+            title: formatMessage({ id: 'adminRemoteComponent.deploy.confirmTitle' }),
+            content: formatMessage({ id: 'adminRemoteComponent.deploy.confirmContent' }, { name: data.name || data.remote }),
+            onOk: async () => {
+              const { data: resData } = await ajax(
+                Object.assign({}, apis.remoteComponent.triggerDeploy, {
+                  data: { targetId: data.id }
+                })
+              );
+              if (resData.code !== 0) {
+                message.error(formatMessage({ id: 'adminRemoteComponent.deploy.taskFailed' }));
+                return;
+              }
+              message.success(formatMessage({ id: 'adminRemoteComponent.deploy.taskCreated' }));
+              onSuccess && onSuccess();
             }
-            message.success('部署任务已创建，请稍后刷新查看结果');
-            onSuccess && onSuccess();
-          }
-        });
-      }}
-    />
-  );
-});
+          });
+        }}
+      />
+    );
+  })
+);
 
 export default Deploy;

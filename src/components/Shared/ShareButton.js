@@ -1,11 +1,14 @@
 import { Button, Tooltip, App } from 'antd';
 import { ShareAltOutlined } from '@ant-design/icons';
 import { useCallback } from 'react';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 import { hasUserToken } from './auth';
 
-const ShareButton = ({ type, id, disabled, disabledReason }) => {
+const ShareButton = withLocale(({ type, id, disabled, disabledReason }) => {
   const isLoggedIn = hasUserToken();
   const { message } = App.useApp();
+  const { formatMessage } = useIntl();
 
   const handleShare = useCallback(() => {
     if (disabled) return;
@@ -13,7 +16,7 @@ const ShareButton = ({ type, id, disabled, disabledReason }) => {
     navigator.clipboard
       .writeText(url)
       .then(() => {
-        message.success('分享链接已复制到剪贴板');
+        message.success(formatMessage({ id: 'shared.shareButton.copySuccess' }));
       })
       .catch(() => {
         const textArea = document.createElement('textarea');
@@ -24,13 +27,13 @@ const ShareButton = ({ type, id, disabled, disabledReason }) => {
         textArea.select();
         try {
           document.execCommand('copy');
-          message.success('分享链接已复制到剪贴板');
+          message.success(formatMessage({ id: 'shared.shareButton.copySuccess' }));
         } catch {
-          message.error('复制失败，请手动复制');
+          message.error(formatMessage({ id: 'shared.shareButton.copyFailed' }));
         }
         document.body.removeChild(textArea);
       });
-  }, [type, id, disabled, message]);
+  }, [type, id, disabled, message, formatMessage]);
 
   if (!isLoggedIn) {
     return null;
@@ -38,7 +41,7 @@ const ShareButton = ({ type, id, disabled, disabledReason }) => {
 
   const btn = (
     <Button icon={<ShareAltOutlined />} onClick={handleShare} disabled={disabled}>
-      分享
+      {formatMessage({ id: 'shared.shareButton.buttonText' })}
     </Button>
   );
 
@@ -47,6 +50,6 @@ const ShareButton = ({ type, id, disabled, disabledReason }) => {
   }
 
   return btn;
-};
+});
 
 export default ShareButton;

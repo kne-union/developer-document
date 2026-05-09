@@ -4,7 +4,8 @@ import createEntry from '@kne/modules-dev/dist/create-entry.modern';
 import '@kne/modules-dev/dist/create-entry.css';
 import { Empty, Tag, Typography } from 'antd';
 import { CloudServerOutlined } from '@ant-design/icons';
-import { REMOTE_COMPONENT_GROUP_LABELS } from '@components/Shared/catalogMeta';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 import styles from '@components/Shared/detailPage.module.scss';
 
 const ExamplePage = createEntry.ExamplePage;
@@ -19,7 +20,8 @@ const MetaItem = ({ label, value }) => {
   );
 };
 
-const ComponentExample = ({ remote, tpl, url, defaultVersion, current, examples }) => {
+const ComponentExample = withLocale(({ remote, tpl, url, defaultVersion, current, examples }) => {
+  const { formatMessage } = useIntl();
   const [, setSearchParams] = useSearchParams();
   const {
     loading,
@@ -47,7 +49,7 @@ const ComponentExample = ({ remote, tpl, url, defaultVersion, current, examples 
   }
 
   if (error) {
-    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="加载远程组件库失败，请稍后重试" />;
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: 'shared.remoteComponent.loadFailed' })} />;
   }
 
   const [components] = targetModules;
@@ -79,9 +81,10 @@ const ComponentExample = ({ remote, tpl, url, defaultVersion, current, examples 
       />
     </div>
   );
-};
+});
 
-const RemoteComponentDetailView = ({ data, headerExtra, current, simple }) => {
+const RemoteComponentDetailView = withLocale(({ data, headerExtra, current, simple }) => {
+  const { formatMessage } = useIntl();
   const group = data.group || 'common';
 
   return (
@@ -91,7 +94,7 @@ const RemoteComponentDetailView = ({ data, headerExtra, current, simple }) => {
           <span className={styles.headerIdentityIcon}>
             <CloudServerOutlined />
           </span>
-          <span className={styles.headerIdentityText}>远程组件</span>
+          <span className={styles.headerIdentityText}>{formatMessage({ id: 'shared.remoteComponent.identityLabel' })}</span>
         </div>
         <div className={styles.headerTop}>
           <div className={styles.headerContent}>
@@ -100,11 +103,11 @@ const RemoteComponentDetailView = ({ data, headerExtra, current, simple }) => {
             </Title>
             {!simple && (
               <>
-                <Paragraph className={styles.pageDescription}>{data.description || '用于业务模块或微前端场景下的远程能力接入与示例验证。'}</Paragraph>
+                <Paragraph className={styles.pageDescription}>{data.description || formatMessage({ id: 'shared.remoteComponent.defaultDescription' })}</Paragraph>
                 <div className={styles.tagRow}>
-                  <Tag className={styles.tagTone}>{REMOTE_COMPONENT_GROUP_LABELS[group] || group}</Tag>
+                  <Tag className={styles.tagTone}>{formatMessage({ id: `shared.catalogMeta.${group}` })}</Tag>
                   <Tag className={styles.tagToneSoft}>{data.defaultVersion || 'latest'}</Tag>
-                  <Tag className={data.isPublic ? styles.tagStatePublic : styles.tagStatePrivate}>{data.isPublic ? '公开' : '私有'}</Tag>
+                  <Tag className={data.isPublic ? styles.tagStatePublic : styles.tagStatePrivate}>{data.isPublic ? formatMessage({ id: 'common.public' }) : formatMessage({ id: 'common.private' })}</Tag>
                 </div>
               </>
             )}
@@ -113,10 +116,10 @@ const RemoteComponentDetailView = ({ data, headerExtra, current, simple }) => {
         </div>
         {!simple && (
           <div className={styles.metaGrid}>
-            <MetaItem label="Remote 名称" value={<Text copyable={{ text: data.remote }}>{data.remote}</Text>} />
-            <MetaItem label="NPM 包名" value={data.packageName || '-'} />
-            <MetaItem label="默认版本" value={data.defaultVersion || '-'} />
-            <MetaItem label="加载模版" value={data.tpl || '-'} />
+            <MetaItem label={formatMessage({ id: 'shared.remoteComponent.remoteNameLabel' })} value={<Text copyable={{ text: data.remote }}>{data.remote}</Text>} />
+            <MetaItem label={formatMessage({ id: 'shared.remoteComponent.npmPackageLabel' })} value={data.packageName || '-'} />
+            <MetaItem label={formatMessage({ id: 'shared.remoteComponent.defaultVersionLabel' })} value={data.defaultVersion || '-'} />
+            <MetaItem label={formatMessage({ id: 'shared.remoteComponent.loadTemplateLabel' })} value={data.tpl || '-'} />
           </div>
         )}
       </section>
@@ -125,15 +128,15 @@ const RemoteComponentDetailView = ({ data, headerExtra, current, simple }) => {
         <div className={styles.sectionHeader}>
           <div>
             <Title level={4} className={styles.sectionTitle}>
-              示例文档
+              {formatMessage({ id: 'shared.remoteComponent.exampleDocTitle' })}
             </Title>
-            <p className={styles.sectionDesc}>参考设计稿中的文档页结构，保留顶部摘要，示例区域继续复用现有 ExamplePage 能力。</p>
+            <p className={styles.sectionDesc}>{formatMessage({ id: 'shared.remoteComponent.exampleDocDesc' })}</p>
           </div>
         </div>
         <ComponentExample {...data} current={current} />
       </section>
     </div>
   );
-};
+});
 
 export default RemoteComponentDetailView;

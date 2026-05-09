@@ -7,65 +7,83 @@ import { CheckCircleOutlined, ClockCircleOutlined, EyeInvisibleOutlined, EyeOutl
 import dayjs from 'dayjs';
 import styles from '../style.module.scss';
 import { ShareButton, DocumentDetailView } from '@components/Shared';
+import withLocale from '@root/withLocale';
+import { useIntl } from '@kne/react-intl';
 
 const Basic = createWithRemoteLoader({
   modules: ['components-core:InfoPage', 'components-core:Descriptions']
-})(({ remoteModules, data }) => {
-  const [InfoPage, Descriptions] = remoteModules;
+})(
+  withLocale(({ remoteModules, data }) => {
+    const [InfoPage, Descriptions] = remoteModules;
+    const { formatMessage } = useIntl();
 
+    return (
+      <InfoPage>
+        <InfoPage.Part title={formatMessage({ id: 'adminDocument.tabDetail.basicInfoTitle' })}>
+          <Descriptions
+            dataSource={[
+              [{ label: 'ID', content: data.id }],
+              [{ label: formatMessage({ id: 'common.name' }), content: data.name }],
+              [
+                {
+                  label: formatMessage({ id: 'common.status' }),
+                  content: data.status === 'published' ? formatMessage({ id: 'common.published' }) : formatMessage({ id: 'common.draft' })
+                }
+              ],
+              [
+                {
+                  label: formatMessage({ id: 'common.isPublic' }),
+                  content: data.isPublic ? formatMessage({ id: 'common.public' }) : formatMessage({ id: 'common.private' })
+                }
+              ],
+              [
+                {
+                  label: formatMessage({ id: 'common.group' }),
+                  content: (
+                    <Space>
+                      {(data.groups || []).map(group => (
+                        <Tag key={group.id}>{group.name}</Tag>
+                      ))}
+                    </Space>
+                  )
+                }
+              ],
+              [
+                {
+                  label: formatMessage({ id: 'common.creator' }),
+                  content: data.createdUser?.email || '-'
+                }
+              ],
+              [
+                {
+                  label: formatMessage({ id: 'common.createdAt' }),
+                  content: data.createdAt ? dayjs(data.createdAt).format('YYYY-MM-DD HH:mm:ss') : '-'
+                }
+              ]
+            ]}
+          />
+        </InfoPage.Part>
+      </InfoPage>
+    );
+  })
+);
+
+const Preview = withLocale(({ data }) => {
+  const { formatMessage } = useIntl();
   return (
-    <InfoPage>
-      <InfoPage.Part title="基本信息">
-        <Descriptions
-          dataSource={[
-            [{ label: 'ID', content: data.id }],
-            [{ label: '名称', content: data.name }],
-            [
-              {
-                label: '状态',
-                content: data.status === 'published' ? '已发布' : '草稿'
-              }
-            ],
-            [
-              {
-                label: '是否公开',
-                content: data.isPublic ? '公开' : '私密'
-              }
-            ],
-            [
-              {
-                label: '分组',
-                content: (
-                  <Space>
-                    {(data.groups || []).map(group => (
-                      <Tag key={group.id}>{group.name}</Tag>
-                    ))}
-                  </Space>
-                )
-              }
-            ],
-            [
-              {
-                label: '创建人',
-                content: data.createdUser?.email || '-'
-              }
-            ],
-            [
-              {
-                label: '创建时间',
-                content: data.createdAt ? dayjs(data.createdAt).format('YYYY-MM-DD HH:mm:ss') : '-'
-              }
-            ]
-          ]}
+    <DocumentDetailView
+      data={data}
+      headerExtra={
+        <ShareButton
+          type="document"
+          id={data.id}
+          disabled={data.status !== 'published' || !data.isPublic}
+          disabledReason={!data.isPublic ? formatMessage({ id: 'adminDocument.tabDetail.privateCannotShare' }) : formatMessage({ id: 'adminDocument.tabDetail.unpublishedCannotShare' })}
         />
-      </InfoPage.Part>
-    </InfoPage>
+      }
+    />
   );
 });
-
-const Preview = ({ data }) => {
-  return <DocumentDetailView data={data} headerExtra={<ShareButton type="document" id={data.id} disabled={data.status !== 'published' || !data.isPublic} disabledReason={!data.isPublic ? '私密文档无法分享' : '未发布文档无法分享'} />} />;
-};
 
 const contentMap = {
   basic: Basic,
@@ -74,80 +92,83 @@ const contentMap = {
 
 const TabDetail = createWithRemoteLoader({
   modules: ['components-core:Layout@StateBarPage', 'components-core:Layout@PageHeader', 'components-core:Global@usePreset']
-})(({ remoteModules, ...props }) => {
-  const [StateBarPage, PageHeader, usePreset] = remoteModules;
-  const { apis } = usePreset();
-  const [searchParams, setSearchParams] = useSearchParams();
+})(
+  withLocale(({ remoteModules, ...props }) => {
+    const [StateBarPage, PageHeader, usePreset] = remoteModules;
+    const { apis } = usePreset();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const { formatMessage } = useIntl();
 
-  return (
-    <Fetch
-      {...Object.assign({}, apis.document.detail, { params: { id: searchParams.get('id') } })}
-      render={({ data, reload }) => {
-        const activeKey = searchParams.get('tab') || 'basic';
-        const ContentComponent = contentMap[activeKey] || Basic;
-        const statusTag =
-          data.status === 'published' ? (
-            <Tag className={styles.statusTagPublished} icon={<CheckCircleOutlined />}>
-              已发布
+    return (
+      <Fetch
+        {...Object.assign({}, apis.document.detail, { params: { id: searchParams.get('id') } })}
+        render={({ data, reload }) => {
+          const activeKey = searchParams.get('tab') || 'basic';
+          const ContentComponent = contentMap[activeKey] || Basic;
+          const statusTag =
+            data.status === 'published' ? (
+              <Tag className={styles.statusTagPublished} icon={<CheckCircleOutlined />}>
+                {formatMessage({ id: 'common.published' })}
+              </Tag>
+            ) : (
+              <Tag className={styles.statusTagDraft} icon={<ClockCircleOutlined />}>
+                {formatMessage({ id: 'common.draft' })}
+              </Tag>
+            );
+          const visibilityTag = data.isPublic ? (
+            <Tag className={styles.visibilityTagPublic} icon={<EyeOutlined />}>
+              {formatMessage({ id: 'common.public' })}
             </Tag>
           ) : (
-            <Tag className={styles.statusTagDraft} icon={<ClockCircleOutlined />}>
-              草稿
+            <Tag className={styles.visibilityTagPrivate} icon={<EyeInvisibleOutlined />}>
+              {formatMessage({ id: 'common.private' })}
             </Tag>
           );
-        const visibilityTag = data.isPublic ? (
-          <Tag className={styles.visibilityTagPublic} icon={<EyeOutlined />}>
-            公开
-          </Tag>
-        ) : (
-          <Tag className={styles.visibilityTagPrivate} icon={<EyeInvisibleOutlined />}>
-            私密
-          </Tag>
-        );
 
-        return (
-          <StateBarPage
-            {...props}
-            headerFixed={false}
-            header={
-              <PageHeader
-                title={data.name}
-                info={`ID: ${data.id}`}
-                tags={[
-                  <Tag className={styles.domainTag} icon={<FileTextOutlined />} key="domain">
-                    文档管理
-                  </Tag>,
-                  statusTag,
-                  visibilityTag
-                ]}
-                buttonOptions={
-                  <Actions
-                    data={data}
-                    onSuccess={() => {
-                      reload();
-                    }}
-                  />
-                }
-              />
-            }
-            stateBar={{
-              activeKey,
-              onChange: key => {
-                searchParams.set('tab', key);
-                setSearchParams(searchParams.toString());
-              },
-              stateOption: [
-                { tab: '基本信息', key: 'basic' },
-                { tab: '内容预览', key: 'preview' }
-              ]
-            }}
-          >
-            <ContentComponent data={data} reload={reload} />
-          </StateBarPage>
-        );
-      }}
-    />
-  );
-});
+          return (
+            <StateBarPage
+              {...props}
+              headerFixed={false}
+              header={
+                <PageHeader
+                  title={data.name}
+                  info={`ID: ${data.id}`}
+                  tags={[
+                    <Tag className={styles.domainTag} icon={<FileTextOutlined />} key="domain">
+                      {formatMessage({ id: 'adminDocument.tabDetail.domainTag' })}
+                    </Tag>,
+                    statusTag,
+                    visibilityTag
+                  ]}
+                  buttonOptions={
+                    <Actions
+                      data={data}
+                      onSuccess={() => {
+                        reload();
+                      }}
+                    />
+                  }
+                />
+              }
+              stateBar={{
+                activeKey,
+                onChange: key => {
+                  searchParams.set('tab', key);
+                  setSearchParams(searchParams.toString());
+                },
+                stateOption: [
+                  { tab: formatMessage({ id: 'adminDocument.tabDetail.basicInfoTitle' }), key: 'basic' },
+                  { tab: formatMessage({ id: 'adminDocument.tabDetail.contentPreviewTab' }), key: 'preview' }
+                ]
+              }}
+            >
+              <ContentComponent data={data} reload={reload} />
+            </StateBarPage>
+          );
+        }}
+      />
+    );
+  })
+);
 
 export default TabDetail;
