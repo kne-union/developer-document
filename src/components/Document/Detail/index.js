@@ -1,21 +1,19 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
-import { Tag, Space, Typography, Button, Empty } from 'antd';
-import { ArrowLeftOutlined, CalendarOutlined, ClockCircleOutlined, EyeInvisibleOutlined, EyeOutlined, LockOutlined, LoginOutlined, FileTextOutlined, UserOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import MarkdownRender from '@kne/markdown-components-render';
-import classNames from 'classnames';
+import { Button, Empty, Space, Typography } from 'antd';
+import { ArrowLeftOutlined, LoginOutlined } from '@ant-design/icons';
 import { useMemo } from 'react';
 import { hasUserToken } from '@components/Shared/auth';
+import { ShareButton, DocumentDetailView } from '@components/Shared';
 import styles from '../style.module.scss';
 
 const { Title, Paragraph } = Typography;
 
 const DocumentDetail = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:Layout@Page', 'components-thirdparty:CKEditor']
+  modules: ['components-core:Global@usePreset', 'components-core:Layout@Page']
 })(({ remoteModules, baseUrl: propsBaseUrl }) => {
-  const [usePreset, Page, CKEditor] = remoteModules;
+  const [usePreset, Page] = remoteModules;
   const { apis } = usePreset();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -59,86 +57,19 @@ const DocumentDetail = createWithRemoteLoader({
           }
 
           return (
-            <div className={styles.detailPage}>
-              <section className={styles.detailHeader}>
-                <div className={styles.headerIdentity}>
-                  <span className={styles.headerIdentityIcon}>
-                    <FileTextOutlined />
-                  </span>
-                  <span className={styles.headerIdentityText}>文档中心</span>
+            <DocumentDetailView
+              data={data}
+              headerExtra={<ShareButton type="document" id={data.id} disabled={data.status !== 'published' || !data.isPublic} disabledReason={!data.isPublic ? '私密文档无法分享' : '未发布文档无法分享'} />}
+              footer={
+                <div className={styles.detailActions}>
+                  <Space>
+                    <Button type="primary" ghost icon={<ArrowLeftOutlined />} onClick={() => navigate(baseUrl)}>
+                      返回列表
+                    </Button>
+                  </Space>
                 </div>
-                <Title level={2} className={styles.detailTitle}>
-                  {data.name}
-                </Title>
-                <div className={styles.tagRow}>
-                  {data.groups?.map(group => (
-                    <Tag key={group.id} className={classNames(styles.documentTag)} style={{ margin: 0 }}>
-                      {group.name}
-                    </Tag>
-                  ))}
-                  <Tag className={classNames(styles.documentTag, data.status === 'published' ? styles.tagLife : styles.tagProduct)}>{data.status === 'published' ? '已发布' : '草稿'}</Tag>
-                  {!data.isPublic && (
-                    <Tag icon={<LockOutlined />} className={classNames(styles.documentTag, styles.tagPrivate)}>
-                      私密
-                    </Tag>
-                  )}
-                </div>
-                <div className={styles.detailMeta}>
-                  <div className={styles.detailMetaItem}>
-                    <span className={styles.detailMetaIcon}>
-                      <UserOutlined />
-                    </span>
-                    <div>
-                      <div className={styles.detailMetaLabel}>作者</div>
-                      <div className={styles.detailMetaValue}>{data.createdUser?.email || '匿名'}</div>
-                    </div>
-                  </div>
-                  <div className={styles.detailMetaItem}>
-                    <span className={styles.detailMetaIcon}>
-                      <CalendarOutlined />
-                    </span>
-                    <div>
-                      <div className={styles.detailMetaLabel}>创建时间</div>
-                      <div className={styles.detailMetaValue}>{dayjs(data.createdAt).format('YYYY-MM-DD HH:mm')}</div>
-                    </div>
-                  </div>
-                  <div className={styles.detailMetaItem}>
-                    <span className={styles.detailMetaIcon}>
-                      <ClockCircleOutlined />
-                    </span>
-                    <div>
-                      <div className={styles.detailMetaLabel}>更新时间</div>
-                      <div className={styles.detailMetaValue}>{dayjs(data.updatedAt || data.createdAt).format('YYYY-MM-DD HH:mm')}</div>
-                    </div>
-                  </div>
-                  <div className={styles.detailMetaItem}>
-                    <span className={styles.detailMetaIcon}>{data.isPublic ? <EyeOutlined /> : <EyeInvisibleOutlined />}</span>
-                    <div>
-                      <div className={styles.detailMetaLabel}>可见性</div>
-                      <div className={styles.detailMetaValue}>{data.isPublic ? '公开' : '私密'}</div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section className={styles.detailContent}>
-                <div className={styles.detailContentHeader}>
-                  <FileTextOutlined />
-                  <span>正文内容</span>
-                </div>
-                <div className={styles.detailContentBody}>
-                  <MarkdownRender>{data.content}</MarkdownRender>
-                </div>
-              </section>
-
-              <div className={styles.detailActions}>
-                <Space>
-                  <Button type="primary" ghost icon={<ArrowLeftOutlined />} onClick={() => navigate(baseUrl)}>
-                    返回列表
-                  </Button>
-                </Space>
-              </div>
-            </div>
+              }
+            />
           );
         }}
       />

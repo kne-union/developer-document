@@ -1,11 +1,13 @@
 import React from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { Typography, Row, Col, Timeline, Statistic, Tag } from 'antd';
+import { Typography, Row, Col, Statistic, Tag } from 'antd';
 import { TeamOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { ColorfulCard, defaultColors, Jelly, GlassCard, PersonalCard } from '@kne/react-box';
+import Timeline from '@kne/timeline';
+import '@kne/timeline/dist/index.css';
 import styles from './style.module.scss';
 import { IconDisplay } from '@kne/antd-icon-select';
-import dayjs from 'dayjs';
 import '@kne/react-box/dist/index.css';
 
 const { Title, Paragraph } = Typography;
@@ -73,7 +75,18 @@ export const ValueSection = ({ data = [] }) => {
   );
 };
 
-export const HistorySection = ({ data = [] }) => {
+const formatTime = time => {
+  if (!time) return '';
+  const date = dayjs(time);
+  if (!date.isValid()) return time;
+  return date.format('YYYY.MM');
+};
+
+export const HistorySection = createWithRemoteLoader({
+  modules: ['components-core:Global@usePreset']
+})(({ remoteModules, data = [] }) => {
+  const [usePreset] = remoteModules;
+  const { staticUrl } = usePreset();
   if (!(data && data.length > 0)) {
     return null;
   }
@@ -86,18 +99,26 @@ export const HistorySection = ({ data = [] }) => {
       </div>
       <div className={styles.timelinePanel}>
         <Timeline
-          mode="left"
-          items={data.map(item => {
-            return {
-              label: dayjs(item.time).format('YYYY.MM.DD'),
-              children: <span className={styles.timelineText}>{item.event}</span>
+          data={data.map(item => {
+            const timelineItem = {
+              title: formatTime(item.time),
+              content: item.event
             };
+            if (item.images && item.images.length > 0) {
+              timelineItem.images = item.images.map(id => ({
+                src: `${staticUrl}/api/v1/static/file-id/${id}`
+              }));
+            }
+            if (item.extra) {
+              timelineItem.extra = item.extra;
+            }
+            return timelineItem;
           })}
         />
       </div>
     </section>
   );
-};
+});
 
 export const TeamMemberSection = createWithRemoteLoader({
   modules: ['components-core:Image']

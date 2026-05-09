@@ -1,6 +1,7 @@
 import RemoteLoader, { createWithRemoteLoader } from '@kne/remote-loader';
 import AppChildrenRouter from '@kne/app-children-router';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
+import RightOptions from './RightOptions';
 import './index.scss';
 import '@kne/react-box/dist/index.css';
 
@@ -100,7 +101,7 @@ const App = createWithRemoteLoader({
   const currentYear = new Date().getFullYear();
   const location = useLocation();
 
-  const shouldShowFooter = !(location.pathname.startsWith('/account') || location.pathname.startsWith('/admin') || location.pathname === '/remote-components/detail');
+  const shouldShowFooter = !(location.pathname.startsWith('/account') || location.pathname.startsWith('/admin') || location.pathname === '/remote-components/detail' || location.pathname.startsWith('/share'));
 
   return (
     <Global preset={globalPreset} themeToken={globalPreset.themeToken}>
@@ -111,7 +112,7 @@ const App = createWithRemoteLoader({
         list={[
           {
             path: 'account/*',
-            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" systemName="Developer Document" allowLanguageSwitch={false} />
+            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" systemName="Developer Document" allowLanguageSwitch={false} registerOpen={false} />
           },
           {
             path: 'admin/initAdmin',
@@ -230,10 +231,16 @@ const App = createWithRemoteLoader({
                 ]}
               />
             )
+          },
+          {
+            path: 'share',
+            loader: () => import('@pages/Share')
           }
         ]}
       >
         <AppChildrenRouter
+          notFoundPage
+          errorPage
           baseUrl={baseUrl}
           element={
             <Layout
@@ -245,6 +252,7 @@ const App = createWithRemoteLoader({
               }}
               navigation={{
                 defaultTitle: 'Developer Document',
+                rightOptions: <RightOptions />,
                 list: [
                   {
                     key: 'npm-packages',

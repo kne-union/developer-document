@@ -51,7 +51,7 @@ module.exports = fp(async (fastify, options) => {
     });
   };
 
-  const list = async ({ keyword, status, isPublic, groups, perPage, currentPage, createdUserId, publishTimeStart, publishTimeEnd }) => {
+  const list = async ({ keyword, status, isPublic, group, groups, perPage, currentPage, createdUserId, publishTimeStart, publishTimeEnd }) => {
     const where = {};
 
     if (keyword) {
@@ -80,17 +80,24 @@ module.exports = fp(async (fastify, options) => {
       }
     }
 
-    if (groups && groups.length > 0) {
-      // 获取所有分组及其后代分组的 id
-      const allGroupIds = [];
-      for (const groupId of groups) {
-        const descendantIds = await fastify.group.services.getDescendantIds({ id: groupId, type: 'blog' });
-        allGroupIds.push(...descendantIds);
+    if (group) {
+      // 根据分组 code 获取该分组及其所有后代分组的 code
+      const groupCodes = await fastify.group.services.getDescendantCodes({ code: group, type: 'blog' });
+      // PostgreSQL JSONB 数组查询：使用 @> 操作符按 code 匹配
+      where[Op.and] = [literal(`(${groupCodes.map(code => `groups @> '[{"code":"${code}"}]'`).join(' OR ')})`)];
+    }
+
+    if (!group && groups && groups.length > 0) {
+      // 获取所有分组及其后代分组的 code
+      const allGroupCodes = [];
+      for (const code of groups) {
+        const descendantCodes = await fastify.group.services.getDescendantCodes({ code, type: 'blog' });
+        allGroupCodes.push(...descendantCodes);
       }
       // 去重
-      const uniqueGroupIds = [...new Set(allGroupIds)];
-      // PostgreSQL JSONB 数组查询：使用 @> 操作符
-      where[Op.and] = [literal(`(${uniqueGroupIds.map(id => `groups @> '[{"id":"${id}"}]'`).join(' OR ')})`)];
+      const uniqueGroupCodes = [...new Set(allGroupCodes)];
+      // PostgreSQL JSONB 数组查询：使用 @> 操作符按 code 匹配
+      where[Op.and] = [literal(`(${uniqueGroupCodes.map(code => `groups @> '[{"code":"${code}"}]'`).join(' OR ')})`)];
     }
 
     const offset = (currentPage - 1) * perPage;
@@ -148,16 +155,16 @@ module.exports = fp(async (fastify, options) => {
     }
 
     if (groups && groups.length > 0) {
-      // 获取所有分组及其后代分组的 id
-      const allGroupIds = [];
-      for (const groupId of groups) {
-        const descendantIds = await fastify.group.services.getDescendantIds({ id: groupId, type: 'blog' });
-        allGroupIds.push(...descendantIds);
+      // 获取所有分组及其后代分组的 code
+      const allGroupCodes = [];
+      for (const code of groups) {
+        const descendantCodes = await fastify.group.services.getDescendantCodes({ code, type: 'blog' });
+        allGroupCodes.push(...descendantCodes);
       }
       // 去重
-      const uniqueGroupIds = [...new Set(allGroupIds)];
-      // PostgreSQL JSONB 数组查询：使用 @> 操作符
-      where[Op.and] = [literal(`(${uniqueGroupIds.map(id => `groups @> '[{"id":"${id}"}]'`).join(' OR ')})`)];
+      const uniqueGroupCodes = [...new Set(allGroupCodes)];
+      // PostgreSQL JSONB 数组查询：使用 @> 操作符按 code 匹配
+      where[Op.and] = [literal(`(${uniqueGroupCodes.map(code => `groups @> '[{"code":"${code}"}]'`).join(' OR ')})`)];
     }
 
     const offset = (currentPage - 1) * perPage;

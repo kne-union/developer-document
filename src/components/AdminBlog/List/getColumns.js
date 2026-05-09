@@ -42,6 +42,17 @@ const getColumns = ({ navigate, baseUrl }) => {
       }
     },
     {
+      name: 'groups',
+      title: '标签',
+      type: 'tag',
+      valueOf: item => {
+        const groups = item.groups || [];
+        if (groups.length === 0) return null;
+        if (groups.length === 1) return { type: 'default', text: groups[0].name };
+        return { type: 'default', text: `${groups[0].name} +${groups.length - 1}` };
+      }
+    },
+    {
       name: 'createdUser',
       title: '创建人',
       type: 'text',

@@ -1,9 +1,11 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
+import { useNavigate } from 'react-router-dom';
 
 const RightOptions = createWithRemoteLoader({
   modules: ['components-core:Global@GetGlobal', 'components-admin:UserTool']
 })(({ remoteModules }) => {
   const [GetGlobal, UserTool] = remoteModules;
+  const navigate = useNavigate();
 
   return (
     <GetGlobal globalKey="userInfo">
@@ -11,15 +13,20 @@ const RightOptions = createWithRemoteLoader({
         if (!value) {
           return null;
         }
-        const { userInfo, tenantUser, tenant } = value;
+        const userInfo = value.value;
 
         return (
           <UserTool
-            avatar={tenantUser ? tenantUser.avatar : userInfo.avatar}
-            name={tenantUser ? tenantUser.name : userInfo.nickname}
-            email={tenantUser ? tenantUser.email : userInfo.email}
-            tenant={tenant}
-            orgName={tenantUser && (tenantUser?.tenantOrgs || []).map(item => item.name).join(',')}
+            avatar={userInfo.avatar}
+            name={userInfo.nickname}
+            email={userInfo.emaill}
+            list={[
+              {
+                iconType: 'icon-shezhi',
+                label: '管理端',
+                onClick: () => navigate('/admin')
+              }
+            ]}
           />
         );
       }}

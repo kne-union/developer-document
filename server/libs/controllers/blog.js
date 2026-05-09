@@ -18,7 +18,7 @@ module.exports = fp(async (fastify, options) => {
             content: { type: 'string', default: '' },
             status: { type: 'string', enum: ['draft', 'published'], default: 'draft' },
             publishTime: { type: 'string', format: 'date-time' },
-            isPublic: { type: 'boolean', default: true },
+            isPublic: { type: 'boolean', default: false },
             groups: { type: 'array', items: { type: 'object' }, default: [] }
           },
           required: ['title']
@@ -30,7 +30,7 @@ module.exports = fp(async (fastify, options) => {
         ...request.body,
         content: request.body.content ?? '',
         status: request.body.status ?? 'draft',
-        isPublic: request.body.isPublic ?? true,
+        isPublic: request.body.isPublic ?? false,
         groups: request.body.groups ?? [],
         createdUserId: request.user.id
       });
@@ -52,7 +52,7 @@ module.exports = fp(async (fastify, options) => {
             content: { type: 'string', default: '' },
             status: { type: 'string', enum: ['draft', 'published'], default: 'draft' },
             publishTime: { type: 'string', format: 'date-time' },
-            isPublic: { type: 'boolean', default: true },
+            isPublic: { type: 'boolean', default: false },
             groups: { type: 'array', items: { type: 'object' }, default: [] }
           },
           required: ['id']
@@ -120,6 +120,7 @@ module.exports = fp(async (fastify, options) => {
             keyword: { type: 'string' },
             status: { type: 'string', enum: ['draft', 'published'] },
             isPublic: { type: 'boolean' },
+            group: { type: 'string' },
             groups: { type: 'array', items: { type: 'string' } },
             perPage: { type: 'number', default: 20 },
             currentPage: { type: 'number', default: 1 },

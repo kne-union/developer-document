@@ -13,7 +13,8 @@ const pages = {
   Admin: loadableWithProps(() => import('./Admin')),
   InitAdmin: loadableWithProps(() => import('./Admin').then(({ InitAdmin }) => InitAdmin)),
   Error: loadableWithProps(() => import('./Error')),
-  NotFound: loadableWithProps(() => import('./NotFound'))
+  NotFound: loadableWithProps(() => import('./NotFound')),
+  Share: loadableWithProps(() => import('./Share'))
 };
 
 export default pages;

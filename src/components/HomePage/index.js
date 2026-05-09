@@ -195,25 +195,53 @@ const HomePage = createWithRemoteLoader({
                 <CodeOutlined />
                 <span>直接查看示例与 README 文档</span>
               </div>
+              <div className={styles.inlineListItem}>
+                <FileTextOutlined />
+                <span>一键部署 AI 提示词，辅助编码与文档生成</span>
+              </div>
             </Space>
           </div>
           <Zsh title="终端 — zsh" padding="32px" radius="12px">
             <div style={{ color: '#1f2937' }}>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <span style={{ color: '#22c55e', fontWeight: 'bold' }}>$</span>
-                <span>npm init @kne/union-app my-dashboard</span>
+                <span>npx @kne/npm-tools init my-project</span>
+              </div>
+              <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd', color: '#0369a1', fontSize: '0.75rem' }}>
+                <p style={{ margin: 0 }}>✔ NodeJS Libs</p>
+                <p style={{ margin: 0 }}>✔ Frontend Libs</p>
+                <p style={{ margin: 0 }}>✔ Remote Components</p>
+                <p style={{ margin: 0 }}>✔ Business Project</p>
+                <p style={{ margin: 0 }}>✔ WeChat Miniprogram Libs</p>
+                <p style={{ margin: 0 }}>✔ WeChat Miniprogram Project</p>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
                 <span style={{ color: '#22c55e', fontWeight: 'bold' }}>$</span>
-                <span>cd my-dashboard</span>
+                <span>cd my-project</span>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
                 <span style={{ color: '#22c55e', fontWeight: 'bold' }}>$</span>
-                <span>npm install</span>
+                <span>npx @kne/npm-tools deployPrompts</span>
+              </div>
+              <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd', color: '#0369a1', fontSize: '0.75rem' }}>
+                <p style={{ margin: 0, fontWeight: 'bold' }}>请选择要部署的 prompts 类型：</p>
+                <p style={{ margin: '0.25rem 0 0' }}>❯ Fastify Project</p>
+                <p style={{ margin: '0.25rem 0 0' }}> Frontend Libs</p>
+                <p style={{ margin: '0.25rem 0 0' }}> Frontend Remote Components</p>
+                <p style={{ margin: '0.25rem 0 0' }}> Frontend Project</p>
+                <p style={{ margin: '0.25rem 0 0' }}> Node Libs</p>
+                <p style={{ margin: '0.25rem 0 0' }}> Fastify Libs</p>
+              </div>
+              <div style={{ marginTop: '1rem', padding: '0.5rem', backgroundColor: '#fefce8', borderRadius: '8px', border: '1px solid #fef08a', color: '#854d0e', fontSize: '0.75rem' }}>
+                <p style={{ margin: 0 }}>正在处理包: @kne/prompts-node-libs</p>
+                <p style={{ margin: 0 }}>正在处理包: @kne/prompts-fastify-libs</p>
+                <p style={{ margin: 0 }}>正在处理包: @kne/prompts-remote-components</p>
+                <p style={{ margin: 0 }}>正在处理包: @kne/prompts-projects</p>
+                <p style={{ margin: 0, fontWeight: 'bold' }}>所有 prompts 部署完成</p>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
                 <span style={{ color: '#22c55e', fontWeight: 'bold' }}>$</span>
-                <span>npm run start</span>
+                <span>npm start</span>
               </div>
               <div style={{ marginTop: '1.5rem', padding: '0.75rem', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #dcfce7', color: '#15803d', fontSize: '0.75rem', fontWeight: 'bold' }}>
                 <p style={{ margin: 0 }}>成功！项目已创建并启动</p>
