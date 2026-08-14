@@ -125,29 +125,6 @@ const createServer = () => {
         }
       });
 
-      fastify.register(require('@kne/fastify-message'), {
-        isTest: fastify.config.IS_TEST,
-        emailConfig: {
-          host: fastify.config.ALISMTP_ENDPOINT,
-          port: 465,
-          secure: true,
-          user: fastify.config.ALISMTP_USER,
-          pass: fastify.config.ALISMTP_PASSWORD
-        },
-        templateDir: path.join(__dirname, './messageTemplate')
-      });
-
-      fastify.register(require('@kne/fastify-group'), {
-        prefix: `${options.prefix}/group`,
-        getAuthenticate: name => {
-          if (name === 'read') {
-            return [];
-          }
-          const { authenticate } = fastify.account;
-          return [authenticate.user, authenticate.admin];
-        }
-      });
-
       fastify.register(require('fastify-cron'), {
         jobs: [
           {
@@ -177,6 +154,29 @@ const createServer = () => {
             start: true
           }
         ]
+      });
+
+      fastify.register(require('@kne/fastify-message'), {
+        isTest: fastify.config.IS_TEST,
+        emailConfig: {
+          host: fastify.config.ALISMTP_ENDPOINT,
+          port: 465,
+          secure: true,
+          user: fastify.config.ALISMTP_USER,
+          pass: fastify.config.ALISMTP_PASSWORD
+        },
+        templateDir: path.join(__dirname, './messageTemplate')
+      });
+
+      fastify.register(require('@kne/fastify-group'), {
+        prefix: `${options.prefix}/group`,
+        getAuthenticate: name => {
+          if (name === 'read') {
+            return [];
+          }
+          const { authenticate } = fastify.account;
+          return [authenticate.user, authenticate.admin];
+        }
       });
 
       fastify.register(require('@kne/fastify-task'), {

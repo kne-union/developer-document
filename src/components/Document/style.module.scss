@@ -1,3 +1,5 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
 .page,
 .detailPage {
   --document-primary: #0891b2;
@@ -12,6 +14,8 @@
   max-width: 1240px;
   margin: 0 auto;
   padding: 20px 24px 40px;
+
+  @include resp.responsive-container;
 }
 
 .headerPanel,
@@ -432,6 +436,9 @@
   margin: 0 auto;
   padding: 20px 24px 32px;
   width: 100%;
+  box-sizing: border-box;
+
+  @include resp.responsive-container;
 }
 
 .detailHeader {
@@ -545,6 +552,7 @@
 
 .detailContent {
   padding: 0;
+  overflow: visible;
 }
 
 .detailContentHeader {
@@ -561,6 +569,40 @@
 
 .detailContentBody {
   padding: 16px 18px;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+
+  :global(img),
+  :global(video),
+  :global(svg),
+  :global(figure),
+  :global(picture) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  :global(table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+
+    :global(th) {
+      white-space: normal;
+    }
+  }
+
+  :global(pre) {
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  > div {
+    max-width: 100%;
+    min-width: 0;
+  }
 }
 
 .detailContentBody :global(.ck-content) {
@@ -568,6 +610,18 @@
   font-size: 14px;
   line-height: 1.82;
   word-break: break-word;
+  max-width: 100%;
+
+  :global(pre),
+  :global(table) {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  :global(img) {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 .articleContent {
@@ -576,6 +630,18 @@
   line-height: 1.82;
   white-space: pre-wrap;
   word-break: break-word;
+  max-width: 100%;
+
+  :global(pre),
+  :global(table) {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  :global(img) {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 .detailActions {
@@ -625,6 +691,54 @@
   .detailHeader::after,
   .card {
     animation: none !important;
+  }
+}
+
+.user-select {
+  max-width: 100%;
+}
+
+.range-picker {
+  max-width: 100%;
+}
+
+@include resp.mobile-container {
+  .page,
+  .detailPage {
+    padding: 16px 16px 32px;
+  }
+
+  .headerTop {
+    flex-direction: column;
+  }
+
+  .searchBox {
+    width: 100%;
+  }
+
+  .contentLayout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    position: static;
+  }
+
+  .filterRow {
+    flex-direction: column;
+  }
+
+  .filterLabel {
+    white-space: normal;
+  }
+
+  .cardGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detailMeta {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

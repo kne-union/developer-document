@@ -1,3 +1,5 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
 .page {
   --tone-npm: #2563eb;
   --tone-npm-dark: #1d4ed8;
@@ -17,6 +19,8 @@
   max-width: 1240px;
   margin: 0 auto;
   padding: 24px;
+
+  @include resp.responsive-container;
 }
 
 .hero,
@@ -39,7 +43,7 @@
 .hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
   gap: 20px;
   padding: 28px;
   margin-bottom: 24px;
@@ -119,6 +123,7 @@
 
 .heroActions {
   margin-top: 24px;
+  flex-wrap: wrap;
 }
 
 .heroActions :global(.ant-btn) {
@@ -455,9 +460,9 @@
   }
 }
 
-@media (max-width: 960px) {
+@include resp.mobile-container {
   .page {
-    padding: 20px 16px;
+    padding: 16px;
   }
 
   .hero,
@@ -470,6 +475,12 @@
   .footerCta {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 960px) {
+  .page {
+    padding: 20px 16px;
   }
 }
 

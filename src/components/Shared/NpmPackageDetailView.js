@@ -106,7 +106,7 @@ const NpmPackageDetailView = withLocale(({ data, headerExtra, simple }) => {
               </Title>
               <p className={styles.sectionDesc}>{formatMessage({ id: 'shared.npmPackage.onlineExamplesDesc' })}</p>
             </div>
-            <Select style={{ width: 220 }} options={examples.map(v => ({ label: `v${v}`, value: v }))} value={currentVersion} onChange={setSelectedVersion} />
+            <Select className={styles.versionSelect} options={examples.map(v => ({ label: `v${v}`, value: v }))} value={currentVersion} onChange={setSelectedVersion} />
           </div>
           <div className={styles.exampleWrap}>
             <ExampleRunner packageName={data.packageName} version={currentVersion} />

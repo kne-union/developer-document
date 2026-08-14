@@ -2,6 +2,7 @@ import { Tag, Typography } from 'antd';
 import { CalendarOutlined, ClockCircleOutlined, EyeInvisibleOutlined, EyeOutlined, FileTextOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import MarkdownRender from '@kne/markdown-components-render';
+import '@kne/markdown-components-render/dist/index.css';
 import classNames from 'classnames';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
