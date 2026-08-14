@@ -1,3 +1,5 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
 :root {
   color-scheme: light;
 }
@@ -8,8 +10,48 @@ body,
   min-height: 100%;
 }
 
+body,
+#root {
+  max-width: 100%;
+}
+
+#root {
+  @include resp.responsive-container;
+}
+
 body {
   margin: 0;
+}
+
+.container-body {
+  max-width: 100%;
+  min-width: 0;
+
+  :global(img),
+  :global(video),
+  :global(svg),
+  :global(figure) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  :global(.ck-content),
+  :global(.markdown-body) {
+    max-width: 100%;
+    overflow-x: auto;
+    word-break: break-word;
+
+    :global(pre),
+    :global(table) {
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    :global(img) {
+      max-width: 100%;
+      height: auto;
+    }
+  }
 }
 
 .ant-layout-header {
@@ -41,10 +83,37 @@ body {
 }
 
 .ant-layout-header > .ant-row.ant-row-no-wrap {
-  max-width: 1240px;
+  max-width: min(1240px, 100%);
   margin: 0 auto;
   align-items: center;
   gap: 12px;
+}
+
+@include resp.mobile-container {
+  .ant-layout-header > .ant-row.ant-row-no-wrap {
+    padding-inline: 16px;
+  }
+
+  .container-body > .ant-layout {
+    --margin-width: 0 !important;
+    --padding-width: 0 !important;
+  }
+
+  .example-driver-preview {
+    padding: 0 !important;
+  }
+
+  .example-driver-inner {
+    margin: 0 0 10px 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+  }
+
+  .example-driver-item {
+    width: 100% !important;
+    min-width: auto !important;
+  }
 }
 
 .navigation-logo {
@@ -138,26 +207,6 @@ body {
   line-height: 1.5;
   text-align: right;
   white-space: nowrap;
-}
-
-@media (max-width: 768px) {
-  .container-body > .ant-layout {
-    --margin-width: 0 !important;
-    --padding-width: 0 !important;
-  }
-  .example-driver-preview {
-    padding: 0 !important;
-  }
-  .example-driver-inner {
-    margin: 0 0 10px 0 !important;
-    border-left: none !important;
-    border-right: none !important;
-    border-top: none !important;
-  }
-  .example-driver-item {
-    width: 100% !important;
-    min-width: auto !important;
-  }
 }
 
 @media (max-width: 640px) {

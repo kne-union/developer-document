@@ -7,7 +7,8 @@
 }
 
 .icon-select-popup {
-  min-width: 300px;
+  min-width: min(300px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
 
   :global {
     .rc-virtual-list-holder-inner {

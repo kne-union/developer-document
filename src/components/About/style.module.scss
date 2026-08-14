@@ -1,7 +1,11 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
 .page {
   max-width: 1240px;
   margin: 0 auto;
   padding: 24px;
+
+  @include resp.responsive-container;
 }
 
 .hero,
@@ -240,6 +244,16 @@
   .teamCard,
   .cultureCard {
     animation: none !important;
+  }
+}
+
+@include resp.mobile-container {
+  .page {
+    padding: 16px;
+  }
+
+  .statsGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -89,7 +89,11 @@ const Share = createWithRemoteLoader({
               );
             }
 
-            return <DetailView data={data} current={current} simple />;
+            return (
+              <div className={styles.shareContent}>
+                <DetailView data={data} current={current} simple />
+              </div>
+            );
           }}
         />
       </div>

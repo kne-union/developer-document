@@ -97,6 +97,7 @@
     "@kne/ensure-slash": "^0.1.0",
     "@kne/markdown-components-render": "^0.1.10",
     "@kne/react-box": "^0.1.6",
+    "@kne/responsive-utils": "^0.1.15",
     "@kne/timeline": "^1.0.2",
     "@kne/token-storage": "^1.0.0",
     "@kne/use-ref-callback": "^0.1.2",

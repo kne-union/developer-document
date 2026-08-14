@@ -1,3 +1,5 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
 .page {
   min-height: 100vh;
 }
@@ -13,6 +15,8 @@
   max-width: 1240px;
   margin: 0 auto;
   padding: 20px 24px 40px;
+
+  @include resp.responsive-container;
 }
 
 .themeDefault {
@@ -427,6 +431,32 @@
 @media (max-width: 1200px) {
   .cardGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@include resp.mobile-container {
+  .content {
+    padding: 16px 16px 32px;
+  }
+
+  .headerTop {
+    flex-direction: column;
+  }
+
+  .searchBox {
+    width: 100%;
+  }
+
+  .filterRow {
+    flex-direction: column;
+  }
+
+  .filterLabel {
+    white-space: normal;
+  }
+
+  .cardGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

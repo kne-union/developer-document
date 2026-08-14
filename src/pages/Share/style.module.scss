@@ -1,9 +1,13 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
 .container {
   max-width: 1240px;
   margin: 0 auto;
   padding: 20px 24px 32px;
   width: 100%;
   box-sizing: border-box;
+
+  @include resp.responsive-container;
 }
 
 .noticePanel {
@@ -40,6 +44,22 @@
   margin: 0 !important;
   color: #94a3b8;
   font-size: 14px;
+}
+
+.shareContent {
+  min-width: 0;
+  max-width: 100%;
+
+  :global([class*='detailPage']) {
+    padding: 0;
+    max-width: 100%;
+  }
+}
+
+@include resp.mobile-container {
+  .container {
+    padding: 16px 16px 32px;
+  }
 }
 
 @media (max-width: 960px) {
