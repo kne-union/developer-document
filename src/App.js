@@ -1,6 +1,6 @@
 import RemoteLoader, { createWithRemoteLoader } from '@kne/remote-loader';
 import AppChildrenRouter from '@kne/app-children-router';
-import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
@@ -144,8 +144,17 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
   const baseUrl = '';
   const currentYear = new Date().getFullYear();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const shouldShowFooter = !(location.pathname.startsWith('/account') || location.pathname.startsWith('/admin') || location.pathname === '/remote-components/detail' || location.pathname.startsWith('/share'));
+
+  const adminNavigateTo = path => {
+    if (!path || path === '/' || !String(path).startsWith('/admin')) {
+      window.location.href = path || '/';
+      return;
+    }
+    navigate(path);
+  };
 
   return (
     <>
@@ -186,6 +195,8 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
                     navigation={{
                       base: `${baseUrl}/admin`,
                       defaultTitle: 'Developer Document',
+                      rightOptions: <RightOptions />,
+                      navigateTo: adminNavigateTo,
                       list: [
                         {
                           key: 'npm-package',

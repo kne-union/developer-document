@@ -1,9 +1,11 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { useNavigate } from 'react-router-dom';
 import { Space } from 'antd';
-import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
 import { useGlobalContext } from '@kne/global-context';
+
+const hardNavigate = path => {
+  window.location.href = path;
+};
 
 const LanguageSwitch = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-admin:Account@Language']
@@ -25,41 +27,45 @@ const LanguageSwitch = createWithRemoteLoader({
 
 const RightOptions = createWithRemoteLoader({
   modules: ['components-core:Global@GetGlobal', 'components-admin:UserTool']
-})(
-  withLocale(({ remoteModules }) => {
-    const [GetGlobal, UserTool] = remoteModules;
-    const navigate = useNavigate();
-    const { formatMessage } = useIntl();
+})(({ remoteModules }) => {
+  const [GetGlobal, UserTool] = remoteModules;
+  const { formatMessage } = useIntl();
+  const isAdmin = window.location.pathname.startsWith('/admin');
 
-    return (
-      <GetGlobal globalKey="userInfo">
-        {({ value }) => {
-          if (!value) {
-            return <LanguageSwitch />;
-          }
-          const userInfo = value.value;
+  return (
+    <GetGlobal globalKey="userInfo">
+      {({ value }) => {
+        if (!value) {
+          return <LanguageSwitch />;
+        }
+        const userInfo = value.value;
 
-          return (
-            <Space size={8}>
-              <LanguageSwitch />
-              <UserTool
-                avatar={userInfo.avatar}
-                name={userInfo.nickname}
-                email={userInfo.emaill}
-                list={[
-                  {
-                    iconType: 'icon-shezhi',
-                    label: formatMessage({ id: 'rightOptions.admin' }),
-                    onClick: () => navigate('/admin')
-                  }
-                ]}
-              />
-            </Space>
-          );
-        }}
-      </GetGlobal>
-    );
-  })
-);
+        return (
+          <Space size={8}>
+            <LanguageSwitch />
+            <UserTool
+              avatar={userInfo.avatar}
+              name={userInfo.nickname}
+              email={userInfo.emaill}
+              list={[
+                isAdmin
+                  ? {
+                      iconType: 'icon-shezhi',
+                      label: formatMessage({ id: 'common.backToHome' }),
+                      onClick: () => hardNavigate('/')
+                    }
+                  : {
+                      iconType: 'icon-shezhi',
+                      label: formatMessage({ id: 'rightOptions.admin' }),
+                      onClick: () => hardNavigate('/admin')
+                    }
+              ]}
+            />
+          </Space>
+        );
+      }}
+    </GetGlobal>
+  );
+});
 
 export default RightOptions;
