@@ -154,6 +154,11 @@ const getApis = options => {
         url: `${prefix}/document/public/list`,
         method: 'GET',
         paramsType: 'params'
+      },
+      search: {
+        url: `${prefix}/document/search`,
+        method: 'GET',
+        paramsType: 'params'
       }
     },
     group: {
@@ -176,6 +181,106 @@ const getApis = options => {
       remove: {
         url: `${prefix}/group/remove`,
         method: 'POST'
+      }
+    },
+    experience: {
+      list: {
+        url: `${prefix}/experience/manage/list`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      detail: {
+        url: `${prefix}/experience/manage/detail`,
+        method: 'GET'
+      },
+      close: {
+        url: `${prefix}/experience/manage/close`,
+        method: 'POST'
+      },
+      reopen: {
+        url: `${prefix}/experience/manage/reopen`,
+        method: 'POST'
+      },
+      delete: {
+        url: `${prefix}/experience/manage/delete`,
+        method: 'POST'
+      },
+      export: {
+        url: `${prefix}/experience/manage/export`,
+        method: 'GET'
+      },
+      import: {
+        url: `${prefix}/experience/manage/import`,
+        method: 'POST'
+      },
+      upload: {
+        url: `${prefix}/experience/upload`,
+        method: 'POST'
+      },
+      exists: {
+        url: `${prefix}/experience/exists`,
+        method: 'GET'
+      },
+      search: {
+        url: `${prefix}/experience/search`,
+        method: 'GET',
+        paramsType: 'params'
+      }
+    },
+    worklog: {
+      list: {
+        url: `${prefix}/worklog/manage/list`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      detail: {
+        url: `${prefix}/worklog/manage/detail`,
+        method: 'GET'
+      },
+      export: {
+        url: `${prefix}/worklog/manage/export`,
+        method: 'GET'
+      },
+      import: {
+        url: `${prefix}/worklog/manage/import`,
+        method: 'POST'
+      },
+      upload: {
+        url: `${prefix}/worklog/upload`,
+        method: 'POST'
+      },
+      exists: {
+        url: `${prefix}/worklog/exists`,
+        method: 'GET'
+      }
+    },
+    documentIndex: {
+      search: {
+        url: `${prefix}/document-index/search`,
+        method: 'GET',
+        paramsType: 'params'
+      }
+    },
+    searchAnalytics: {
+      records: {
+        url: `${prefix}/search-analytics/records`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      summary: {
+        url: `${prefix}/search-analytics/summary`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      trend: {
+        url: `${prefix}/search-analytics/trend`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      topQueries: {
+        url: `${prefix}/search-analytics/top-queries`,
+        method: 'GET',
+        paramsType: 'params'
       }
     }
   };

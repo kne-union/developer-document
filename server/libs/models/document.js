@@ -25,6 +25,10 @@ module.exports = ({ DataTypes, options }) => {
         type: DataTypes.JSONB,
         comment: '分组列表',
         defaultValue: []
+      },
+      searchText: {
+        type: DataTypes.TEXT,
+        comment: '全文检索文本'
       }
     },
     associate: ({ document }) => {

@@ -45,7 +45,9 @@ const createServer = () => {
 
         ALISMTP_USER: { type: 'string' },
         ALISMTP_PASSWORD: { type: 'string' },
-        ALISMTP_ENDPOINT: { type: 'string' }
+        ALISMTP_ENDPOINT: { type: 'string' },
+
+        DOCUMENT_INDEX_DIR: { type: 'string', default: '' }
       }
     }
   });
@@ -197,6 +199,10 @@ const createServer = () => {
         options
       });
 
+      fastify.register(require('@kne/fastify-signature'), {
+        prefix: `${options.prefix}/signature`
+      });
+
       fastify.register(require('@kne/fastify-namespace'), {
         options,
         name: options.name,
@@ -212,9 +218,12 @@ const createServer = () => {
         ]
       });
 
-      fastify.register(require('@kne/fastify-signature'), {
-        prefix: `${options.prefix}/signature`
+      fastify.register(require('@kne/fastify-statistics'), {
+        prefix: `${options.prefix}/statistics`,
+        name: 'statistics'
       });
+
+      fastify.register(require('./libs/mcp'), options);
 
       /*fastify.register(require('@kne/fastify-aliyun'), {
     prefix: `${options.prefix}/aliyun`,

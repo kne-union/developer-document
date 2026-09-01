@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react';
-import { Space, Button, App } from 'antd';
+import { useState } from 'react';
+import { Button, App } from 'antd';
 import { SyncOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import Create from '../Actions/Create';
-import Actions from '../Actions';
+import { getActionList } from '../Actions';
 import getColumns from './getColumns';
 import AdminEntityTablePage from '@components/Shared/AdminEntityTablePage';
 
@@ -19,29 +19,13 @@ const List = createWithRemoteLoader({
     const [loading, setLoading] = useState(false);
     const { message } = App.useApp();
 
-    const statusOptions = useMemo(
-      () => [
-        { tab: formatMessage({ id: 'common.all' }), key: 'all' },
-        { tab: formatMessage({ id: 'common.draft' }), key: 'draft' },
-        { tab: formatMessage({ id: 'common.published' }), key: 'published' }
-      ],
-      [formatMessage]
-    );
-
-    const statusMap = useMemo(() => new Map(statusOptions.map(item => [item.key, item])), [statusOptions]);
-
-    const createStatusFilter = ({ value, label }) => {
-      return { name: 'status', value: { label, value } };
-    };
-
     return (
       <AdminEntityTablePage
         {...props}
+        name="admin-blog-list"
         getApi={apis => apis.blog.list}
         buildRequestData={filterValue => {
-          const result = Object.assign({}, filterValue, {
-            status: filterValue.status && filterValue.status !== 'all' ? filterValue.status : undefined
-          });
+          const result = Object.assign({}, filterValue);
 
           if (filterValue.publishTime?.value?.[0] && filterValue.publishTime?.value?.[1]) {
             result.publishTimeStart = filterValue.publishTime.value[0];
@@ -62,6 +46,15 @@ const List = createWithRemoteLoader({
         getFilterList={({ SuperSelectUserFilterItem, SuperSelectFilterItem, TypeDateRangePickerFilterItem }) => {
           return [
             [
+              <SuperSelectFilterItem
+                single
+                label={formatMessage({ id: 'common.status' })}
+                name="status"
+                options={[
+                  { label: formatMessage({ id: 'common.draft' }), value: 'draft' },
+                  { label: formatMessage({ id: 'common.published' }), value: 'published' }
+                ]}
+              />,
               <SuperSelectFilterItem
                 label={formatMessage({ id: 'adminBlog.list.tagLabel' })}
                 name="groups"
@@ -97,36 +90,7 @@ const List = createWithRemoteLoader({
             ]
           ];
         }}
-        renderTopArea={({ filterValue, setFilter, StateBar }) => {
-          return (
-            <StateBar
-              type="radio"
-              size="small"
-              activeKey={filterValue.status || 'all'}
-              onChange={value => {
-                const currentState = statusMap.get(value);
-                setFilter(filter => {
-                  const nextFilter = filter.slice(0);
-                  const currentIndex = filter.findIndex(item => item.name === 'status');
-
-                  if (currentState.key === 'all') {
-                    if (currentIndex > -1) {
-                      nextFilter.splice(currentIndex, 1);
-                    }
-                  } else if (currentIndex === -1) {
-                    nextFilter.push(createStatusFilter({ value: currentState.key, label: currentState.tab }));
-                  } else {
-                    nextFilter.splice(currentIndex, 1, createStatusFilter({ value: currentState.key, label: currentState.tab }));
-                  }
-
-                  return nextFilter;
-                });
-              }}
-              stateOption={statusOptions}
-            />
-          );
-        }}
-        renderTitleExtra={({ SearchInput, reload, ajax, apis }) => {
+        renderTitleExtra={({ reload, ajax, apis }) => {
           const handleTriggerSearch = async () => {
             setLoading(true);
             try {
@@ -144,19 +108,18 @@ const List = createWithRemoteLoader({
           };
 
           return (
-            <Space align="center">
-              <SearchInput name="keyword" label={formatMessage({ id: 'common.keyword' })} />
+            <>
               <Button icon={<SyncOutlined spin={loading} />} loading={loading} onClick={handleTriggerSearch}>
                 {formatMessage({ id: 'adminBlog.list.manualFetch' })}
               </Button>
               <Create type="primary" onSuccess={reload}>
                 {formatMessage({ id: 'adminBlog.list.addBlog' })}
               </Create>
-            </Space>
+            </>
           );
         }}
         getColumns={({ navigate, baseUrl }) => getColumns({ navigate, baseUrl, formatMessage })}
-        renderActions={({ item, reload }) => <Actions data={item} onSuccess={reload} />}
+        getActionList={getActionList}
       />
     );
   })

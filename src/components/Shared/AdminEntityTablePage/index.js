@@ -1,85 +1,213 @@
+import React, { useCallback, useMemo, useRef } from 'react';
+import { ConfigProvider } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useMemo, useRef, useState } from 'react';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
+import convertLegacyColumns from './convertLegacyColumns';
+
+const flattenFilterElements = filterGroups => {
+  if (!filterGroups) {
+    return [];
+  }
+  const rows = Array.isArray(filterGroups[0]) ? filterGroups[0] : filterGroups;
+  return rows
+    .filter(item => React.isValidElement(item))
+    .map(item => ({
+      type: item.type,
+      props: item.props
+    }));
+};
+
+const getFilterFields = Filter => {
+  if (Filter.fields) {
+    return Filter.fields;
+  }
+  const { SearchInput, getFilterValue, fields, ...rest } = Filter;
+  return fields || rest;
+};
+
+const TitleExtraButton = ({ size, className, children }) => (
+  <ConfigProvider componentSize={size}>
+    <span className={className} style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+      {children}
+    </span>
+  </ConfigProvider>
+);
 
 const AdminEntityTablePage = createWithRemoteLoader({
-  modules: ['components-core:Layout@TablePage', 'components-core:Filter', 'components-core:Global@usePreset', 'components-core:StateBar']
+  modules: ['components-core:Layout@TablePage', 'components-core:Filter', 'components-core:Global@usePreset', 'components-core:Layout@Page']
 })(
-  withLocale(({ remoteModules, baseUrl: propsBaseUrl, getApi, buildRequestData = filterValue => Object.assign({}, filterValue), getFilterList, renderTopArea, renderTitleExtra, getColumns, renderActions, ...pageProps }) => {
-    const [TablePage, Filter, usePreset, StateBar] = remoteModules;
-    const { apis, ajax } = usePreset();
-    const { formatMessage } = useIntl();
-    const { SearchInput, getFilterValue, fields: filterFields } = Filter;
-    const ref = useRef(null);
-    const [filter, setFilter] = useState([]);
-    const filterValue = getFilterValue(filter);
-    const navigate = useNavigate();
-    const location = useLocation();
+  withLocale(
+    ({
+      remoteModules,
+      baseUrl: propsBaseUrl,
+      getApi,
+      buildRequestData = filterValue => Object.assign({}, filterValue),
+      getFilterList,
+      renderTitleExtra,
+      getColumns,
+      getActionList,
+      pageTitle,
+      name = 'admin-entity-list',
+      keywordFilterName = 'keyword',
+      keywordFilterLabel,
+      allowKeywordSearch = true,
+      listKey,
+      menu,
+      ...pageProps
+    }) => {
+      const [TablePage, Filter, usePreset, Page] = remoteModules;
+      const filterFields = getFilterFields(Filter);
+      const { apis, ajax } = usePreset();
+      const { formatMessage } = useIntl();
+      const navigate = useNavigate();
+      const location = useLocation();
+      const filterValueRef = useRef({});
+      const tableRef = useRef(null);
 
-    const baseUrl = useMemo(() => {
-      if (propsBaseUrl) return propsBaseUrl;
-      const pathParts = location.pathname.split('/').filter(Boolean);
-      return '/' + pathParts.slice(0, 3).join('/');
-    }, [propsBaseUrl, location.pathname]);
+      const baseUrl = useMemo(() => {
+        if (propsBaseUrl) {
+          return propsBaseUrl;
+        }
+        const pathParts = location.pathname.split('/').filter(Boolean);
+        return `/${pathParts.slice(0, 3).join('/')}`;
+      }, [propsBaseUrl, location.pathname]);
 
-    const reload = () => {
-      ref.current?.reload?.();
-    };
+      const reload = useCallback(() => {
+        tableRef.current?.reload?.();
+      }, []);
 
-    const columns = typeof getColumns === 'function' ? getColumns({ navigate, baseUrl, reload, filterValue }) : getColumns || [];
-    const filterList = typeof getFilterList === 'function' ? getFilterList({ ...filterFields, SearchInput, filterValue }) : undefined;
+      const mapFilterValue = useCallback(
+        (value, getFilterValue) => {
+          const filterValue = Object.assign({}, getFilterValue(value));
+          const result = buildRequestData(filterValue, { apis, ajax });
+          filterValueRef.current = filterValue;
+          return result;
+        },
+        [apis, ajax, buildRequestData]
+      );
 
-    return (
-      <TablePage
-        {...Object.assign({}, getApi(apis), {
-          params: buildRequestData(filterValue, { apis, ajax })
-        })}
-        ref={ref}
-        name="list"
-        pagination={{ paramsType: 'params' }}
-        topArea={renderTopArea?.({
-          filter,
-          setFilter,
-          filterValue,
-          StateBar,
-          reload,
-          apis,
-          ajax
-        })}
-        page={{
-          ...pageProps,
-          filter: filterList
-            ? {
-                value: filter,
-                onChange: setFilter,
-                list: filterList
-              }
-            : undefined,
-          titleExtra: renderTitleExtra?.({ SearchInput, filterValue, reload, apis, ajax })
-        }}
-        columns={[
-          ...columns,
-          ...(renderActions
-            ? [
-                {
-                  name: 'options',
-                  title: formatMessage({ id: 'shared.adminEntityTable.actionColumnTitle' }),
-                  type: 'options',
-                  fixed: 'right',
-                  valueOf: item => {
-                    return {
-                      children: renderActions({ item, reload, apis, ajax, filterValue })
-                    };
-                  }
+      const filterList = useMemo(() => {
+        if (!getFilterList) {
+          return [];
+        }
+        return flattenFilterElements(
+          getFilterList({
+            ...filterFields,
+            SearchInput: Filter.SearchInput,
+            filterValue: filterValueRef.current
+          })
+        );
+      }, [Filter.SearchInput, filterFields, getFilterList]);
+
+      const columns = useMemo(() => {
+        const baseColumns = convertLegacyColumns(typeof getColumns === 'function' ? getColumns({ navigate, baseUrl, reload, filterValue: filterValueRef.current, formatMessage }) : getColumns || []);
+
+        if (!getActionList) {
+          return baseColumns;
+        }
+
+        const resolveActionList = getActionList({ formatMessage });
+
+        return [
+          ...baseColumns,
+          {
+            name: 'options',
+            title: formatMessage({ id: 'shared.adminEntityTable.actionColumnTitle' }),
+            renderType: 'options',
+            fixed: 'right',
+            width: 48,
+            min: 40,
+            max: 160,
+            getValueOf: item => resolveActionList({ data: item, onSuccess: reload })
+          }
+        ];
+      }, [baseUrl, formatMessage, getActionList, getColumns, navigate, reload]);
+
+      const titleExtra = renderTitleExtra?.({
+        reload,
+        apis,
+        ajax,
+        filterValue: filterValueRef.current
+      });
+
+      const listApi = getApi(apis);
+      if (!listApi) {
+        return null;
+      }
+
+      const userButtonGroup = pageProps.tableProps?.buttonGroup;
+      const userButtonList = Array.isArray(userButtonGroup?.list) ? userButtonGroup.list : [];
+      const titleExtraList = titleExtra
+        ? [
+            {
+              buttonComponent: TitleExtraButton,
+              children: titleExtra
+            }
+          ]
+        : [];
+      const buttonGroupList = [...titleExtraList, ...userButtonList];
+
+      const filterConfig = useMemo(
+        () => ({
+          list: filterList,
+          mapFilterValue: (value, getFilterValue) => mapFilterValue(value, getFilterValue || Filter.getFilterValue)
+        }),
+        [Filter.getFilterValue, filterList, mapFilterValue]
+      );
+
+      const tablePage = (
+        <TablePage
+          key={[name, listKey].filter(v => v !== undefined && v !== null).join('-')}
+          ref={tableRef}
+          isNext
+          name={name}
+          {...pageProps.tableProps}
+          {...listApi}
+          dataFormat={data => ({
+            list: data.pageData,
+            total: data.totalCount ?? data.total,
+            data
+          })}
+          columns={columns}
+          pagination={{
+            paramsType: 'params',
+            open: true,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            ...pageProps.tableProps?.pagination
+          }}
+          filter={filterConfig}
+          search={
+            allowKeywordSearch
+              ? {
+                  name: keywordFilterName,
+                  label: keywordFilterLabel || formatMessage({ id: 'common.keyword' })
                 }
-              ]
-            : [])
-        ]}
-      />
-    );
-  })
+              : undefined
+          }
+          buttonGroup={
+            buttonGroupList.length
+              ? Object.assign({}, userButtonGroup, {
+                  list: buttonGroupList
+                })
+              : userButtonGroup
+          }
+        />
+      );
+
+      if (menu || pageTitle) {
+        return (
+          <Page name={name} menu={menu} title={pageTitle}>
+            {tablePage}
+          </Page>
+        );
+      }
+
+      return tablePage;
+    }
+  )
 );
 
 export default AdminEntityTablePage;

@@ -5,45 +5,52 @@ import Remove from './Remove';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 
-const Actions = createWithRemoteLoader({
-  modules: ['components-core:ButtonGroup']
-})(
-  withLocale(({ remoteModules, moreType, children, itemClassName, ...props }) => {
-    const [ButtonGroup] = remoteModules;
-    const { formatMessage } = useIntl();
-
-    const actionList = [
+export const getActionList =
+  ({ formatMessage }) =>
+  ({ data, onSuccess, ...rest }) => {
+    const actionProps = { data, onSuccess, ...rest };
+    return [
       {
-        ...props,
+        ...actionProps,
         buttonComponent: Save,
         children: formatMessage({ id: 'common.edit' })
       },
       {
-        ...props,
+        ...actionProps,
         buttonComponent: SetStatus,
         status: 'published',
         children: formatMessage({ id: 'adminBlog.actions.publish' }),
         message: formatMessage({ id: 'adminBlog.actions.publishConfirm' }),
         isDelete: false,
-        hidden: props?.data.status === 'published'
+        hidden: data?.status === 'published'
       },
       {
-        ...props,
+        ...actionProps,
         buttonComponent: SetStatus,
         status: 'draft',
         children: formatMessage({ id: 'adminBlog.actions.unpublish' }),
         message: formatMessage({ id: 'adminBlog.actions.unpublishConfirm' }),
         isDelete: false,
-        hidden: props?.data.status !== 'published'
+        hidden: data?.status !== 'published'
       },
       {
-        ...props,
+        ...actionProps,
         buttonComponent: Remove,
         children: formatMessage({ id: 'common.delete' }),
         confirm: true,
         message: formatMessage({ id: 'adminBlog.actions.removeConfirm' })
       }
     ];
+  };
+
+const Actions = createWithRemoteLoader({
+  modules: ['components-core:ButtonGroup']
+})(
+  withLocale(props => {
+    const [ButtonGroup] = props.remoteModules;
+    const { formatMessage } = useIntl();
+    const { moreType, children, itemClassName, ...rest } = props;
+    const actionList = getActionList({ formatMessage })(rest);
 
     if (typeof children === 'function') {
       return children({
