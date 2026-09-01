@@ -1,13 +1,18 @@
 const fp = require('fastify-plugin');
 const { Op, literal } = require('sequelize');
+const { ftsWhere, ftsOrder, ftsHeadline } = require('../utils/fts');
+
+const buildDocumentSearchText = ({ name, content }) => [name || '', content || ''].join('\n').trim();
 
 module.exports = fp(async (fastify, options) => {
-  const { models } = fastify[options.name];
+  const { models, services } = fastify[options.name];
+  const searchTextColumn = models.document.rawAttributes.searchText.field;
 
   const create = async (userInfo, { name, content, status, isPublic, groups }) => {
     return models.document.create({
       name,
       content,
+      searchText: buildDocumentSearchText({ name, content }),
       status: status || 'draft',
       isPublic: isPublic !== undefined ? isPublic : false,
       groups: groups || [],
@@ -20,12 +25,15 @@ module.exports = fp(async (fastify, options) => {
     if (!document) {
       throw new Error('文档不存在');
     }
+    const nextName = name !== undefined ? name : document.name;
+    const nextContent = content !== undefined ? content : document.content;
     return document.update({
       name,
       content,
       status,
       isPublic,
-      groups
+      groups,
+      searchText: buildDocumentSearchText({ name: nextName, content: nextContent })
     });
   };
 
@@ -174,6 +182,39 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
+  const searchByFts = async ({ query, limit = 3, userId, source = 'rest' }) => {
+    if (!query) {
+      return [];
+    }
+    const rows = await models.document.findAll({
+      where: ftsWhere(searchTextColumn),
+      limit,
+      order: ftsOrder(searchTextColumn),
+      bind: { query },
+      attributes: {
+        include: [[ftsHeadline(searchTextColumn), 'snippet']]
+      }
+    });
+
+    const results = rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      status: row.status,
+      isPublic: row.isPublic,
+      snippet: row.get('snippet')
+    }));
+
+    await services.searchRecord.recordSearch({
+      searchType: 'document',
+      query,
+      results,
+      userId,
+      source
+    });
+
+    return results;
+  };
+
   Object.assign(fastify[options.name].services, {
     document: {
       create,
@@ -183,7 +224,8 @@ module.exports = fp(async (fastify, options) => {
       list,
       publish,
       unpublish,
-      getPublicList
+      getPublicList,
+      searchByFts
     }
   });
 });

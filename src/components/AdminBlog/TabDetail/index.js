@@ -101,10 +101,10 @@ const contentMap = {
 };
 
 const TabDetail = createWithRemoteLoader({
-  modules: ['components-core:Layout@StateBarPage', 'components-core:Layout@PageHeader', 'components-core:Global@usePreset']
+  modules: ['components-core:Layout@Page', 'components-core:Layout@PageHeader', 'components-core:StateBar', 'components-core:Global@usePreset']
 })(
   withLocale(({ remoteModules, ...props }) => {
-    const [StateBarPage, PageHeader, usePreset] = remoteModules;
+    const [Page, PageHeader, StateBar, usePreset] = remoteModules;
     const { apis } = usePreset();
     const [searchParams, setSearchParams] = useSearchParams();
     const { formatMessage } = useIntl();
@@ -136,7 +136,7 @@ const TabDetail = createWithRemoteLoader({
           );
 
           return (
-            <StateBarPage
+            <Page
               {...props}
               headerFixed={false}
               header={
@@ -160,20 +160,20 @@ const TabDetail = createWithRemoteLoader({
                   }
                 />
               }
-              stateBar={{
-                activeKey,
-                onChange: key => {
+            >
+              <StateBar
+                activeKey={activeKey}
+                onChange={key => {
                   searchParams.set('tab', key);
                   setSearchParams(searchParams.toString());
-                },
-                stateOption: [
+                }}
+                stateOption={[
                   { tab: formatMessage({ id: 'adminBlog.tabDetail.basicInfoTitle' }), key: 'basic' },
                   { tab: formatMessage({ id: 'adminBlog.tabDetail.contentPreviewTab' }), key: 'preview' }
-                ]
-              }}
-            >
+                ]}
+              />
               <ContentComponent data={data} reload={reload} />
-            </StateBarPage>
+            </Page>
           );
         }}
       />

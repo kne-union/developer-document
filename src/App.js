@@ -1,13 +1,106 @@
 import RemoteLoader, { createWithRemoteLoader } from '@kne/remote-loader';
 import AppChildrenRouter from '@kne/app-children-router';
-import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
+import loadable from '@loadable/component';
+import { Spin } from 'antd';
 import withLocale from './withLocale';
 import { useIntl } from '@kne/react-intl';
 import { useGlobalContext } from '@kne/global-context';
 import RightOptions from './RightOptions';
 import './index.scss';
 import '@kne/react-box/dist/index.css';
+
+const pageLoading = <Spin style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }} />;
+
+const AdminBlog = loadable(() => import('@components/AdminBlog'), { fallback: pageLoading });
+const AdminDocument = loadable(() => import('@components/AdminDocument'), { fallback: pageLoading });
+const AdminDevManagement = loadable(() => import('@components/AdminDevManagement'), { fallback: pageLoading });
+const AdminRemoteComponent = loadable(() => import('@components/AdminRemoteComponent'), { fallback: pageLoading });
+const AdminNpmPackage = loadable(() => import('@components/AdminNpmPackage'), { fallback: pageLoading });
+
+const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage }) => {
+  return (
+    <Routes>
+      <Route
+        element={
+          <AfterAdminUserLoginLayout
+            navigation={{
+              base: `${baseUrl}/admin`,
+              showIndex: false,
+              defaultTitle: 'Developer Document',
+              rightOptions: <RightOptions />,
+              list: [
+                {
+                  key: 'npm-package',
+                  title: formatMessage({ id: 'app.adminNav.npmPackage' }),
+                  path: '/admin/npm-package'
+                },
+                {
+                  key: 'remote-component',
+                  title: formatMessage({ id: 'app.adminNav.remoteComponent' }),
+                  path: '/admin/remote-component'
+                },
+                {
+                  key: 'blog',
+                  title: formatMessage({ id: 'app.adminNav.blog' }),
+                  path: '/admin/blog'
+                },
+                {
+                  key: 'document',
+                  title: formatMessage({ id: 'app.adminNav.document' }),
+                  path: '/admin/document'
+                },
+                {
+                  key: 'dev-management',
+                  title: formatMessage({ id: 'app.adminNav.devManagement' }),
+                  path: '/admin/dev-management'
+                },
+                {
+                  key: 'task',
+                  title: formatMessage({ id: 'app.adminNav.task' }),
+                  path: '/admin/task'
+                },
+                {
+                  key: 'user',
+                  title: formatMessage({ id: 'app.adminNav.user' }),
+                  path: '/admin/user'
+                },
+                {
+                  key: 'file',
+                  title: formatMessage({ id: 'app.adminNav.file' }),
+                  path: '/admin/file'
+                },
+                {
+                  key: 'signature',
+                  title: formatMessage({ id: 'app.adminNav.signature' }),
+                  path: '/admin/signature'
+                },
+                {
+                  key: 'setting',
+                  title: formatMessage({ id: 'app.adminNav.setting' }),
+                  path: '/admin/setting'
+                }
+              ]
+            }}
+          />
+        }
+      >
+        <Route index element={<Navigate to={`${baseUrl}/admin/setting`} replace />} />
+        <Route path="file/*" element={<RemoteLoader key="file" module="components-file-manager:FileListPage" baseUrl={`${baseUrl}/admin/file`} />} />
+        <Route path="blog/*" element={<AdminBlog baseUrl={`${baseUrl}/admin`} />} />
+        <Route path="document/*" element={<AdminDocument baseUrl={`${baseUrl}/admin`} />} />
+        <Route path="dev-management/*" element={<AdminDevManagement baseUrl={`${baseUrl}/admin`} />} />
+        <Route path="remote-component/*" element={<AdminRemoteComponent baseUrl={`${baseUrl}/admin`} />} />
+        <Route path="npm-package/*" element={<AdminNpmPackage baseUrl={`${baseUrl}/admin`} />} />
+        <Route path="task/*" element={<RemoteLoader key="task" module="components-admin:Task" baseUrl={baseUrl + '/admin'} />} />
+        <Route path="signature" element={<RemoteLoader key="signature" module="components-admin:Signature" />} />
+        <Route path="setting/*" element={<RemoteLoader key="setting" module="developer-document:Setting" baseUrl={`${baseUrl}/admin/setting`} />} />
+        <Route path="*" element={<RemoteLoader key="admin" module="components-admin:Admin" baseUrl={baseUrl + '/admin'} />} />
+      </Route>
+    </Routes>
+  );
+};
 
 const Blog = ({ baseUrl }) => {
   return (
@@ -139,22 +232,32 @@ const DefaultLocaleHandler = createWithRemoteLoader({
   return null;
 });
 
-const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout }) => {
-  const { formatMessage, locale: currentLocale } = useIntl();
-  const baseUrl = '';
-  const currentYear = new Date().getFullYear();
+const AdminFooter = () => {
+  const { formatMessage } = useIntl();
   const location = useLocation();
-  const navigate = useNavigate();
-
+  const currentYear = new Date().getFullYear();
   const shouldShowFooter = !(location.pathname.startsWith('/account') || location.pathname.startsWith('/admin') || location.pathname === '/remote-components/detail' || location.pathname.startsWith('/share'));
 
-  const adminNavigateTo = path => {
-    if (!path || path === '/' || !String(path).startsWith('/admin')) {
-      window.location.href = path || '/';
-      return;
-    }
-    navigate(path);
-  };
+  if (!shouldShowFooter) {
+    return null;
+  }
+
+  return (
+    <footer className="global-page-footer">
+      <div className="global-page-footer__inner">
+        <div className="global-page-footer__brand">
+          <div className="global-page-footer__title">Developer Document</div>
+          <div className="global-page-footer__desc">{formatMessage({ id: 'app.footer.desc' })}</div>
+        </div>
+        <div className="global-page-footer__meta">© {currentYear} Developer Document. All rights reserved.</div>
+      </div>
+    </footer>
+  );
+};
+
+const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout }) => {
+  const { formatMessage } = useIntl();
+  const baseUrl = '';
 
   return (
     <>
@@ -186,107 +289,7 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
           },
           {
             path: 'admin/*',
-            element: (
-              <AppChildrenRouter
-                errorPage
-                baseUrl={baseUrl + '/admin'}
-                element={
-                  <AfterAdminUserLoginLayout
-                    navigation={{
-                      base: `${baseUrl}/admin`,
-                      defaultTitle: 'Developer Document',
-                      rightOptions: <RightOptions />,
-                      navigateTo: adminNavigateTo,
-                      list: [
-                        {
-                          key: 'npm-package',
-                          title: formatMessage({ id: 'app.adminNav.npmPackage' }),
-                          path: '/admin/npm-package'
-                        },
-                        {
-                          key: 'remote-component',
-                          title: formatMessage({ id: 'app.adminNav.remoteComponent' }),
-                          path: '/admin/remote-component'
-                        },
-                        /*{
-                          key: 'apis',
-                          title: '接口文档管理',
-                          path: '/admin/apis'
-                        },*/
-                        {
-                          key: 'blog',
-                          title: formatMessage({ id: 'app.adminNav.blog' }),
-                          path: '/admin/blog'
-                        },
-                        {
-                          key: 'document',
-                          title: formatMessage({ id: 'app.adminNav.document' }),
-                          path: '/admin/document'
-                        },
-                        {
-                          key: 'task',
-                          title: formatMessage({ id: 'app.adminNav.task' }),
-                          path: '/admin/task'
-                        },
-                        {
-                          key: 'user',
-                          title: formatMessage({ id: 'app.adminNav.user' }),
-                          path: '/admin/user'
-                        },
-                        {
-                          key: 'file',
-                          title: formatMessage({ id: 'app.adminNav.file' }),
-                          path: '/admin/file'
-                        },
-                        {
-                          key: 'setting',
-                          title: formatMessage({ id: 'app.adminNav.setting' }),
-                          path: '/admin/setting'
-                        }
-                      ]
-                    }}
-                  />
-                }
-                list={[
-                  {
-                    index: true,
-                    element: <Navigate to={`${baseUrl}/admin/setting`} replace />
-                  },
-                  {
-                    path: 'file',
-                    element: <RemoteLoader module="components-file-manager:FileListPage" />
-                  },
-                  {
-                    path: 'blog/*',
-                    loader: () => import('@components/AdminBlog')
-                  },
-                  {
-                    path: 'document/*',
-                    loader: () => import('@components/AdminDocument')
-                  },
-                  {
-                    path: 'remote-component/*',
-                    loader: () => import('@components/AdminRemoteComponent')
-                  },
-                  {
-                    path: 'npm-package/*',
-                    loader: () => import('@components/AdminNpmPackage')
-                  },
-                  {
-                    path: 'task/*',
-                    element: <RemoteLoader module="components-admin:Task" baseUrl={baseUrl + '/admin'} />
-                  },
-                  {
-                    path: 'setting/*',
-                    element: <RemoteLoader module="developer-document:Setting" baseUrl={`${baseUrl}/admin/setting`} />
-                  },
-                  {
-                    path: '*',
-                    element: <RemoteLoader module="components-admin:Admin" baseUrl={baseUrl + '/admin'} />
-                  }
-                ]}
-              />
-            )
+            element: <AdminApp AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} baseUrl={baseUrl} formatMessage={formatMessage} />
           },
           {
             path: 'share',
@@ -320,11 +323,6 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
                     title: formatMessage({ id: 'app.nav.remoteComponents' }),
                     path: '/remote-components'
                   },
-                  /*{
-                key: 'apis',
-                title: '接口文档',
-                path: '/apis'
-              },*/
                   {
                     key: 'blog',
                     title: formatMessage({ id: 'app.nav.blog' }),
@@ -372,17 +370,7 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
           ]}
         />
       </AppChildrenRouter>
-      {shouldShowFooter && (
-        <footer className="global-page-footer">
-          <div className="global-page-footer__inner">
-            <div className="global-page-footer__brand">
-              <div className="global-page-footer__title">Developer Document</div>
-              <div className="global-page-footer__desc">{formatMessage({ id: 'app.footer.desc' })}</div>
-            </div>
-            <div className="global-page-footer__meta">© {currentYear} Developer Document. All rights reserved.</div>
-          </div>
-        </footer>
-      )}
+      <AdminFooter />
     </>
   );
 });

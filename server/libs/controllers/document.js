@@ -167,6 +167,31 @@ module.exports = fp(async (fastify, options) => {
     }
   );
 
+  // 全文搜索（登录用户可读全部 document）
+  fastify.get(
+    `${options.prefix}/document/search`,
+    {
+      onRequest: [authenticate.user],
+      schema: {
+        summary: '全文搜索文档',
+        query: {
+          type: 'object',
+          properties: {
+            query: { type: 'string' },
+            limit: { type: 'number', default: 3 }
+          },
+          required: ['query']
+        }
+      }
+    },
+    async request =>
+      services.document.searchByFts({
+        ...request.query,
+        userId: request.userInfo.id,
+        source: 'rest'
+      })
+  );
+
   // 获取公开文档列表（前台）
   fastify.get(
     `${options.prefix}/document/public/list`,

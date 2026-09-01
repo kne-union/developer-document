@@ -1,10 +1,9 @@
-import { useState, useMemo } from 'react';
-import { Space } from 'antd';
+import { useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import Create from '../Actions/Create';
-import Actions from '../Actions';
+import { getActionList } from '../Actions';
 import getColumns from './getColumns';
 import AdminEntityTablePage from '@components/Shared/AdminEntityTablePage';
 
@@ -17,30 +16,15 @@ const List = createWithRemoteLoader({
     const { formatMessage } = useIntl();
     const [selectedGroup, setSelectedGroup] = useState(null);
 
-    const statusOptions = useMemo(
-      () => [
-        { tab: formatMessage({ id: 'common.all' }), key: 'all' },
-        { tab: formatMessage({ id: 'common.draft' }), key: 'draft' },
-        { tab: formatMessage({ id: 'common.published' }), key: 'published' }
-      ],
-      [formatMessage]
-    );
-
-    const statusMap = useMemo(() => new Map(statusOptions.map(item => [item.key, item])), [statusOptions]);
-
-    const createStatusFilter = ({ value, label }) => {
-      return { name: 'status', value: { label, value } };
-    };
-
     return (
       <GroupFolder type="document" value={selectedGroup} onChange={key => setSelectedGroup(key)}>
         <AdminEntityTablePage
           {...props}
+          name="admin-document-list"
+          listKey={selectedGroup || 'all'}
           getApi={apis => apis.document.list}
           buildRequestData={filterValue => {
-            const result = Object.assign({}, filterValue, {
-              status: filterValue.status && filterValue.status !== 'all' ? filterValue.status : undefined
-            });
+            const result = Object.assign({}, filterValue);
 
             if (filterValue.createdAt?.value?.[0] && filterValue.createdAt?.value?.[1]) {
               result.createdAtStart = filterValue.createdAt.value[0];
@@ -54,9 +38,18 @@ const List = createWithRemoteLoader({
 
             return result;
           }}
-          getFilterList={({ SuperSelectUserFilterItem, TypeDateRangePickerFilterItem }) => {
+          getFilterList={({ SuperSelectUserFilterItem, SuperSelectFilterItem, TypeDateRangePickerFilterItem }) => {
             return [
               [
+                <SuperSelectFilterItem
+                  single
+                  label={formatMessage({ id: 'common.status' })}
+                  name="status"
+                  options={[
+                    { label: formatMessage({ id: 'common.draft' }), value: 'draft' },
+                    { label: formatMessage({ id: 'common.published' }), value: 'published' }
+                  ]}
+                />,
                 <SuperSelectUserFilterItem
                   single
                   label={formatMessage({ id: 'common.publishUser' })}
@@ -78,47 +71,13 @@ const List = createWithRemoteLoader({
               ]
             ];
           }}
-          renderTopArea={({ filterValue, setFilter, StateBar }) => {
-            return (
-              <StateBar
-                type="radio"
-                size="small"
-                activeKey={filterValue.status || 'all'}
-                onChange={value => {
-                  const currentState = statusMap.get(value);
-                  setFilter(filter => {
-                    const nextFilter = filter.slice(0);
-                    const currentIndex = filter.findIndex(item => item.name === 'status');
-
-                    if (currentState.key === 'all') {
-                      if (currentIndex > -1) {
-                        nextFilter.splice(currentIndex, 1);
-                      }
-                    } else if (currentIndex === -1) {
-                      nextFilter.push(createStatusFilter({ value: currentState.key, label: currentState.tab }));
-                    } else {
-                      nextFilter.splice(currentIndex, 1, createStatusFilter({ value: currentState.key, label: currentState.tab }));
-                    }
-
-                    return nextFilter;
-                  });
-                }}
-                stateOption={statusOptions}
-              />
-            );
-          }}
-          renderTitleExtra={({ SearchInput, reload }) => {
-            return (
-              <Space align="center">
-                <SearchInput name="keyword" label={formatMessage({ id: 'common.keyword' })} />
-                <Create type="primary" onSuccess={reload}>
-                  {formatMessage({ id: 'adminDocument.list.addDocument' })}
-                </Create>
-              </Space>
-            );
-          }}
+          renderTitleExtra={({ reload }) => (
+            <Create type="primary" onSuccess={reload}>
+              {formatMessage({ id: 'adminDocument.list.addDocument' })}
+            </Create>
+          )}
           getColumns={({ navigate, baseUrl }) => getColumns({ navigate, baseUrl, formatMessage })}
-          renderActions={({ item, reload }) => <Actions data={item} onSuccess={reload} />}
+          getActionList={getActionList}
         />
       </GroupFolder>
     );

@@ -1,8 +1,7 @@
-import { Space } from 'antd';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import Create from '../Actions/Create';
-import Actions from '../Actions';
+import { getActionList } from '../Actions';
 import getColumns from './getColumns';
 import AdminEntityTablePage from '@components/Shared/AdminEntityTablePage';
 import { NPM_PACKAGE_TYPE_OPTIONS } from '@components/Shared/catalogMeta';
@@ -18,20 +17,16 @@ const List = withLocale(props => {
   return (
     <AdminEntityTablePage
       {...props}
+      name="admin-npm-package-list"
       getApi={apis => apis.npmPackage.list}
       getFilterList={({ SuperSelectFilterItem }) => [[<SuperSelectFilterItem single label={formatMessage({ id: 'common.type' })} name="type" options={localizedTypeOptions} />]]}
-      renderTitleExtra={({ SearchInput, reload }) => {
-        return (
-          <Space align="center">
-            <SearchInput name="keyword" label={formatMessage({ id: 'common.keyword' })} />
-            <Create type="primary" onSuccess={reload}>
-              {formatMessage({ id: 'adminNpmPackage.list.addComponent' })}
-            </Create>
-          </Space>
-        );
-      }}
+      renderTitleExtra={({ reload }) => (
+        <Create type="primary" onSuccess={reload}>
+          {formatMessage({ id: 'adminNpmPackage.list.addComponent' })}
+        </Create>
+      )}
       getColumns={({ navigate, baseUrl }) => getColumns({ navigate, baseUrl, formatMessage })}
-      renderActions={({ item, reload }) => <Actions data={item} onSuccess={reload} />}
+      getActionList={getActionList}
     />
   );
 });

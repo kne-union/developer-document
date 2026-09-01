@@ -26,6 +26,13 @@ const runner = async (fastify, options, { task, polling, updateProgress, log }) 
 
       await services.remoteComponent.deployComponents({ id: component.id });
 
+      try {
+        await services.documentIndex.buildFromRemoteComponent(component);
+        log({ data: { remote: component.remote }, message: '文档索引构建成功' });
+      } catch (indexError) {
+        log({ data: { error: indexError.message }, message: `文档索引构建失败: ${component.remote}` });
+      }
+
       results.push({
         remote: component.remote,
         packageName: component.packageName,

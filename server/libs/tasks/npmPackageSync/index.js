@@ -44,6 +44,19 @@ const runner = async (fastify, options, { task, polling, updateProgress, log }) 
         keywords: pkg.keywords?.length > 0 ? pkg.keywords : []
       });
 
+      if (npmInfo.readme) {
+        try {
+          await services.documentIndex.buildFromNpmPackage({
+            packageName: pkg.packageName,
+            version: latestVersion,
+            registry: pkg.registry
+          });
+          log({ data: { packageName: pkg.packageName }, message: '文档索引构建成功' });
+        } catch (indexError) {
+          log({ data: { error: indexError.message }, message: `文档索引构建失败: ${pkg.packageName}` });
+        }
+      }
+
       results.push({
         packageName: pkg.packageName,
         success: true,
