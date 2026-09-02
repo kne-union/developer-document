@@ -208,11 +208,14 @@ module.exports = fp(async (fastify, options) => {
       }
     }
 
+    // description 列为 TEXT；禁止用 readme 回填（曾 slice(0,500) 写入 VARCHAR(255) 导致部署失败）
+    const nextDescription = component.description || npmInfo.description || null;
+
     await component.update({
       versions: normalizeVersions(allVersions),
       defaultVersion: latestVersion,
       examples: [...new Set(examples)],
-      description: component.description || npmInfo.description || (npmInfo.readme ? npmInfo.readme.slice(0, 500) : null)
+      description: nextDescription
     });
 
     return component.reload();
