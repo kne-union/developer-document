@@ -1,40 +1,95 @@
 const fp = require('fastify-plugin');
 
+const displayNameFromPackage = packageName => {
+  if (!packageName) {
+    return '';
+  }
+  return packageName.includes('/') ? packageName.split('/').slice(1).join('/') : packageName.replace(/^@/, '');
+};
+
+const deriveRemoteFromPackageName = packageName => {
+  if (!packageName) {
+    return '';
+  }
+  return packageName.includes('/') ? packageName.split('/').slice(1).join('/') : packageName.replace(/^@/, '');
+};
+
 module.exports = fp(async (fastify, options) => {
   const { models, services } = fastify[options.name];
 
-  const triggerNpmPackageSync = async ({ packageName, version, registry }) => {
-    const where = { packageName };
-    if (registry) {
-      where.registry = registry;
+  const triggerNpmPackageSync = async ({ packageName, version, registry, type }) => {
+    if (!packageName) {
+      throw new Error('packageName 不能为空');
     }
-    const pkg = await models.npmPackage.findOne({ where });
+
+    const PACKAGE_TYPES = new Set(['frontend', 'nodejs', 'engineering', 'miniprogram', 'prompts', 'other']);
+    const resolvedType = PACKAGE_TYPES.has(type) ? type : 'other';
+
+    let pkg = await models.npmPackage.findOne({ where: { packageName } });
+    let created = false;
+
     if (!pkg) {
-      const err = new Error(`未找到 npm 包: ${packageName}`);
-      err.statusCode = 404;
-      throw err;
+      pkg = await services.npmPackage.create({
+        packageName,
+        registry: registry || 'https://registry.npmjs.org',
+        name: displayNameFromPackage(packageName),
+        type: resolvedType,
+        isPublic: true
+      });
+      created = true;
     }
+
     const task = await services.task.createNpmPackageSyncTask({ targetId: pkg.id });
-    return { success: true, taskId: task.id, targetId: pkg.id, packageName, version };
+    return {
+      success: true,
+      created,
+      taskId: task.id,
+      targetId: pkg.id,
+      packageName,
+      version,
+      type: pkg.type
+    };
   };
 
-  const triggerRemoteComponentDeploy = async ({ remote, packageName }) => {
-    const where = {};
-    if (remote) {
-      where.remote = remote;
-    } else if (packageName) {
-      where.packageName = packageName;
-    } else {
+  const triggerRemoteComponentDeploy = async ({ remote, packageName, registry }) => {
+    const resolvedRemote = remote || deriveRemoteFromPackageName(packageName);
+    const resolvedPackageName = packageName || (resolvedRemote ? `@kne-components/${resolvedRemote}` : '');
+
+    if (!resolvedRemote && !resolvedPackageName) {
       throw new Error('remote 或 packageName 至少提供一个');
     }
-    const component = await models.remoteComponent.findOne({ where });
-    if (!component) {
-      const err = new Error(`未找到远程组件: ${remote || packageName}`);
-      err.statusCode = 404;
-      throw err;
+
+    const where = {};
+    if (resolvedRemote) {
+      where.remote = resolvedRemote;
+    } else {
+      where.packageName = resolvedPackageName;
     }
+
+    let component = await models.remoteComponent.findOne({ where });
+    let created = false;
+
+    if (!component) {
+      component = await services.remoteComponent.create({
+        remote: resolvedRemote || displayNameFromPackage(resolvedPackageName),
+        packageName: resolvedPackageName,
+        registry: registry || 'https://registry.npmjs.org',
+        name: resolvedRemote || displayNameFromPackage(resolvedPackageName),
+        group: 'general',
+        isPublic: true
+      });
+      created = true;
+    }
+
     const task = await services.task.createRemoteComponentDeployTask({ targetId: component.id });
-    return { success: true, taskId: task.id, targetId: component.id, remote: component.remote };
+    return {
+      success: true,
+      created,
+      taskId: task.id,
+      targetId: component.id,
+      remote: component.remote,
+      packageName: component.packageName
+    };
   };
 
   Object.assign(services, {

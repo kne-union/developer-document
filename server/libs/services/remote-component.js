@@ -15,11 +15,12 @@ module.exports = fp(async (fastify, options) => {
   const { models } = fastify[options.name];
   const { Op } = fastify.sequelize.Sequelize;
 
-  const create = async ({ remote, url, packageName, tpl, name, description, group, versions, defaultVersion, isPublic }) => {
+  const create = async ({ remote, url, packageName, registry, tpl, name, description, group, versions, defaultVersion, isPublic }) => {
     return models.remoteComponent.create({
       remote,
       url,
       packageName,
+      registry,
       tpl,
       name,
       description,
@@ -30,7 +31,7 @@ module.exports = fp(async (fastify, options) => {
     });
   };
 
-  const update = async ({ id, remote, url, packageName, tpl, name, description, group, versions, defaultVersion, isPublic }) => {
+  const update = async ({ id, remote, url, packageName, registry, tpl, name, description, group, versions, defaultVersion, isPublic }) => {
     const component = await models.remoteComponent.findByPk(id);
     if (!component) {
       throw new Error('远程组件不存在');
@@ -39,6 +40,7 @@ module.exports = fp(async (fastify, options) => {
       remote,
       url,
       packageName,
+      registry,
       tpl,
       name,
       description,
@@ -127,14 +129,17 @@ module.exports = fp(async (fastify, options) => {
   const deployComponents = async ({ id }) => {
     const component = await models.remoteComponent.findByPk(id);
     if (!component || !component.packageName) {
-      return;
+      return component;
     }
-    let examples = component.examples;
-    const npmInfo = await loadNpmInfo(component.packageName, { registry: component.registry });
-    await fs.ensureDir(path.resolve(outputPath, component.packageName));
-    if (/^@kne-components\//.test(component.packageName)) {
-      const allVersions = Object.keys(npmInfo.versions);
 
+    const npmInfo = await loadNpmInfo(component.packageName, { registry: component.registry });
+    const latestVersion = npmInfo.version;
+    const allVersions = Object.keys(npmInfo.versions || {});
+    const examples = [];
+
+    await fs.ensureDir(path.resolve(outputPath, component.packageName));
+
+    if (/^@kne-components\//.test(component.packageName)) {
       // 按大版本分组
       const majorVersionMap = new Map();
       allVersions.forEach(version => {
@@ -154,8 +159,6 @@ module.exports = fp(async (fastify, options) => {
 
       // 最多保留最近10个大版本
       const recentMajors = sortedMajors.slice(0, 10);
-
-      // 构建要部署的版本列表
       const versionsToDeploy = [];
 
       recentMajors.forEach((major, index) => {
@@ -173,7 +176,7 @@ module.exports = fp(async (fastify, options) => {
         });
 
         if (index === 0) {
-          // 最后一个大版本，最多保留5个最近小版本
+          // 最新大版本，最多保留5个最近小版本
           versionsToDeploy.push(...versions.slice(0, 5));
         } else {
           // 其他大版本，只保留该大版本的最后一个版本
@@ -181,9 +184,10 @@ module.exports = fp(async (fastify, options) => {
         }
       });
 
-      for (let currentVersion of versionsToDeploy) {
+      for (const currentVersion of versionsToDeploy) {
         const packageName = `@kne-components/${npmInfo.name}@${currentVersion}`;
-        if (await fs.exists(path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`))) {
+        const versionPackagePath = path.resolve(outputPath, `@kne-components/${npmInfo.name}/${currentVersion}/package.json`);
+        if (await fs.exists(versionPackagePath)) {
           examples.push(currentVersion);
           continue;
         }
@@ -193,7 +197,15 @@ module.exports = fp(async (fastify, options) => {
         } catch (e) {}
       }
     }
-    await component.update({ examples });
+
+    await component.update({
+      versions: allVersions,
+      defaultVersion: latestVersion,
+      examples: [...new Set(examples)],
+      description: component.description || npmInfo.description || (npmInfo.readme ? npmInfo.readme.slice(0, 500) : null)
+    });
+
+    return component.reload();
   };
 
   Object.assign(fastify[options.name].services, {
