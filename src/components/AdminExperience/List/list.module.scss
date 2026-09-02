@@ -1,0 +1,78 @@
+.fullTextSearch {
+  position: relative;
+  margin-bottom: 16px;
+  padding: 20px 24px;
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 52%, #ecfeff 100%);
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.08);
+  overflow: hidden;
+}
+
+.fullTextSearch::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  border-radius: 999px;
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.18) 0%, rgba(59, 130, 246, 0) 72%);
+  pointer-events: none;
+}
+
+.fullTextSearchInner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fullTextSearchLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #1d4ed8;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fullTextSearchHint {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.fullTextSearchInput {
+  max-width: 760px;
+}
+
+.fullTextSearchInput :global(.ant-input-affix-wrapper),
+.fullTextSearchInput :global(.ant-input-search) {
+  border-radius: 12px;
+}
+
+.fullTextSearchInput :global(.ant-input-affix-wrapper) {
+  min-height: 48px;
+  padding-inline: 14px;
+  border-color: #bfdbfe;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+.fullTextSearchInput :global(.ant-input-affix-wrapper-focused),
+.fullTextSearchInput :global(.ant-input-affix-wrapper:hover) {
+  border-color: #3b82f6;
+}
+
+.fullTextSearchInput :global(.ant-input) {
+  font-size: 15px;
+}
+
+.fullTextSearchInput :global(.ant-input-search-button) {
+  min-width: 96px;
+  height: 48px !important;
+  border-start-end-radius: 12px !important;
+  border-end-end-radius: 12px !important;
+  font-weight: 600;
+}

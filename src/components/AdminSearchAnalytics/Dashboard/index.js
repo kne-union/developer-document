@@ -4,8 +4,17 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
-import AdminEntityTablePage from '@components/Shared/AdminEntityTablePage';
 import dayjs from 'dayjs';
+
+const mapSearchRecordsFilterValue = filterValue => {
+  const result = Object.assign({}, filterValue);
+  if (filterValue.createdAt?.value?.[0] && filterValue.createdAt?.value?.[1]) {
+    result.startAt = filterValue.createdAt.value[0];
+    result.endAt = filterValue.createdAt.value[1];
+  }
+  delete result.createdAt;
+  return result;
+};
 
 const SEARCH_TYPE_LABELS = {
   experience: 'adminSearchAnalytics.searchType.experience',
@@ -14,84 +23,76 @@ const SEARCH_TYPE_LABELS = {
 };
 
 const RecordsTab = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
+  modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter']
 })(
   withLocale(({ remoteModules }) => {
-    const [usePreset] = remoteModules;
+    const [BizUnit, usePreset, Filter] = remoteModules;
     const { apis } = usePreset();
     const { formatMessage } = useIntl();
+    const { SuperSelectFilterItem, TypeDateRangePickerFilterItem } = Filter.fields;
 
     return (
-      <AdminEntityTablePage
+      <BizUnit
+        isNext
         name="admin-search-analytics-records"
-        keywordFilterName="query"
-        keywordFilterLabel={formatMessage({ id: 'adminSearchAnalytics.columns.query' })}
-        getApi={apis => apis.searchAnalytics.records}
-        buildRequestData={filterValue => {
-          const result = Object.assign({}, filterValue);
-          if (filterValue.createdAt?.value?.[0] && filterValue.createdAt?.value?.[1]) {
-            result.startAt = filterValue.createdAt.value[0];
-            result.endAt = filterValue.createdAt.value[1];
-          }
-          delete result.createdAt;
-          return result;
-        }}
-        getFilterList={({ SuperSelectFilterItem, TypeDateRangePickerFilterItem }) => {
-          return [
-            [
-              <SuperSelectFilterItem
-                key="searchType"
-                single
-                label={formatMessage({ id: 'adminSearchAnalytics.columns.searchType' })}
-                name="searchType"
-                options={[
+        apis={{ list: apis.searchAnalytics.records }}
+        allowKeywordSearch
+        filter={{
+          list: [
+            {
+              type: SuperSelectFilterItem,
+              props: {
+                single: true,
+                label: formatMessage({ id: 'adminSearchAnalytics.columns.searchType' }),
+                name: 'searchType',
+                options: [
                   { label: formatMessage({ id: 'adminSearchAnalytics.searchType.experience' }), value: 'experience' },
                   { label: formatMessage({ id: 'adminSearchAnalytics.searchType.documentIndex' }), value: 'document_index' },
                   { label: formatMessage({ id: 'adminSearchAnalytics.searchType.document' }), value: 'document' }
-                ]}
-              />,
-              <TypeDateRangePickerFilterItem key="createdAt" label={formatMessage({ id: 'common.createdAt' })} name="createdAt" />
-            ]
-          ];
+                ]
+              }
+            },
+            {
+              type: TypeDateRangePickerFilterItem,
+              props: {
+                label: formatMessage({ id: 'common.createdAt' }),
+                name: 'createdAt'
+              }
+            }
+          ]
         }}
         getColumns={() => [
           {
             name: 'createdAt',
             title: formatMessage({ id: 'common.createdAt' }),
-            type: 'datetime'
+            format: 'datetime'
           },
           {
             name: 'searchType',
             title: formatMessage({ id: 'adminSearchAnalytics.columns.searchType' }),
-            type: 'text',
-            valueOf: item => formatMessage({ id: SEARCH_TYPE_LABELS[item.searchType] || 'common.unknown' })
+            getValueOf: item => formatMessage({ id: SEARCH_TYPE_LABELS[item.searchType] || 'common.unknown' })
           },
           {
             name: 'query',
-            title: formatMessage({ id: 'adminSearchAnalytics.columns.query' }),
-            type: 'text'
+            title: formatMessage({ id: 'adminSearchAnalytics.columns.query' })
           },
           {
             name: 'hitCount',
-            title: formatMessage({ id: 'adminSearchAnalytics.columns.hitCount' }),
-            type: 'text'
+            title: formatMessage({ id: 'adminSearchAnalytics.columns.hitCount' })
           },
           {
             name: 'source',
-            title: formatMessage({ id: 'adminSearchAnalytics.columns.source' }),
-            type: 'text'
+            title: formatMessage({ id: 'adminSearchAnalytics.columns.source' })
           },
           {
             name: 'createdUser',
             title: formatMessage({ id: 'common.creator' }),
-            type: 'text',
-            valueOf: item => item.createdUser?.email || item.createdUser?.nickname || '-'
+            getValueOf: item => item.createdUser?.email || item.createdUser?.nickname || '-'
           },
           {
             name: 'topHits',
             title: formatMessage({ id: 'adminSearchAnalytics.columns.topHits' }),
-            type: 'text',
-            valueOf: item => {
+            getValueOf: item => {
               const hits = item.topHits || [];
               if (!hits.length) {
                 return '-';
@@ -100,7 +101,14 @@ const RecordsTab = createWithRemoteLoader({
             }
           }
         ]}
-      />
+        options={{
+          keywordFilterName: 'query',
+          keywordFilterLabel: formatMessage({ id: 'adminSearchAnalytics.columns.query' }),
+          mapFilterValue: (value, getFilterValue) => mapSearchRecordsFilterValue(getFilterValue(value))
+        }}
+      >
+        {({ tableOptions }) => <BizUnit.TablePageRender withPage={false} tableOptions={tableOptions} />}
+      </BizUnit>
     );
   })
 );

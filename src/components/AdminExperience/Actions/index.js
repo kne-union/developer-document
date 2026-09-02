@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import ActionButton from './ActionButton';
 import withLocale from '@root/withLocale';
@@ -41,13 +42,13 @@ export const getActionList =
 const Actions = createWithRemoteLoader({
   modules: ['components-core:ButtonGroup', 'components-core:Global@usePreset']
 })(
-  withLocale(({ remoteModules, data, onSuccess, ...props }) => {
+  withLocale(({ remoteModules, data, onSuccess }) => {
     const [ButtonGroup] = remoteModules;
     const { formatMessage } = useIntl();
 
-    const actionList = getActionList({ formatMessage })({ data, onSuccess, ...props });
+    const actionList = useMemo(() => getActionList({ formatMessage })({ data, onSuccess }), [data?.id, data?.status, formatMessage, onSuccess]);
 
-    return <ButtonGroup list={actionList} />;
+    return <ButtonGroup list={actionList} showLength={1} />;
   })
 );
 

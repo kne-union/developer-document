@@ -1,49 +1,52 @@
-const getColumns = ({ navigate, baseUrl, formatMessage }) => {
+import goAdminDetail from '@components/Shared/goAdminDetail';
+
+const getColumns = ({ navigate, formatMessage }) => {
   return [
     {
       name: 'id',
       title: 'ID',
-      type: 'serialNumber',
+      width: 80,
+      renderType: 'main',
       primary: true,
       hover: true,
       onClick: ({ colItem }) => {
-        navigate(`${baseUrl}/detail?id=${colItem.id}`);
+        goAdminDetail(navigate, colItem);
       }
     },
     {
       name: 'title',
       title: formatMessage({ id: 'common.title' }),
-      type: 'mainInfo',
+      renderType: 'main',
       hover: true,
       onClick: ({ colItem }) => {
-        navigate(`${baseUrl}/detail?id=${colItem.id}`);
+        goAdminDetail(navigate, colItem);
       }
     },
     {
       name: 'projectName',
       title: formatMessage({ id: 'adminWorklog.columns.project' }),
-      type: 'text'
+      getValueOf: item => item.projectName || item.content?.project?.name || '-'
     },
     {
       name: 'relativePath',
       title: formatMessage({ id: 'adminWorklog.columns.path' }),
-      type: 'text'
+      renderType: 'description',
+      ellipsis: true
     },
     {
       name: 'createdUser',
       title: formatMessage({ id: 'common.creator' }),
-      type: 'text',
-      valueOf: item => item.createdUser?.nickname || item.createdUser?.email || '-'
+      getValueOf: item => item.createdUser?.nickname || item.createdUser?.email || '-'
     },
     {
       name: 'writtenAt',
       title: formatMessage({ id: 'adminWorklog.columns.writtenAt' }),
-      type: 'datetime'
+      format: 'datetime'
     },
     {
       name: 'updatedAt',
       title: formatMessage({ id: 'common.updatedAt' }),
-      type: 'datetime'
+      format: 'datetime'
     }
   ];
 };

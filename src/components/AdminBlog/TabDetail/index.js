@@ -7,6 +7,7 @@ import { CheckCircleOutlined, ClockCircleOutlined, EyeInvisibleOutlined, EyeOutl
 import dayjs from 'dayjs';
 import styles from '../style.module.scss';
 import { ShareButton, BlogDetailView } from '@components/Shared';
+import DetailPageHeaderTitle from '@components/Shared/DetailPageHeaderTitle';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 
@@ -101,10 +102,10 @@ const contentMap = {
 };
 
 const TabDetail = createWithRemoteLoader({
-  modules: ['components-core:Layout@Page', 'components-core:Layout@PageHeader', 'components-core:StateBar', 'components-core:Global@usePreset']
+  modules: ['components-core:Layout@StateBarPage', 'components-core:Layout@PageHeader', 'components-core:Global@usePreset']
 })(
-  withLocale(({ remoteModules, ...props }) => {
-    const [Page, PageHeader, StateBar, usePreset] = remoteModules;
+  withLocale(({ remoteModules, baseUrl, ...props }) => {
+    const [StateBarPage, PageHeader, usePreset] = remoteModules;
     const { apis } = usePreset();
     const [searchParams, setSearchParams] = useSearchParams();
     const { formatMessage } = useIntl();
@@ -136,12 +137,12 @@ const TabDetail = createWithRemoteLoader({
           );
 
           return (
-            <Page
+            <StateBarPage
               {...props}
               headerFixed={false}
               header={
                 <PageHeader
-                  title={data.title}
+                  title={<DetailPageHeaderTitle baseUrl={baseUrl} title={data.title} />}
                   info={`ID: ${data.id}`}
                   tags={[
                     <Tag className={styles.domainTag} icon={<ReadOutlined />} key="domain">
@@ -160,20 +161,21 @@ const TabDetail = createWithRemoteLoader({
                   }
                 />
               }
-            >
-              <StateBar
-                activeKey={activeKey}
-                onChange={key => {
-                  searchParams.set('tab', key);
-                  setSearchParams(searchParams.toString());
-                }}
-                stateOption={[
+              stateBar={{
+                activeKey,
+                onChange: key => {
+                  const next = new URLSearchParams(searchParams);
+                  next.set('tab', key);
+                  setSearchParams(next, { replace: true });
+                },
+                stateOption: [
                   { tab: formatMessage({ id: 'adminBlog.tabDetail.basicInfoTitle' }), key: 'basic' },
                   { tab: formatMessage({ id: 'adminBlog.tabDetail.contentPreviewTab' }), key: 'preview' }
-                ]}
-              />
+                ]
+              }}
+            >
               <ContentComponent data={data} reload={reload} />
-            </Page>
+            </StateBarPage>
           );
         }}
       />

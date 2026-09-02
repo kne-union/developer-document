@@ -7,15 +7,16 @@ import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import { hasUserToken } from '@components/Shared/auth';
 import { ShareButton, NpmPackageDetailView } from '@components/Shared';
+import DetailPageHeaderTitle from '@components/Shared/DetailPageHeaderTitle';
 import styles from '@components/Shared/detailPage.module.scss';
 
 const { Title, Paragraph } = Typography;
 
 const Detail = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:Layout@Page']
+  modules: ['components-core:Global@usePreset', 'components-core:Layout@Page', 'components-core:Layout@PageHeader']
 })(
-  withLocale(({ remoteModules }) => {
-    const [usePreset, Page] = remoteModules;
+  withLocale(({ remoteModules, baseUrl, ...props }) => {
+    const [usePreset, Page, PageHeader] = remoteModules;
     const { apis } = usePreset();
     const { formatMessage } = useIntl();
     const [searchParams] = useSearchParams();
@@ -29,41 +30,34 @@ const Detail = createWithRemoteLoader({
         {...Object.assign({}, apiConfig, {
           params: { id: searchParams.get('id') }
         })}
-        render={({ data }) => {
-          if (!data) {
-            return (
-              <Page name="npm-package-detail">
-                <div className={styles.page}>
-                  <div className={styles.emptyCard}>
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: 'npmPackage.detail.notFound' })} />
-                  </div>
+        render={({ data }) => (
+          <Page
+            {...props}
+            name="npm-package-detail"
+            headerFixed={false}
+            header={<PageHeader title={<DetailPageHeaderTitle baseUrl={baseUrl} title={data?.packageName || data?.name || formatMessage({ id: 'common.loading' })} />} info={data ? `ID: ${data.id}` : undefined} />}
+          >
+            {!data ? (
+              <div className={styles.page}>
+                <div className={styles.emptyCard}>
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: 'npmPackage.detail.notFound' })} />
                 </div>
-              </Page>
-            );
-          }
-
-          if (!isLoggedIn && !data.isPublic) {
-            return (
-              <Page name="npm-package-detail">
-                <div className={styles.page}>
-                  <div className={styles.emptyCard}>
-                    <Title level={4}>{formatMessage({ id: 'npmPackage.detail.notPublic' })}</Title>
-                    <Paragraph>{formatMessage({ id: 'npmPackage.detail.loginToView' })}</Paragraph>
-                    <Button type="primary" onClick={() => navigate('/account/login')}>
-                      {formatMessage({ id: 'common.goLogin' })}
-                    </Button>
-                  </div>
+              </div>
+            ) : !isLoggedIn && !data.isPublic ? (
+              <div className={styles.page}>
+                <div className={styles.emptyCard}>
+                  <Title level={4}>{formatMessage({ id: 'npmPackage.detail.notPublic' })}</Title>
+                  <Paragraph>{formatMessage({ id: 'npmPackage.detail.loginToView' })}</Paragraph>
+                  <Button type="primary" onClick={() => navigate('/account/login')}>
+                    {formatMessage({ id: 'common.goLogin' })}
+                  </Button>
                 </div>
-              </Page>
-            );
-          }
-
-          return (
-            <Page name="npm-package-detail">
+              </div>
+            ) : (
               <NpmPackageDetailView data={data} headerExtra={<ShareButton type="npm-package" id={data.id} disabled={!data.isPublic} disabledReason={formatMessage({ id: 'common.privateCannotShare' })} />} />
-            </Page>
-          );
-        }}
+            )}
+          </Page>
+        )}
       />
     );
   })

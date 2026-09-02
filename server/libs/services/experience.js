@@ -1,9 +1,12 @@
 const fp = require('fastify-plugin');
-const { Op, literal } = require('sequelize');
+const { Op, fn, col, where: sequelizeWhere, cast } = require('sequelize');
 const { createZipBuffer, parseZipBuffer } = require('../utils/kne-document-zip');
+const { buildPathTree } = require('../utils/kne-document-path-tree');
 
 module.exports = fp(async (fastify, options) => {
   const { models, services } = fastify[options.name];
+
+  const projectNameExpr = () => fn('jsonb_extract_path_text', col('content'), 'project', 'name');
 
   const pickContentFields = content => {
     const data = content || {};
@@ -59,7 +62,7 @@ module.exports = fp(async (fastify, options) => {
       where.category = category;
     }
     if (query) {
-      where[Op.or] = [{ title: { [Op.iLike]: `%${query}%` } }, { relativePath: { [Op.iLike]: `%${query}%` } }, literal(`"content"::text ILIKE ${fastify.sequelize.escape(`%${query}%`)}`)];
+      where[Op.or] = [{ title: { [Op.iLike]: `%${query}%` } }, { relativePath: { [Op.iLike]: `%${query}%` } }, sequelizeWhere(cast(col('content'), 'TEXT'), { [Op.iLike]: `%${query}%` })];
     }
 
     const rows = await models.experience.findAll({
@@ -89,7 +92,7 @@ module.exports = fp(async (fastify, options) => {
     return results;
   };
 
-  const list = async ({ keyword, category, status, perPage = 20, currentPage = 1 }) => {
+  const buildListWhere = ({ keyword, category, status, createdUserId, projectName, pathPrefix }) => {
     const where = {};
     if (category) {
       where.category = category;
@@ -97,9 +100,23 @@ module.exports = fp(async (fastify, options) => {
     if (status) {
       where.status = status;
     }
-    if (keyword) {
-      where[Op.or] = [{ title: { [Op.iLike]: `%${keyword}%` } }, { relativePath: { [Op.iLike]: `%${keyword}%` } }];
+    if (createdUserId) {
+      where.createdUserId = createdUserId;
     }
+    if (pathPrefix) {
+      where.relativePath = { [Op.like]: `${pathPrefix}%` };
+    }
+    if (projectName) {
+      where[Op.and] = [...(where[Op.and] || []), sequelizeWhere(projectNameExpr(), { [Op.iLike]: `%${projectName}%` })];
+    }
+    if (keyword) {
+      where[Op.or] = [{ title: { [Op.iLike]: `%${keyword}%` } }, { relativePath: { [Op.iLike]: `%${keyword}%` } }, sequelizeWhere(cast(col('content'), 'TEXT'), { [Op.iLike]: `%${keyword}%` })];
+    }
+    return where;
+  };
+
+  const list = async ({ keyword, category, status, createdUserId, projectName, pathPrefix, perPage = 20, currentPage = 1 }) => {
+    const where = buildListWhere({ keyword, category, status, createdUserId, projectName, pathPrefix });
     const offset = (currentPage - 1) * perPage;
     const { count, rows } = await models.experience.findAndCountAll({
       where,
@@ -115,6 +132,30 @@ module.exports = fp(async (fastify, options) => {
       ]
     });
     return { totalCount: count, pageData: rows };
+  };
+
+  const pathTree = async () => {
+    const rows = await models.experience.findAll({
+      attributes: ['relativePath'],
+      raw: true
+    });
+    return buildPathTree(rows.map(row => row.relativePath));
+  };
+
+  const filterOptions = async () => {
+    const rows = await models.experience.findAll({
+      attributes: [[fn('DISTINCT', projectNameExpr()), 'projectName']],
+      where: {
+        [Op.and]: [sequelizeWhere(projectNameExpr(), { [Op.ne]: null }), sequelizeWhere(projectNameExpr(), { [Op.ne]: '' })]
+      },
+      raw: true
+    });
+    return {
+      projectNames: rows
+        .map(row => row.projectName)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b))
+    };
   };
 
   const detail = async ({ id }) => {
@@ -154,19 +195,7 @@ module.exports = fp(async (fastify, options) => {
     return { success: true };
   };
 
-  const buildExportWhere = ({ keyword, category, status }) => {
-    const where = {};
-    if (category) {
-      where.category = category;
-    }
-    if (status) {
-      where.status = status;
-    }
-    if (keyword) {
-      where[Op.or] = [{ title: { [Op.iLike]: `%${keyword}%` } }, { relativePath: { [Op.iLike]: `%${keyword}%` } }];
-    }
-    return where;
-  };
+  const buildExportWhere = filters => buildListWhere(filters);
 
   const exportZip = async filters => {
     const rows = await models.experience.findAll({
@@ -230,6 +259,8 @@ module.exports = fp(async (fastify, options) => {
       reopen,
       remove,
       exists,
+      pathTree,
+      filterOptions,
       exportZip,
       importZip
     }

@@ -1,14 +1,16 @@
 const fp = require('fastify-plugin');
-const { Op } = require('sequelize');
+const { Op, fn, col, where: sequelizeWhere } = require('sequelize');
 const { createZipBuffer, parseZipBuffer } = require('../utils/kne-document-zip');
+const { buildPathTree } = require('../utils/kne-document-path-tree');
 
 module.exports = fp(async (fastify, options) => {
   const { models, services } = fastify[options.name];
 
+  const projectNameExpr = () => fn('jsonb_extract_path_text', col('content'), 'project', 'name');
+
   const upsert = async ({ relativePath, content, userId, skipIfExists = false }) => {
     const existing = await models.worklog.findOne({ where: { relativePath }, paranoid: false });
     const title = content?.title || '';
-    const projectName = content?.project?.name || '';
     const writtenAt = content?.writtenAt ? new Date(content.writtenAt) : new Date();
 
     if (existing && !existing.deletedAt && skipIfExists) {
@@ -20,7 +22,7 @@ module.exports = fp(async (fastify, options) => {
       if (wasDeleted) {
         await existing.restore();
       }
-      await existing.update({ content, title, projectName, writtenAt });
+      await existing.update({ content, title, writtenAt });
       return {
         action: wasDeleted ? 'created' : 'updated',
         relativePath,
@@ -32,7 +34,6 @@ module.exports = fp(async (fastify, options) => {
       relativePath,
       content,
       title,
-      projectName,
       writtenAt,
       createdUserId: userId
     });
@@ -47,16 +48,19 @@ module.exports = fp(async (fastify, options) => {
     return { exists: !!row, id: row?.id };
   };
 
-  const list = async ({ keyword, projectName, createdUserId, writtenAtStart, writtenAtEnd, perPage = 20, currentPage = 1 }) => {
+  const buildListWhere = ({ keyword, projectName, createdUserId, writtenAtStart, writtenAtEnd, pathPrefix }) => {
     const where = {};
     if (createdUserId) {
       where.createdUserId = createdUserId;
     }
     if (projectName) {
-      where.projectName = { [Op.iLike]: `%${projectName}%` };
+      where[Op.and] = [...(where[Op.and] || []), sequelizeWhere(projectNameExpr(), { [Op.iLike]: `%${projectName}%` })];
+    }
+    if (pathPrefix) {
+      where.relativePath = { [Op.like]: `${pathPrefix}%` };
     }
     if (keyword) {
-      where[Op.or] = [{ title: { [Op.iLike]: `%${keyword}%` } }, { relativePath: { [Op.iLike]: `%${keyword}%` } }, { projectName: { [Op.iLike]: `%${keyword}%` } }];
+      where[Op.or] = [{ title: { [Op.iLike]: `%${keyword}%` } }, { relativePath: { [Op.iLike]: `%${keyword}%` } }, sequelizeWhere(projectNameExpr(), { [Op.iLike]: `%${keyword}%` })];
     }
     if (writtenAtStart || writtenAtEnd) {
       where.writtenAt = {};
@@ -67,6 +71,11 @@ module.exports = fp(async (fastify, options) => {
         where.writtenAt[Op.lte] = writtenAtEnd;
       }
     }
+    return where;
+  };
+
+  const list = async ({ keyword, projectName, createdUserId, writtenAtStart, writtenAtEnd, pathPrefix, perPage = 20, currentPage = 1 }) => {
+    const where = buildListWhere({ keyword, projectName, createdUserId, writtenAtStart, writtenAtEnd, pathPrefix });
 
     const offset = (currentPage - 1) * perPage;
     const { count, rows } = await models.worklog.findAndCountAll({
@@ -88,6 +97,30 @@ module.exports = fp(async (fastify, options) => {
     return { totalCount: count, pageData: rows };
   };
 
+  const pathTree = async () => {
+    const rows = await models.worklog.findAll({
+      attributes: ['relativePath'],
+      raw: true
+    });
+    return buildPathTree(rows.map(row => row.relativePath));
+  };
+
+  const filterOptions = async () => {
+    const rows = await models.worklog.findAll({
+      attributes: [[fn('DISTINCT', projectNameExpr()), 'projectName']],
+      where: {
+        [Op.and]: [sequelizeWhere(projectNameExpr(), { [Op.ne]: null }), sequelizeWhere(projectNameExpr(), { [Op.ne]: '' })]
+      },
+      raw: true
+    });
+    return {
+      projectNames: rows
+        .map(row => row.projectName)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b))
+    };
+  };
+
   const detail = async ({ id }) => {
     return models.worklog.findByPk(id, {
       include: [
@@ -100,28 +133,28 @@ module.exports = fp(async (fastify, options) => {
     });
   };
 
-  const buildExportWhere = ({ keyword, projectName, createdUserId, writtenAtStart, writtenAtEnd }) => {
-    const where = {};
-    if (createdUserId) {
-      where.createdUserId = createdUserId;
+  const resolveByPaths = async ({ relativePaths }) => {
+    const paths = [...new Set((Array.isArray(relativePaths) ? relativePaths : []).map(item => String(item || '').trim()).filter(Boolean))];
+    if (!paths.length) {
+      return { items: [] };
     }
-    if (projectName) {
-      where.projectName = { [Op.iLike]: `%${projectName}%` };
-    }
-    if (keyword) {
-      where[Op.or] = [{ title: { [Op.iLike]: `%${keyword}%` } }, { relativePath: { [Op.iLike]: `%${keyword}%` } }, { projectName: { [Op.iLike]: `%${keyword}%` } }];
-    }
-    if (writtenAtStart || writtenAtEnd) {
-      where.writtenAt = {};
-      if (writtenAtStart) {
-        where.writtenAt[Op.gte] = writtenAtStart;
-      }
-      if (writtenAtEnd) {
-        where.writtenAt[Op.lte] = writtenAtEnd;
-      }
-    }
-    return where;
+
+    const rows = await models.worklog.findAll({
+      where: { relativePath: { [Op.in]: paths } },
+      attributes: ['id', 'relativePath', 'title']
+    });
+    const byPath = Object.fromEntries(rows.map(row => [row.relativePath, row]));
+
+    return {
+      items: paths.map(relativePath => ({
+        relativePath,
+        id: byPath[relativePath]?.id ?? null,
+        title: byPath[relativePath]?.title ?? null
+      }))
+    };
   };
+
+  const buildExportWhere = filters => buildListWhere(filters);
 
   const exportZip = async filters => {
     const rows = await models.worklog.findAll({
@@ -177,6 +210,9 @@ module.exports = fp(async (fastify, options) => {
       list,
       detail,
       exists,
+      pathTree,
+      filterOptions,
+      resolveByPaths,
       exportZip,
       importZip
     }

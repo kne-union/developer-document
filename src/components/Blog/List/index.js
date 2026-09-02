@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import { hasUserToken } from '@components/Shared/auth';
+import goAdminDetail from '@components/Shared/goAdminDetail';
 import styles from '../style.module.scss';
 
 const { Title, Paragraph, Text } = Typography;
@@ -227,7 +228,7 @@ const BlogList = createWithRemoteLoader({
 
                   <div className={styles.cardGrid}>
                     {list.map(item => (
-                      <button type="button" key={item.id} className={styles.card} onClick={() => navigate(`${baseUrl}/detail?id=${item.id}`)}>
+                      <button type="button" key={item.id} className={styles.card} onClick={() => goAdminDetail(navigate, item)}>
                         <div className={styles.cardHeader}>
                           <Title level={4} ellipsis={{ rows: 2 }} className={styles.cardTitle}>
                             {item.title}

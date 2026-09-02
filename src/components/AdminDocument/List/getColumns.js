@@ -1,29 +1,32 @@
-const getColumns = ({ navigate, baseUrl, formatMessage }) => {
+import goAdminDetail from '@components/Shared/goAdminDetail';
+
+const getColumns = ({ navigate, formatMessage }) => {
   return [
     {
       name: 'id',
       title: 'ID',
-      type: 'serialNumber',
+      width: 80,
+      renderType: 'main',
       primary: true,
       hover: true,
       onClick: ({ colItem }) => {
-        navigate(`${baseUrl}/detail?id=${colItem.id}`);
+        goAdminDetail(navigate, colItem);
       }
     },
     {
       name: 'name',
       title: formatMessage({ id: 'common.name' }),
-      type: 'mainInfo',
+      renderType: 'main',
       hover: true,
       onClick: ({ colItem }) => {
-        navigate(`${baseUrl}/detail?id=${colItem.id}`);
+        goAdminDetail(navigate, colItem);
       }
     },
     {
       name: 'status',
       title: formatMessage({ id: 'common.status' }),
-      type: 'tag',
-      valueOf: item => {
+      renderType: 'tag',
+      getValueOf: item => {
         if (item.status === 'published') {
           return { type: 'success', text: formatMessage({ id: 'common.published' }) };
         }
@@ -36,34 +39,33 @@ const getColumns = ({ navigate, baseUrl, formatMessage }) => {
     {
       name: 'isPublic',
       title: formatMessage({ id: 'common.isPublic' }),
-      type: 'tag',
-      valueOf: item => {
-        return item.isPublic ? { type: 'success', text: formatMessage({ id: 'common.public' }) } : { type: 'default', text: formatMessage({ id: 'common.private' }) };
-      }
+      renderType: 'tag',
+      getValueOf: item => (item.isPublic ? { type: 'success', text: formatMessage({ id: 'common.public' }) } : { type: 'default', text: formatMessage({ id: 'common.private' }) })
     },
     {
       name: 'groups',
       title: formatMessage({ id: 'adminDocument.getColumns.folder' }),
-      type: 'tag',
-      valueOf: item => {
+      renderType: 'tag',
+      getValueOf: item => {
         const groups = item.groups || [];
-        if (groups.length === 0) return null;
-        if (groups.length === 1) return { type: 'default', text: groups[0].name };
+        if (groups.length === 0) {
+          return null;
+        }
+        if (groups.length === 1) {
+          return { type: 'default', text: groups[0].name };
+        }
         return { type: 'default', text: `${groups[0].name} +${groups.length - 1}` };
       }
     },
     {
       name: 'createdUser',
       title: formatMessage({ id: 'common.creator' }),
-      type: 'text',
-      valueOf: item => {
-        return item.createdUser?.email || '-';
-      }
+      getValueOf: item => item.createdUser?.email || '-'
     },
     {
       name: 'createdAt',
       title: formatMessage({ id: 'common.createdAt' }),
-      type: 'datetime'
+      format: 'datetime'
     }
   ];
 };

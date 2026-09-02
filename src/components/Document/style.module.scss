@@ -740,6 +740,53 @@
   .detailMeta {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .detailPage {
+    .detailHeader,
+    .detailContent {
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      margin-bottom: 0;
+      overflow: visible;
+      background: #fff;
+    }
+
+    .detailHeader {
+      padding: 16px;
+      border-top: 1px solid #e8edf3;
+      border-bottom: 1px solid #e8edf3;
+
+      &::before,
+      &::after {
+        display: none;
+      }
+    }
+
+    .detailContent {
+      border-top: none;
+      border-bottom: 1px solid #e8edf3;
+    }
+
+    .detailContentHeader {
+      padding: 12px 14px;
+    }
+
+    .detailContentBody {
+      padding: 16px;
+    }
+
+    .detailMetaItem {
+      border: none;
+      border-radius: 0;
+      padding: 8px 10px;
+      border-bottom: 1px solid #eef2f6;
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+  }
 }
 
 @media (max-width: 960px) {
@@ -780,22 +827,30 @@
   .card,
   .paginationPanel,
   .emptyState,
-  .detailHeader,
-  .detailContent,
   .noticePanel {
     border-radius: 16px;
   }
 
-  .headerPanel,
-  .detailHeader {
-    padding: 16px;
+  .detailPage {
+    .detailHeader,
+    .detailContent {
+      border-radius: 0;
+    }
+
+    .detailHeader {
+      padding: 16px;
+    }
+
+    .detailContentHeader {
+      padding: 12px 14px;
+    }
+
+    .detailContentBody {
+      padding: 16px;
+    }
   }
 
-  .detailContentHeader {
-    padding: 12px 14px;
-  }
-
-  .detailContentBody {
+  .headerPanel {
     padding: 16px;
   }
 

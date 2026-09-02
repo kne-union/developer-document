@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { App, Button, Upload } from 'antd';
+import { useRef, useState } from 'react';
+import { App, Button } from 'antd';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { getToken } from '@kne/token-storage';
@@ -17,23 +17,22 @@ const buildQueryString = params => {
   return query ? `?${query}` : '';
 };
 
-const KneDocumentZipActions = createWithRemoteLoader({
+const ExportZipButton = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset']
 })(
-  withLocale(({ remoteModules, type, buildRequestData, filterValue, onSuccess }) => {
+  withLocale(({ remoteModules, type, getFilterValue, buildRequestData, children, ...props }) => {
     const [usePreset] = remoteModules;
-    const { apis, ajax, staticUrl } = usePreset();
+    const { apis, staticUrl } = usePreset();
     const { message } = App.useApp();
     const { formatMessage } = useIntl();
     const [exporting, setExporting] = useState(false);
-    const [importing, setImporting] = useState(false);
-
     const apiGroup = type === 'worklog' ? apis.worklog : apis.experience;
 
     const handleExport = async () => {
       setExporting(true);
       try {
-        const params = buildRequestData ? buildRequestData(filterValue || {}) : filterValue || {};
+        const rawFilterValue = (typeof getFilterValue === 'function' ? getFilterValue() : {}) || {};
+        const params = buildRequestData ? buildRequestData(rawFilterValue) : rawFilterValue;
         const baseUrl = staticUrl || '';
         const url = `${baseUrl}${apiGroup.export.url}${buildQueryString(params)}`;
         const response = await fetch(url, {
@@ -59,12 +58,32 @@ const KneDocumentZipActions = createWithRemoteLoader({
       }
     };
 
-    const importZip = async (file, { skipIfExists }) => {
+    return (
+      <Button {...props} icon={<DownloadOutlined />} loading={exporting} onClick={handleExport}>
+        {children}
+      </Button>
+    );
+  })
+);
+
+const ImportZipButton = createWithRemoteLoader({
+  modules: ['components-core:Global@usePreset']
+})(
+  withLocale(({ remoteModules, type, onSuccess, children, ...props }) => {
+    const [usePreset] = remoteModules;
+    const { apis, ajax } = usePreset();
+    const { message } = App.useApp();
+    const { formatMessage } = useIntl();
+    const [importing, setImporting] = useState(false);
+    const inputRef = useRef(null);
+    const apiGroup = type === 'worklog' ? apis.worklog : apis.experience;
+
+    const importZip = async file => {
       setImporting(true);
       try {
         const query = buildQueryString({
-          skipIfExists,
-          overwrite: !skipIfExists
+          skipIfExists: false,
+          overwrite: true
         });
         const { data: resData } = await ajax.postForm({
           url: `${apiGroup.import.url}${query}`,
@@ -93,34 +112,41 @@ const KneDocumentZipActions = createWithRemoteLoader({
 
     return (
       <>
-        <Button icon={<DownloadOutlined />} loading={exporting} onClick={handleExport}>
-          {formatMessage({ id: 'shared.kneDocumentZip.export' })}
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".zip,application/zip"
+          style={{ display: 'none' }}
+          onChange={event => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (file) {
+              importZip(file);
+            }
+          }}
+        />
+        <Button {...props} icon={<UploadOutlined />} loading={importing} onClick={() => inputRef.current?.click()}>
+          {children}
         </Button>
-        <Upload
-          accept=".zip,application/zip"
-          showUploadList={false}
-          beforeUpload={file => {
-            importZip(file, { skipIfExists: false });
-            return false;
-          }}
-        >
-          <Button icon={<UploadOutlined />} loading={importing}>
-            {formatMessage({ id: 'shared.kneDocumentZip.import' })}
-          </Button>
-        </Upload>
-        <Upload
-          accept=".zip,application/zip"
-          showUploadList={false}
-          beforeUpload={file => {
-            importZip(file, { skipIfExists: true });
-            return false;
-          }}
-        >
-          <Button loading={importing}>{formatMessage({ id: 'shared.kneDocumentZip.importSkipDuplicate' })}</Button>
-        </Upload>
       </>
     );
   })
 );
 
-export default KneDocumentZipActions;
+export const getKneDocumentZipButtonGroupList = ({ type, getFilterValue, buildRequestData, onSuccess, formatMessage }) => [
+  {
+    buttonComponent: ExportZipButton,
+    type,
+    getFilterValue,
+    buildRequestData,
+    children: formatMessage({ id: 'shared.kneDocumentZip.export' })
+  },
+  {
+    buttonComponent: ImportZipButton,
+    type,
+    onSuccess,
+    children: formatMessage({ id: 'shared.kneDocumentZip.import' })
+  }
+];
+
+export default getKneDocumentZipButtonGroupList;

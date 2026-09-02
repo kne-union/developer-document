@@ -1,0 +1,22 @@
+.back-icon {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid var(--font-color-grey-2);
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  :global {
+    .iconfont {
+      transform: scale(0.6);
+    }
+  }
+}
+
+.title-text {
+  min-width: 0;
+  word-break: break-word;
+}

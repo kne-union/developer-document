@@ -1,74 +1,138 @@
+import { useCallback, useMemo, useRef } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
+import { useNavigate } from 'react-router-dom';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import getColumns from './getColumns';
-import AdminEntityTablePage from '@components/Shared/AdminEntityTablePage';
-import KneDocumentZipActions from '@components/Shared/KneDocumentZipActions';
+import getKneDocumentZipButtonGroupList from '@components/Shared/KneDocumentZipActions';
+import { buildPathTreeApis, buildProjectNameFilterApi, buildUserListFilterApi, mapKneDocumentListFilterValue } from '@components/Shared/kneDocumentListFilters';
+import useTablePaginationSearchParams from '@components/Shared/useTablePaginationSearchParams';
 
 const List = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
+  modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter', 'components-admin:GroupSelect@GroupFolderFilterItem']
 })(
-  withLocale(({ remoteModules, ...props }) => {
-    const [usePreset] = remoteModules;
+  withLocale(({ remoteModules, baseUrl, menu, ...props }) => {
+    const [BizUnit, usePreset, Filter, GroupFolderFilterItem] = remoteModules;
     const { apis } = usePreset();
     const { formatMessage } = useIntl();
+    const navigate = useNavigate();
+    const filterValueRef = useRef({});
+    const reloadRef = useRef(() => {});
+    const { SuperSelectFilterItem, TypeDateRangePickerFilterItem } = Filter.fields;
+    const pathTreeApis = useMemo(() => ({ groupList: buildPathTreeApis(apis.worklog.pathTree) }), [apis.worklog.pathTree]);
+    const projectNameApi = useMemo(() => buildProjectNameFilterApi(apis.worklog.filterOptions), [apis.worklog.filterOptions]);
+    const userListApi = useMemo(() => buildUserListFilterApi(apis.admin.getUserList), [apis.admin.getUserList]);
+    const paginationSearchParams = useTablePaginationSearchParams();
+
+    const handleFilterChange = useCallback(value => {
+      filterValueRef.current = value;
+    }, []);
+
+    const mapFilterValue = useCallback(
+      (value, getFilterValue) =>
+        mapKneDocumentListFilterValue(getFilterValue(value), {
+          dateField: 'writtenAt',
+          dateStartKey: 'writtenAtStart',
+          dateEndKey: 'writtenAtEnd'
+        }),
+      []
+    );
+
+    const filter = useMemo(
+      () => ({
+        list: [
+          {
+            type: GroupFolderFilterItem,
+            props: {
+              single: true,
+              label: formatMessage({ id: 'adminWorklog.columns.path' }),
+              name: 'pathPrefix',
+              overlayWidth: '480px',
+              permissions: [],
+              apis: pathTreeApis
+            }
+          },
+          {
+            type: SuperSelectFilterItem,
+            props: {
+              single: true,
+              label: formatMessage({ id: 'adminWorklog.columns.project' }),
+              name: 'projectName',
+              api: projectNameApi
+            }
+          },
+          {
+            type: SuperSelectFilterItem,
+            props: {
+              single: true,
+              label: formatMessage({ id: 'common.creator' }),
+              name: 'createdUserId',
+              api: userListApi
+            }
+          },
+          {
+            type: TypeDateRangePickerFilterItem,
+            props: {
+              label: formatMessage({ id: 'adminWorklog.columns.writtenAt' }),
+              name: 'writtenAt'
+            }
+          }
+        ]
+      }),
+      [GroupFolderFilterItem, SuperSelectFilterItem, TypeDateRangePickerFilterItem, formatMessage, pathTreeApis, projectNameApi, userListApi]
+    );
+
+    const getColumnsFn = useCallback(() => getColumns({ navigate, formatMessage }), [navigate, formatMessage]);
+
+    const zipButtonGroupList = useMemo(
+      () =>
+        getKneDocumentZipButtonGroupList({
+          type: 'worklog',
+          getFilterValue: () => filterValueRef.current,
+          buildRequestData: value =>
+            mapKneDocumentListFilterValue(value, {
+              dateField: 'writtenAt',
+              dateStartKey: 'writtenAtStart',
+              dateEndKey: 'writtenAtEnd'
+            }),
+          onSuccess: () => reloadRef.current(),
+          formatMessage
+        }),
+      [formatMessage]
+    );
 
     return (
-      <AdminEntityTablePage
+      <BizUnit
         {...props}
+        isNext
         name="admin-worklog-list"
-        getApi={apis => apis.worklog.list}
-        buildRequestData={filterValue => {
-          const result = Object.assign({}, filterValue);
-          if (filterValue.writtenAt?.value?.[0] && filterValue.writtenAt?.value?.[1]) {
-            result.writtenAtStart = filterValue.writtenAt.value[0];
-            result.writtenAtEnd = filterValue.writtenAt.value[1];
+        page={menu ? { menu } : undefined}
+        apis={{ list: apis.worklog.list }}
+        filter={filter}
+        getColumns={getColumnsFn}
+        onFilterChange={handleFilterChange}
+        options={{
+          mapFilterValue,
+          tableProps: {
+            pagination: {
+              paramsType: 'params',
+              searchParams: paginationSearchParams.searchParams,
+              setSearchParams: paginationSearchParams.setSearchParams
+            },
+            buttonGroup: {
+              list: zipButtonGroupList
+            }
           }
-          delete result.writtenAt;
-          return result;
         }}
-        getFilterList={({ SuperSelectUserFilterItem, TypeDateRangePickerFilterItem }) => {
-          return [
-            [
-              <SuperSelectUserFilterItem
-                single
-                label={formatMessage({ id: 'common.creator' })}
-                name="createdUserId"
-                api={Object.assign({}, apis.admin.getUserList, {
-                  transformData: data => {
-                    return Object.assign({}, data, {
-                      pageData: (data.pageData || []).map(item =>
-                        Object.assign({}, item, {
-                          value: item.id,
-                          label: item.nickname || item.email || item.phone
-                        })
-                      )
-                    });
-                  }
-                })}
-              />,
-              <TypeDateRangePickerFilterItem label={formatMessage({ id: 'adminWorklog.columns.writtenAt' })} name="writtenAt" />
-            ]
-          ];
+      >
+        {({ tableOptions }) => {
+          reloadRef.current = () =>
+            tableOptions.ref?.current?.refresh?.({
+              params: { currentPage: 1 }
+            });
+          return <BizUnit.TablePageRender page={menu ? { menu } : undefined} tableOptions={tableOptions} />;
         }}
-        renderTitleExtra={({ reload, filterValue }) => (
-          <KneDocumentZipActions
-            type="worklog"
-            filterValue={filterValue}
-            buildRequestData={filterValue => {
-              const result = Object.assign({}, filterValue);
-              if (filterValue.writtenAt?.value?.[0] && filterValue.writtenAt?.value?.[1]) {
-                result.writtenAtStart = filterValue.writtenAt.value[0];
-                result.writtenAtEnd = filterValue.writtenAt.value[1];
-              }
-              delete result.writtenAt;
-              return result;
-            }}
-            onSuccess={reload}
-          />
-        )}
-        getColumns={({ navigate, baseUrl }) => getColumns({ navigate, baseUrl, formatMessage })}
-      />
+      </BizUnit>
     );
   })
 );

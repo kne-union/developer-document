@@ -1,94 +1,79 @@
-import { Tag, Space } from 'antd';
+import { Tag } from 'antd';
 import { REMOTE_COMPONENT_GROUP_COLORS } from '@components/Shared/catalogMeta';
+import goAdminDetail from '@components/Shared/goAdminDetail';
 
-const getColumns = ({ navigate, baseUrl, formatMessage }) => {
+const getColumns = ({ navigate, formatMessage }) => {
   return [
     {
       name: 'id',
       title: 'ID',
-      type: 'serialNumber',
+      width: 80,
+      renderType: 'main',
       primary: true,
       hover: true,
       onClick: ({ colItem }) => {
-        navigate(`${baseUrl}/detail?id=${colItem.id}`);
+        goAdminDetail(navigate, colItem);
       }
     },
     {
       name: 'remote',
       title: formatMessage({ id: 'adminRemoteComponent.getColumns.componentName' }),
-      type: 'mainInfo',
+      renderType: 'main',
       hover: true,
       onClick: ({ colItem }) => {
-        navigate(`${baseUrl}/detail?id=${colItem.id}`);
+        goAdminDetail(navigate, colItem);
       }
     },
     {
       name: 'name',
       title: formatMessage({ id: 'adminNpmPackage.getColumns.displayName' }),
-      type: 'text',
-      valueOf: item => {
-        return item.name || '-';
-      }
+      getValueOf: item => item.name || '-'
     },
     {
       name: 'group',
       title: formatMessage({ id: 'common.category' }),
-      valueOf: item => {
-        const group = item.group || 'common';
+      render: (_, { dataSource }) => {
+        const group = dataSource.group || 'common';
         return <Tag color={REMOTE_COMPONENT_GROUP_COLORS[group] || 'default'}>{formatMessage({ id: `shared.catalogMeta.${group}` })}</Tag>;
       }
     },
     {
       name: 'packageName',
       title: formatMessage({ id: 'adminRemoteComponent.getColumns.npmPackageName' }),
-      type: 'text',
-      valueOf: item => {
-        return item.packageName || '-';
-      }
+      getValueOf: item => item.packageName || '-'
     },
     {
       name: 'registry',
       title: 'NPM Registry',
-      type: 'text',
-      valueOf: item => {
-        return item.registry || '-';
-      }
+      getValueOf: item => item.registry || '-'
     },
     {
       name: 'defaultVersion',
       title: formatMessage({ id: 'adminRemoteComponent.getColumns.deployedVersions' }),
-      type: 'text',
-      valueOf: item => {
-        return item.defaultVersion || '-';
-      }
+      getValueOf: item => item.defaultVersion || '-'
     },
     {
       name: 'isPublic',
       title: formatMessage({ id: 'common.isPublic' }),
-      type: 'tag',
-      valueOf: item => {
-        return item.isPublic ? { type: 'success', text: formatMessage({ id: 'common.public' }) } : { type: 'default', text: formatMessage({ id: 'common.private' }) };
-      }
+      renderType: 'tag',
+      getValueOf: item => (item.isPublic ? { type: 'success', text: formatMessage({ id: 'common.public' }) } : { type: 'default', text: formatMessage({ id: 'common.private' }) })
     },
     {
       name: 'examples',
       title: formatMessage({ id: 'adminRemoteComponent.getColumns.deployedVersions' }),
-      valueOf: item => {
+      renderType: 'tagList',
+      getValueOf: item => {
         const examples = item.examples || [];
-        if (examples.length === 0) return '-';
-        return (
-          <Space size={[4, 4]} wrap>
-            {examples.map(version => (
-              <Tag key={version}>{version}</Tag>
-            ))}
-          </Space>
-        );
+        if (examples.length === 0) {
+          return null;
+        }
+        return examples.map(version => ({ type: 'default', text: version }));
       }
     },
     {
       name: 'createdAt',
       title: formatMessage({ id: 'common.createdAt' }),
-      type: 'datetime'
+      format: 'datetime'
     }
   ];
 };

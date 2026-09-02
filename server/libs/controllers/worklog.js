@@ -18,6 +18,7 @@ module.exports = fp(async (fastify, options) => {
             keyword: { type: 'string' },
             projectName: { type: 'string' },
             createdUserId: { type: 'string' },
+            pathPrefix: { type: 'string' },
             writtenAtStart: { type: 'string', format: 'date-time' },
             writtenAtEnd: { type: 'string', format: 'date-time' },
             perPage: { type: 'number', default: 20 },
@@ -27,6 +28,28 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => services.worklog.list(request.query)
+  );
+
+  fastify.get(
+    `${options.prefix}/worklog/manage/path-tree`,
+    {
+      onRequest: adminAuth,
+      schema: {
+        summary: '工作日志路径文件夹树（用于筛选）'
+      }
+    },
+    async () => services.worklog.pathTree()
+  );
+
+  fastify.get(
+    `${options.prefix}/worklog/manage/filter-options`,
+    {
+      onRequest: adminAuth,
+      schema: {
+        summary: '工作日志筛选项（项目名等）'
+      }
+    },
+    async () => services.worklog.filterOptions()
   );
 
   fastify.get(
@@ -45,6 +68,27 @@ module.exports = fp(async (fastify, options) => {
     async request => services.worklog.detail(request.query)
   );
 
+  fastify.post(
+    `${options.prefix}/worklog/manage/resolve`,
+    {
+      onRequest: adminAuth,
+      schema: {
+        summary: '按相对路径解析工作日志',
+        body: {
+          type: 'object',
+          properties: {
+            relativePaths: {
+              type: 'array',
+              items: { type: 'string' }
+            }
+          },
+          required: ['relativePaths']
+        }
+      }
+    },
+    async request => services.worklog.resolveByPaths(request.body)
+  );
+
   fastify.get(
     `${options.prefix}/worklog/manage/export`,
     {
@@ -57,6 +101,7 @@ module.exports = fp(async (fastify, options) => {
             keyword: { type: 'string' },
             projectName: { type: 'string' },
             createdUserId: { type: 'string' },
+            pathPrefix: { type: 'string' },
             writtenAtStart: { type: 'string', format: 'date-time' },
             writtenAtEnd: { type: 'string', format: 'date-time' }
           }

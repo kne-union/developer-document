@@ -42,7 +42,7 @@ const hashContent = content => crypto.createHash('sha256').update(JSON.stringify
 
 const resolveRemote = async cli => {
   const config = await loadConfig();
-  const apiUrl = cli.apiUrl || config.remote?.apiUrl;
+  const apiUrl = cli.apiUrl || config.remote?.syncUrl || config.remote?.apiUrl;
   const token = cli.token || config.remote?.token;
   return { config, apiUrl, token };
 };
@@ -93,8 +93,14 @@ const needsSync = ({ entry, apiUrl, contentHash, fileMtimeMs }) => {
   return { needed: false, reason: 'up_to_date' };
 };
 
+const resolveApiUrl = (apiUrl, pathname) => {
+  const base = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+  const segment = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  return `${base}${segment}`;
+};
+
 const apiRequest = async ({ apiUrl, token, method, pathname, body }) => {
-  const url = new URL(pathname, apiUrl.endsWith('/') ? apiUrl : `${apiUrl}/`);
+  const url = resolveApiUrl(apiUrl, pathname);
   const response = await fetch(url, {
     method,
     headers: {
