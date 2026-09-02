@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Card, Col, Row, Statistic, Table, Tabs } from 'antd';
+import { Card, Col, Row, Statistic, Tabs } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import withLocale from '@root/withLocale';
@@ -114,10 +114,10 @@ const RecordsTab = createWithRemoteLoader({
 );
 
 const StatsTab = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset']
+  modules: ['components-core:Global@usePreset', 'components-core:TablePage@Table']
 })(
   withLocale(({ remoteModules }) => {
-    const [usePreset] = remoteModules;
+    const [usePreset, Table] = remoteModules;
     const { apis } = usePreset();
     const { formatMessage } = useIntl();
     const [days, setDays] = useState(7);
@@ -125,6 +125,62 @@ const StatsTab = createWithRemoteLoader({
     const summaryApi = useMemo(() => apis.searchAnalytics.summary, [apis]);
     const trendApi = useMemo(() => Object.assign({}, apis.searchAnalytics.trend, { params: { days } }), [apis, days]);
     const topQueriesApi = useMemo(() => apis.searchAnalytics.topQueries, [apis]);
+
+    const byTypeColumns = useMemo(
+      () => [
+        {
+          name: 'searchType',
+          title: formatMessage({ id: 'adminSearchAnalytics.columns.searchType' }),
+          getValueOf: item => formatMessage({ id: SEARCH_TYPE_LABELS[item.searchType] || 'common.unknown' })
+        },
+        {
+          name: 'count',
+          title: formatMessage({ id: 'adminSearchAnalytics.stats.searchCount' })
+        },
+        {
+          name: 'hitCount',
+          title: formatMessage({ id: 'adminSearchAnalytics.stats.hits' })
+        }
+      ],
+      [formatMessage]
+    );
+
+    const topQueriesColumns = useMemo(
+      () => [
+        {
+          name: 'query',
+          title: formatMessage({ id: 'adminSearchAnalytics.columns.query' })
+        },
+        {
+          name: 'searchCount',
+          title: formatMessage({ id: 'adminSearchAnalytics.stats.searchCount' })
+        },
+        {
+          name: 'hitCount',
+          title: formatMessage({ id: 'adminSearchAnalytics.stats.hits' })
+        }
+      ],
+      [formatMessage]
+    );
+
+    const trendColumns = useMemo(
+      () => [
+        {
+          name: 'day',
+          title: formatMessage({ id: 'adminSearchAnalytics.stats.day' }),
+          getValueOf: item => (item.day ? dayjs(item.day).format('YYYY-MM-DD') : '-')
+        },
+        {
+          name: 'searchCount',
+          title: formatMessage({ id: 'adminSearchAnalytics.stats.searchCount' })
+        },
+        {
+          name: 'hitCount',
+          title: formatMessage({ id: 'adminSearchAnalytics.stats.hits' })
+        }
+      ],
+      [formatMessage]
+    );
 
     return (
       <Fetch
@@ -158,21 +214,7 @@ const StatsTab = createWithRemoteLoader({
             <Row gutter={16}>
               <Col span={12}>
                 <Card title={formatMessage({ id: 'adminSearchAnalytics.stats.byType' })}>
-                  <Table
-                    size="small"
-                    pagination={false}
-                    rowKey="searchType"
-                    dataSource={summary?.byType || []}
-                    columns={[
-                      {
-                        title: formatMessage({ id: 'adminSearchAnalytics.columns.searchType' }),
-                        dataIndex: 'searchType',
-                        render: v => formatMessage({ id: SEARCH_TYPE_LABELS[v] || 'common.unknown' })
-                      },
-                      { title: formatMessage({ id: 'adminSearchAnalytics.stats.searchCount' }), dataIndex: 'count' },
-                      { title: formatMessage({ id: 'adminSearchAnalytics.stats.hits' }), dataIndex: 'hitCount' }
-                    ]}
-                  />
+                  <Table name="admin-search-analytics-by-type" controllerOpen={false} pagination={false} rowKey="searchType" dataSource={summary?.byType || []} columns={byTypeColumns} />
                 </Card>
               </Col>
               <Col span={12}>
@@ -181,17 +223,7 @@ const StatsTab = createWithRemoteLoader({
                   name="topQueries"
                   render={({ data: topQueries }) => (
                     <Card title={formatMessage({ id: 'adminSearchAnalytics.stats.topQueries' })}>
-                      <Table
-                        size="small"
-                        pagination={false}
-                        rowKey="query"
-                        dataSource={topQueries || []}
-                        columns={[
-                          { title: formatMessage({ id: 'adminSearchAnalytics.columns.query' }), dataIndex: 'query' },
-                          { title: formatMessage({ id: 'adminSearchAnalytics.stats.searchCount' }), dataIndex: 'searchCount' },
-                          { title: formatMessage({ id: 'adminSearchAnalytics.stats.hits' }), dataIndex: 'hitCount' }
-                        ]}
-                      />
+                      <Table name="admin-search-analytics-top-queries" controllerOpen={false} pagination={false} rowKey="query" dataSource={topQueries || []} columns={topQueriesColumns} />
                     </Card>
                   )}
                 />
@@ -213,27 +245,7 @@ const StatsTab = createWithRemoteLoader({
                 />
               }
             >
-              <Fetch
-                {...trendApi}
-                name="trend"
-                render={({ data: trend }) => (
-                  <Table
-                    size="small"
-                    pagination={false}
-                    rowKey="day"
-                    dataSource={trend || []}
-                    columns={[
-                      {
-                        title: formatMessage({ id: 'adminSearchAnalytics.stats.day' }),
-                        dataIndex: 'day',
-                        render: v => (v ? dayjs(v).format('YYYY-MM-DD') : '-')
-                      },
-                      { title: formatMessage({ id: 'adminSearchAnalytics.stats.searchCount' }), dataIndex: 'searchCount' },
-                      { title: formatMessage({ id: 'adminSearchAnalytics.stats.hits' }), dataIndex: 'hitCount' }
-                    ]}
-                  />
-                )}
-              />
+              <Fetch {...trendApi} name="trend" render={({ data: trend }) => <Table name="admin-search-analytics-trend" controllerOpen={false} pagination={false} rowKey="day" dataSource={trend || []} columns={trendColumns} />} />
             </Card>
           </>
         )}
