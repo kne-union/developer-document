@@ -11,6 +11,16 @@ const GROUP_LABELS = {
   general: '通用'
 };
 
+const normalizeVersions = versions => {
+  if (Array.isArray(versions)) {
+    return versions;
+  }
+  if (versions && typeof versions === 'object') {
+    return Object.keys(versions);
+  }
+  return [];
+};
+
 module.exports = fp(async (fastify, options) => {
   const { models } = fastify[options.name];
   const { Op } = fastify.sequelize.Sequelize;
@@ -25,7 +35,7 @@ module.exports = fp(async (fastify, options) => {
       name,
       description,
       group: group || 'general',
-      versions: versions || [],
+      versions: normalizeVersions(versions),
       defaultVersion,
       isPublic: isPublic !== undefined ? isPublic : true
     });
@@ -45,7 +55,7 @@ module.exports = fp(async (fastify, options) => {
       name,
       description,
       group,
-      versions,
+      versions: versions === undefined ? undefined : normalizeVersions(versions),
       defaultVersion,
       isPublic
     });
@@ -199,7 +209,7 @@ module.exports = fp(async (fastify, options) => {
     }
 
     await component.update({
-      versions: allVersions,
+      versions: normalizeVersions(allVersions),
       defaultVersion: latestVersion,
       examples: [...new Set(examples)],
       description: component.description || npmInfo.description || (npmInfo.readme ? npmInfo.readme.slice(0, 500) : null)

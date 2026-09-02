@@ -1,11 +1,21 @@
 const fp = require('fastify-plugin');
 const loadNpmInfo = require('@kne/load-npm-info');
-const { buildCatalogFromReadme } = require('@kne/npm-tools');
+const { buildCatalogFromReadme, getRemoteModuleDocument, getRemoteComponentReadmeFromTarball } = require('@kne/npm-tools');
 const { buildSearchTextFromIndex, ftsWhere, ftsOrder } = require('../utils/fts');
 const { withRetry } = require('../utils/retry');
 
-// 已构建即可（允许空目录，避免无 # 切分时反复 ensure）
-const hasValidIndex = row => Boolean(row && row.meta && row.meta.builtAt);
+// 必须有非空组件目录，避免空壳 builtAt 永久阻塞重建
+const hasValidIndex = row => Boolean(row && row.meta && row.meta.builtAt && Array.isArray(row.indexData) && row.indexData.length > 0);
+
+const normalizeVersions = versions => {
+  if (Array.isArray(versions)) {
+    return versions;
+  }
+  if (versions && typeof versions === 'object') {
+    return Object.keys(versions);
+  }
+  return [];
+};
 
 const displayNameFromPackage = packageName => {
   if (!packageName) {
@@ -14,15 +24,17 @@ const displayNameFromPackage = packageName => {
   return packageName.includes('/') ? packageName.split('/').slice(1).join('/') : packageName.replace(/^@/, '');
 };
 
-const parseTokenDocId = query => {
+const parseTokenQuery = query => {
   if (!query) {
     return null;
   }
   const match = String(query)
     .trim()
     .match(/^([^:\s]+):([A-Za-z][\w.]*)$/);
-  return match ? match[1] : null;
+  return match ? { docId: match[1], componentName: match[2] } : null;
 };
+
+const parseTokenDocId = query => parseTokenQuery(query)?.docId || null;
 
 const isKneNpmPackage = name => /^@kne\/[A-Za-z0-9._-]+$/.test(name || '');
 const isKneComponentsPackage = name => /^@kne-components\/[A-Za-z0-9._-]+$/.test(name || '');
@@ -37,17 +49,31 @@ const pickComponentHit = (row, query) => {
     const item = index[0];
     return { item, component: item?.name ? components[item.name] : null };
   }
-  const q = String(query).toLowerCase();
-  const item =
-    index.find(entry => entry.name?.toLowerCase().includes(q)) ||
-    index.find(entry => entry.token?.toLowerCase().includes(q)) ||
-    index.find(entry => entry.summary?.toLowerCase().includes(q)) ||
-    index.find(entry => {
-      const component = components[entry.name];
-      return component?.api && String(component.api).toLowerCase().includes(q);
-    }) ||
-    null;
-  return { item, component: item?.name ? components[item.name] : null };
+
+  const token = parseTokenQuery(query);
+  const needles = [];
+  if (token?.componentName) {
+    needles.push(token.componentName.toLowerCase());
+  }
+  needles.push(String(query).toLowerCase());
+
+  for (const q of needles) {
+    const item =
+      index.find(entry => entry.name?.toLowerCase() === q) ||
+      index.find(entry => entry.token?.toLowerCase() === q) ||
+      index.find(entry => entry.name?.toLowerCase().includes(q)) ||
+      index.find(entry => entry.token?.toLowerCase().includes(q)) ||
+      index.find(entry => entry.summary?.toLowerCase().includes(q)) ||
+      index.find(entry => {
+        const component = components[entry.name];
+        return component?.api && String(component.api).toLowerCase().includes(q);
+      });
+    if (item) {
+      return { item, component: item?.name ? components[item.name] : null };
+    }
+  }
+
+  return { item: null, component: null };
 };
 
 module.exports = fp(async (fastify, options) => {
@@ -61,7 +87,8 @@ module.exports = fp(async (fastify, options) => {
       return [];
     }
 
-    const [exactPackages, suffixPackages, exactRemotes, fuzzyRemotes] = await Promise.all([
+    // 精确 / 后缀优先；避免宽模糊把大量无关包拖进 ensure
+    const [exactPackages, suffixPackages, exactRemotes] = await Promise.all([
       models.npmPackage.findAll({
         where: { [Op.or]: [{ packageName: q }, { packageName: { [Op.iLike]: `%/${q}` } }] },
         attributes: ['packageName'],
@@ -70,7 +97,7 @@ module.exports = fp(async (fastify, options) => {
       }),
       models.npmPackage.findAll({
         where: {
-          [Op.and]: [{ packageName: { [Op.iLike]: `%${q}%` } }, { packageName: { [Op.notILike]: `%/${q}` } }, { packageName: { [Op.ne]: q } }]
+          [Op.and]: [{ packageName: { [Op.iLike]: `%/${q}` } }, { packageName: { [Op.ne]: q } }]
         },
         attributes: ['packageName'],
         limit: 3,
@@ -80,14 +107,6 @@ module.exports = fp(async (fastify, options) => {
         where: { [Op.or]: [{ remote: q }, { packageName: q }, { packageName: { [Op.iLike]: `%/${q}` } }] },
         attributes: ['remote'],
         limit: 5,
-        order: [['updatedAt', 'DESC']]
-      }),
-      models.remoteComponent.findAll({
-        where: {
-          [Op.and]: [{ remote: { [Op.iLike]: `%${q}%` } }, { remote: { [Op.ne]: q } }]
-        },
-        attributes: ['remote'],
-        limit: 3,
         order: [['updatedAt', 'DESC']]
       })
     ]);
@@ -103,11 +122,20 @@ module.exports = fp(async (fastify, options) => {
     exactPackages.forEach(pkg => push(pkg.packageName));
     exactRemotes.forEach(remote => push(remote.remote));
     suffixPackages.forEach(pkg => push(pkg.packageName));
-    fuzzyRemotes.forEach(remote => push(remote.remote));
     return ids.slice(0, 5);
   };
 
-  const resolveKnePackageCandidates = ({ query, docId }) => {
+  const npmPackageExists = async packageName => {
+    try {
+      // 404 不重试，避免裸搜不存在包名拖到分钟级
+      await loadNpmInfo(packageName);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const resolveKnePackageCandidates = async ({ query, docId }) => {
     const candidates = [];
     const push = value => {
       if (value && !candidates.includes(value)) {
@@ -128,22 +156,22 @@ module.exports = fp(async (fastify, options) => {
       return candidates;
     }
 
-    // 裸名：尝试 @kne/ 与 @kne-components/ 域（仅当 npm 上真实存在时才会创建）
+    // 裸名：
+    // - 仅 @kne/ 存在 → npm 包
+    // - 仅 @kne-components/ 存在 → 远程组件
+    // - 两者都存在（如 react-fetch 双发布）→ 只走 @kne/，禁止自动建远程（远程须显式 scope 或已有记录）
     if (/^[A-Za-z0-9._-]+$/.test(q)) {
-      push(`@kne/${q}`);
-      push(`@kne-components/${q}`);
+      const kneName = `@kne/${q}`;
+      const componentsName = `@kne-components/${q}`;
+      const kneExists = await npmPackageExists(kneName);
+      if (kneExists) {
+        push(kneName);
+      } else if (await npmPackageExists(componentsName)) {
+        push(componentsName);
+      }
     }
 
     return candidates;
-  };
-
-  const npmPackageExists = async packageName => {
-    try {
-      await withRetry(() => loadNpmInfo(packageName), { retries: 2, delays: [1500, 3000] });
-      return true;
-    } catch (e) {
-      return false;
-    }
   };
 
   const ensureKneCatalogRecord = async packageName => {
@@ -264,8 +292,12 @@ module.exports = fp(async (fastify, options) => {
 
   const buildFromRemoteComponent = async (component, { version: versionOverride } = {}) => {
     const version = versionOverride || component.defaultVersion;
-    try {
-      const { getRemoteModuleDocument } = require('@kne/npm-tools');
+    if (!component?.remote) {
+      throw new Error('远程组件缺少 remote');
+    }
+
+    // 有 CDN url：只读 CDN README；无 url：只从 tarball 读 build/README.md（禁止 registry readme）
+    if (component.url) {
       const doc = await getRemoteModuleDocument({
         url: component.url,
         remote: component.remote,
@@ -281,29 +313,21 @@ module.exports = fp(async (fastify, options) => {
         readmeUrl: doc.readmeUrl,
         packageName: component.packageName
       });
-    } catch (error) {
-      if (!component.packageName) {
-        throw error;
-      }
-      // 无 url/tpl 或 CDN 失败时，回退 npm README，docId 仍用 remote
-      const { getNpmPackageDocument } = require('@kne/npm-tools');
-      const resolvedName = version ? `${component.packageName}@${version}` : component.packageName;
-      const doc = await withRetry(
-        () =>
-          getNpmPackageDocument(resolvedName, {
-            loadNpmInfo: name => loadNpmInfo(name, component.registry ? { registry: component.registry } : undefined)
-          }),
-        { retries: 3, delays: [2000, 5000, 10000] }
-      );
-      return buildFromReadme({
-        docId: component.remote,
-        version: version || doc.version,
-        readme: doc.readme,
-        source: 'remote',
-        readmeUrl: doc.readmeUrl,
-        packageName: component.packageName
-      });
     }
+
+    if (!component.packageName) {
+      throw new Error(`远程组件[${component.remote}]无 CDN url 且缺少 packageName，无法从 tarball 取文`);
+    }
+
+    const doc = await getRemoteComponentReadmeFromTarball(component.packageName, version);
+    return buildFromReadme({
+      docId: component.remote,
+      version: version || doc.version,
+      readme: doc.readme,
+      source: 'remote',
+      readmeUrl: doc.readmeUrl,
+      packageName: component.packageName
+    });
   };
 
   const ensureIndex = async ({ docId, version }) => {
@@ -383,7 +407,7 @@ module.exports = fp(async (fastify, options) => {
     const tokenDocId = parseTokenDocId(normalizedQuery);
     const resolvedDocId = docId || tokenDocId;
     const catalogDocIds = resolvedDocId ? [] : await resolveCatalogDocIds(normalizedQuery);
-    const kneCandidates = resolveKnePackageCandidates({ query: normalizedQuery, docId: resolvedDocId });
+    const kneCandidates = await resolveKnePackageCandidates({ query: normalizedQuery, docId: resolvedDocId });
 
     const ensureDocIds = [];
     const seen = new Set();
