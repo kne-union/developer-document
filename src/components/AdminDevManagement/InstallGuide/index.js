@@ -28,8 +28,9 @@ const CopySection = ({ title, content, onCopy, copyLabel }) => (
 );
 
 const resolveSyncUrl = () => {
-  const root = (window.runtimeApiUrl || '').replace(/\/$/, '');
-  return root ? `${root}/api/v1` : 'http://localhost:8061/api/v1';
+  const runtimeRoot = (window.runtimeApiUrl || '').replace(/\/$/, '');
+  const root = runtimeRoot || window.location.origin.replace(/\/$/, '');
+  return `${root}/api/v1`;
 };
 
 const buildInitCommand = ({ syncUrl, mcpUrl, tokenValue, target }) =>
