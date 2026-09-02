@@ -30,12 +30,17 @@ module.exports = fp(async (fastify, options) => {
     if (hitCount > 0 && fastify.statistics?.services?.collect) {
       const channel = SEARCH_CHANNELS[searchType];
       if (channel) {
-        await fastify.statistics.services.collect({
-          channel,
-          data: { count: 1, hitCount },
-          title: 'MCP 搜索统计',
-          description: 'Cursor MCP 搜索命中统计'
-        });
+        try {
+          await fastify.statistics.services.collect({
+            channel,
+            data: { count: 1, hitCount },
+            time: new Date(),
+            title: 'MCP 搜索统计',
+            description: 'Cursor MCP 搜索命中统计'
+          });
+        } catch (err) {
+          fastify.log.warn({ err, searchType, query }, 'MCP search statistics collect failed');
+        }
       }
     }
 
