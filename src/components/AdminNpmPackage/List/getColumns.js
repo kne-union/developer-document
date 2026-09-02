@@ -1,47 +1,54 @@
 import { Tag } from 'antd';
 import { NPM_PACKAGE_TYPE_COLORS } from '@components/Shared/catalogMeta';
+import goAdminDetail from '@components/Shared/goAdminDetail';
 
-const getColumns = ({ navigate, baseUrl, formatMessage }) => {
+const getColumns = ({ navigate, formatMessage }) => {
   return [
     {
       name: 'packageName',
       title: 'Package Name',
-      valueOf: item => item.packageName,
+      renderType: 'main',
       primary: true,
       hover: true,
-      onClick: ({ colItem }) => navigate(`${baseUrl}/detail?id=${colItem.id}`)
+      onClick: ({ colItem }) => {
+        goAdminDetail(navigate, colItem);
+      }
     },
     {
       name: 'name',
       title: formatMessage({ id: 'adminNpmPackage.getColumns.displayName' }),
-      valueOf: item => item.name || '-',
+      renderType: 'main',
       hover: true,
-      onClick: ({ colItem }) => navigate(`${baseUrl}/detail?id=${colItem.id}`)
+      onClick: ({ colItem }) => {
+        goAdminDetail(navigate, colItem);
+      },
+      getValueOf: item => item.name || '-'
     },
     {
       name: 'type',
       title: formatMessage({ id: 'common.type' }),
-      valueOf: item => {
-        const type = item.type || 'other';
+      render: (_, { dataSource }) => {
+        const type = dataSource.type || 'other';
         return <Tag color={NPM_PACKAGE_TYPE_COLORS[type] || 'default'}>{formatMessage({ id: `shared.catalogMeta.${type}` })}</Tag>;
       }
     },
     {
       name: 'latestVersion',
       title: formatMessage({ id: 'adminNpmPackage.getColumns.latestVersion' }),
-      valueOf: item => item.latestVersion || '-'
+      getValueOf: item => item.latestVersion || '-'
     },
     {
       name: 'isPublic',
       title: formatMessage({ id: 'common.isPublic' }),
-      valueOf: item => <Tag color={item.isPublic ? 'success' : 'warning'}>{item.isPublic ? formatMessage({ id: 'common.yes' }) : formatMessage({ id: 'common.no' })}</Tag>
+      renderType: 'tag',
+      getValueOf: item => (item.isPublic ? { type: 'success', text: formatMessage({ id: 'common.yes' }) } : { type: 'warning', text: formatMessage({ id: 'common.no' }) })
     },
     {
       name: 'description',
       title: formatMessage({ id: 'common.description' }),
-      type: 'description',
+      renderType: 'description',
       ellipsis: true,
-      valueOf: item => item.description || '-'
+      getValueOf: item => item.description || '-'
     }
   ];
 };

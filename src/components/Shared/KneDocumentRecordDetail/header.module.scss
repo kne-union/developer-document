@@ -1,0 +1,86 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+.back {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid var(--font-color-grey-2, #d9d9d9);
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover {
+    border-color: var(--primary-color, #1677ff);
+    background: rgba(22, 119, 255, 0.06);
+  }
+
+  :global {
+    .iconfont {
+      transform: scale(0.6);
+    }
+  }
+}
+
+.meta-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.meta {
+  width: 100%;
+  min-width: 0;
+
+  @include resp.mobile-container {
+    :global(.ant-space-item) {
+      max-width: 100%;
+    }
+  }
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--font-color-grey-1, rgba(0, 0, 0, 0.45));
+
+  :global(.anticon) {
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+}
+
+.meta-path {
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+
+  @include resp.mobile-container {
+    display: inline-flex;
+    align-items: flex-start;
+    flex: 1 1 100%;
+    max-width: 100%;
+    width: 100%;
+    overflow: visible;
+    text-overflow: unset;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  width: 168px;
+  flex-shrink: 0;
+}

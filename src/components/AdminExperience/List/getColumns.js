@@ -1,39 +1,42 @@
-const getColumns = ({ navigate, baseUrl, formatMessage }) => {
+import goAdminDetail from '@components/Shared/goAdminDetail';
+
+const getColumns = ({ navigate, formatMessage }) => {
   return [
     {
       name: 'id',
       title: 'ID',
-      type: 'serialNumber',
+      width: 80,
+      renderType: 'main',
       primary: true,
       hover: true,
       onClick: ({ colItem }) => {
-        navigate(`${baseUrl}/detail?id=${colItem.id}`);
+        goAdminDetail(navigate, colItem);
       }
     },
     {
       name: 'title',
       title: formatMessage({ id: 'common.title' }),
-      type: 'mainInfo',
+      renderType: 'main',
       hover: true,
       onClick: ({ colItem }) => {
-        navigate(`${baseUrl}/detail?id=${colItem.id}`);
+        goAdminDetail(navigate, colItem);
       }
     },
     {
       name: 'relativePath',
       title: formatMessage({ id: 'adminExperience.columns.path' }),
-      type: 'text'
+      renderType: 'description',
+      ellipsis: true
     },
     {
       name: 'category',
-      title: formatMessage({ id: 'adminExperience.columns.category' }),
-      type: 'text'
+      title: formatMessage({ id: 'adminExperience.columns.category' })
     },
     {
       name: 'status',
       title: formatMessage({ id: 'common.status' }),
-      type: 'tag',
-      valueOf: item => {
+      renderType: 'tag',
+      getValueOf: item => {
         if (item.status === 'active') {
           return { type: 'success', text: formatMessage({ id: 'adminExperience.status.active' }) };
         }
@@ -46,13 +49,12 @@ const getColumns = ({ navigate, baseUrl, formatMessage }) => {
     {
       name: 'createdUser',
       title: formatMessage({ id: 'common.creator' }),
-      type: 'text',
-      valueOf: item => item.createdUser?.email || item.createdUser?.nickname || '-'
+      getValueOf: item => item.createdUser?.email || item.createdUser?.nickname || '-'
     },
     {
       name: 'updatedAt',
       title: formatMessage({ id: 'common.updatedAt' }),
-      type: 'datetime'
+      format: 'datetime'
     }
   ];
 };

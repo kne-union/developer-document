@@ -189,6 +189,14 @@ const getApis = options => {
         method: 'GET',
         paramsType: 'params'
       },
+      pathTree: {
+        url: `${prefix}/experience/manage/path-tree`,
+        method: 'GET'
+      },
+      filterOptions: {
+        url: `${prefix}/experience/manage/filter-options`,
+        method: 'GET'
+      },
       detail: {
         url: `${prefix}/experience/manage/detail`,
         method: 'GET'
@@ -233,9 +241,21 @@ const getApis = options => {
         method: 'GET',
         paramsType: 'params'
       },
+      pathTree: {
+        url: `${prefix}/worklog/manage/path-tree`,
+        method: 'GET'
+      },
+      filterOptions: {
+        url: `${prefix}/worklog/manage/filter-options`,
+        method: 'GET'
+      },
       detail: {
         url: `${prefix}/worklog/manage/detail`,
         method: 'GET'
+      },
+      resolve: {
+        url: `${prefix}/worklog/manage/resolve`,
+        method: 'POST'
       },
       export: {
         url: `${prefix}/worklog/manage/export`,

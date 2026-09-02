@@ -29,7 +29,7 @@ const List = withLocale(() => {
       getItemDescription={item => item.description}
       getItemIdentifier={item => item.remote}
       getItemVersion={item => item.defaultVersion || 'latest'}
-      getNavigateTo={({ pathname, item }) => `${pathname}/detail?id=${item.id}`}
+      getNavigateTo={({ item }) => `detail?id=${encodeURIComponent(item.id)}`}
     />
   );
 });

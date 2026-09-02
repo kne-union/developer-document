@@ -27,15 +27,16 @@ const CopySection = ({ title, content, onCopy, copyLabel }) => (
   </div>
 );
 
-const resolveApiBase = () => {
+const resolveSyncUrl = () => {
   const root = (window.runtimeApiUrl || '').replace(/\/$/, '');
   return root ? `${root}/api/v1` : 'http://localhost:8061/api/v1';
 };
 
-const buildInitCommand = ({ apiV1, tokenValue, target }) =>
+const buildInitCommand = ({ syncUrl, mcpUrl, tokenValue, target }) =>
   `npx @kne/npm-tools initDevDocumentMcp \\
   --target ${target} \\
-  --api-url ${apiV1} \\
+  --sync-url ${syncUrl} \\
+  --mcp-url ${mcpUrl} \\
   --token "${tokenValue}"`;
 
 const buildMcpConfig = ({ mcpUrl, tokenValue }) =>
@@ -54,6 +55,31 @@ const buildMcpConfig = ({ mcpUrl, tokenValue }) =>
     2
   );
 
+const InstallParamTable = ({ syncUrl, mcpUrl, tokenValue, onCopy, formatMessage }) => (
+  <Descriptions bordered size="small" column={1} className={styles.paramTable}>
+    <Descriptions.Item label={formatMessage({ id: 'adminDevManagement.install.syncUrlLabel' })}>
+      <Space>
+        <Text code>{syncUrl}</Text>
+        <Button type="link" size="small" icon={<CopyOutlined />} onClick={() => onCopy(syncUrl)} />
+      </Space>
+    </Descriptions.Item>
+    <Descriptions.Item label={formatMessage({ id: 'adminDevManagement.install.mcpUrlLabel' })}>
+      <Space>
+        <Text code>{mcpUrl}</Text>
+        <Button type="link" size="small" icon={<CopyOutlined />} onClick={() => onCopy(mcpUrl)} />
+      </Space>
+    </Descriptions.Item>
+    <Descriptions.Item label={formatMessage({ id: 'adminDevManagement.install.tokenLabel' })}>
+      <Space align="start">
+        <Text code className={styles.tokenValue}>
+          {tokenValue}
+        </Text>
+        <Button type="link" size="small" icon={<CopyOutlined />} onClick={() => onCopy(tokenValue)} />
+      </Space>
+    </Descriptions.Item>
+  </Descriptions>
+);
+
 const InstallGuide = createWithRemoteLoader({
   modules: ['components-core:Layout@Page', 'components-core:InfoPage']
 })(
@@ -62,8 +88,8 @@ const InstallGuide = createWithRemoteLoader({
     const { formatMessage } = useIntl();
     const [tokenModalOpen, setTokenModalOpen] = useState(false);
     const [mcpTarget, setMcpTarget] = useState(MCP_TARGETS[0].value);
-    const apiV1 = resolveApiBase();
-    const mcpUrl = `${apiV1}/mcp`;
+    const syncUrl = resolveSyncUrl();
+    const mcpUrl = `${syncUrl}/mcp`;
     const token = getToken('X-User-Token') || '';
     const loggedIn = hasUserToken();
 
@@ -80,10 +106,10 @@ const InstallGuide = createWithRemoteLoader({
       const tokenValue = token || formatMessage({ id: 'adminDevManagement.install.tokenPlaceholder' });
       return {
         tokenValue,
-        initCommand: buildInitCommand({ apiV1, tokenValue, target: mcpTarget }),
+        initCommand: buildInitCommand({ syncUrl, mcpUrl, tokenValue, target: mcpTarget }),
         mcpJson: buildMcpConfig({ mcpUrl, tokenValue })
       };
-    }, [apiV1, formatMessage, mcpTarget, mcpUrl, token]);
+    }, [formatMessage, mcpTarget, mcpUrl, syncUrl, token]);
 
     const stepItems = [
       {
@@ -110,6 +136,13 @@ const InstallGuide = createWithRemoteLoader({
       label: formatMessage({ id: item.labelKey })
     }));
 
+    const targetSelectRow = (
+      <div className={styles.targetRow}>
+        <Text type="secondary">{formatMessage({ id: 'adminDevManagement.install.mcpTargetLabel' })}</Text>
+        <Select className={styles.targetSelect} value={mcpTarget} options={targetOptions} onChange={setMcpTarget} />
+      </div>
+    );
+
     return (
       <Page menu={menu} title={formatMessage({ id: 'adminDevManagement.install.pageTitle' })}>
         <div className={styles.installGuide}>
@@ -130,7 +163,7 @@ const InstallGuide = createWithRemoteLoader({
               <InfoPage.Part title={formatMessage({ id: 'adminDevManagement.install.step1Title' })}>
                 <Paragraph type="secondary">{formatMessage({ id: 'adminDevManagement.install.step1Detail' })}</Paragraph>
                 <Paragraph>
-                  <Text code>POST {apiV1}/account/login</Text>
+                  <Text code>POST {syncUrl}/account/login</Text>
                 </Paragraph>
                 <Paragraph type="secondary" style={{ marginTop: 12 }}>
                   {formatMessage({ id: 'adminDevManagement.install.step1TokenHint' })}
@@ -139,10 +172,8 @@ const InstallGuide = createWithRemoteLoader({
 
               <InfoPage.Part title={formatMessage({ id: 'adminDevManagement.install.step2Title' })}>
                 <Paragraph type="secondary">{formatMessage({ id: 'adminDevManagement.install.step2Detail' })}</Paragraph>
-                <div className={styles.targetRow}>
-                  <Text type="secondary">{formatMessage({ id: 'adminDevManagement.install.mcpTargetLabel' })}</Text>
-                  <Select className={styles.targetSelect} value={mcpTarget} options={targetOptions} onChange={setMcpTarget} />
-                </div>
+                {targetSelectRow}
+                <InstallParamTable syncUrl={syncUrl} mcpUrl={mcpUrl} tokenValue={installParams.tokenValue} onCopy={copyText} formatMessage={formatMessage} />
                 <CopySection title={formatMessage({ id: 'adminDevManagement.install.initCommandTitle' })} content={installParams.initCommand} onCopy={copyText} copyLabel={formatMessage({ id: 'adminDevManagement.install.copy' })} />
                 <Paragraph type="secondary" style={{ marginTop: 12 }}>
                   {formatMessage({ id: 'adminDevManagement.install.initCommandHint' })}
@@ -198,33 +229,8 @@ const InstallGuide = createWithRemoteLoader({
             ) : (
               <>
                 <Paragraph type="secondary">{formatMessage({ id: 'adminDevManagement.install.tokenModalDesc' })}</Paragraph>
-                <div className={styles.targetRow}>
-                  <Text type="secondary">{formatMessage({ id: 'adminDevManagement.install.mcpTargetLabel' })}</Text>
-                  <Select className={styles.targetSelect} value={mcpTarget} options={targetOptions} onChange={setMcpTarget} />
-                </div>
-                <Descriptions bordered size="small" column={1} className={styles.paramTable}>
-                  <Descriptions.Item label="apiUrl">
-                    <Space>
-                      <Text code>{apiV1}</Text>
-                      <Button type="link" size="small" icon={<CopyOutlined />} onClick={() => copyText(apiV1)} />
-                    </Space>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="mcpUrl">
-                    <Space>
-                      <Text code>{mcpUrl}</Text>
-                      <Button type="link" size="small" icon={<CopyOutlined />} onClick={() => copyText(mcpUrl)} />
-                    </Space>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="x-user-token">
-                    <Space align="start">
-                      <Text code className={styles.tokenValue}>
-                        {installParams.tokenValue}
-                      </Text>
-                      <Button type="link" size="small" icon={<CopyOutlined />} onClick={() => copyText(installParams.tokenValue)} />
-                    </Space>
-                  </Descriptions.Item>
-                </Descriptions>
-
+                {targetSelectRow}
+                <InstallParamTable syncUrl={syncUrl} mcpUrl={mcpUrl} tokenValue={installParams.tokenValue} onCopy={copyText} formatMessage={formatMessage} />
                 <CopySection title={formatMessage({ id: 'adminDevManagement.install.initCommandTitle' })} content={installParams.initCommand} onCopy={copyText} copyLabel={formatMessage({ id: 'adminDevManagement.install.copy' })} />
                 <CopySection title={formatMessage({ id: 'adminDevManagement.install.tokenModalMcpTitle' })} content={installParams.mcpJson} onCopy={copyText} copyLabel={formatMessage({ id: 'adminDevManagement.install.copy' })} />
               </>

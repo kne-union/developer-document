@@ -3,7 +3,7 @@
  * kne_document 本地 → 服务端同步（保留本地文件，维护 sync-registry.json）
  *
  * 用法：
- *   npm run sync:kne-document -- --api-url http://localhost:8061/api/v1 --token <token>
+ *   npm run sync:kne-document -- --sync-url http://localhost:8061/api/v1 --token <token>
  *   npm run sync:kne-document -- --file worklog/project/2026-01-01-12-00-00/title.json
  *   npm run sync:kne-document -- --force   # 换服务后全量重传
  */
@@ -13,7 +13,7 @@ const parseArgs = () => {
   const args = process.argv.slice(2);
   const result = {};
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--api-url') {
+    if (args[i] === '--sync-url' || args[i] === '--api-url') {
       result.apiUrl = args[++i];
     } else if (args[i] === '--token') {
       result.token = args[++i];
@@ -33,7 +33,7 @@ const main = async () => {
   const { apiUrl, token } = await resolveRemote(cli);
 
   if (!apiUrl || !token) {
-    console.error('缺少 apiUrl 或 token。请传 --api-url / --token，或写入 ~/.kne_document/config.json');
+    console.error('缺少 syncUrl 或 token。请传 --sync-url / --token，或写入 ~/.kne_document/config.json');
     process.exit(1);
   }
 

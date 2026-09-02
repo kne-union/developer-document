@@ -80,7 +80,8 @@ curl -X POST http://localhost:8061/api/v1/open-api/sync/remote-component \
 ```bash
 npx @kne/npm-tools initDevDocumentMcp \
   --target cursor \
-  --api-url http://localhost:8061/api/v1 \
+  --sync-url http://localhost:8061/api/v1 \
+  --mcp-url http://localhost:8061/api/v1/mcp \
   --token "<登录 token>"
 ```
 
@@ -105,19 +106,19 @@ MCP 服务配置示例：
 
 ### 本地与服务端双写同步
 
-初始化后 `~/.kne_document/config.json` 已包含 `remote.apiUrl` 与 `token`；`initDevDocumentMcp` 会自动检查并上传待同步的本地 JSON。**本地文件始终保留**；通过 `sync-registry.json` 记录已同步到的服务地址。
+初始化后 `~/.kne_document/config.json` 已包含 `remote.syncUrl`、`remote.mcpUrl` 与 `token`；`initDevDocumentMcp` 会自动检查并上传待同步的本地 JSON。**本地文件始终保留**；通过 `sync-registry.json` 记录已同步到的服务地址。
 
 ```bash
 # 全量同步（未同步 / 换服务 / 本地有改动）
 cd server && npm run sync:kne-document -- \
-  --api-url http://localhost:8061/api/v1 \
+  --sync-url http://localhost:8061/api/v1 \
   --token "<登录 token>"
 
 # 单条同步（每次本地写入后）
 npm run sync:kne-document -- --file "worklog/project/2026-01-01-12-00-00/title.json"
 
 # 换服务后强制全量重传
-npm run sync:kne-document -- --api-url <新地址> --token "<token>" --force
+npm run sync:kne-document -- --sync-url <新地址> --token "<token>" --force
 ```
 
 `config.json` 示例：
@@ -125,6 +126,8 @@ npm run sync:kne-document -- --api-url <新地址> --token "<token>" --force
 ```json
 {
   "remote": {
+    "syncUrl": "http://localhost:8061/api/v1",
+    "mcpUrl": "http://localhost:8061/api/v1/mcp",
     "apiUrl": "http://localhost:8061/api/v1",
     "token": "<登录 token>"
   }

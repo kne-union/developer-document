@@ -1,6 +1,6 @@
 {
   "name": "developer-document",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "用来部署一个开发者文档系统.",
   "scripts": {
     "init": "npm run init-server && husky",
@@ -95,6 +95,7 @@
     "@kne/app-children-router": "^0.1.8",
     "@kne/axios-fetch": "^1.2.4",
     "@kne/ensure-slash": "^0.1.0",
+    "@kne/json-view": "^0.1.3",
     "@kne/markdown-components-render": "^0.1.10",
     "@kne/react-box": "^0.1.6",
     "@kne/responsive-utils": "^0.1.15",

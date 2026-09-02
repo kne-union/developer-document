@@ -18,6 +18,9 @@ module.exports = fp(async (fastify, options) => {
             keyword: { type: 'string' },
             category: { type: 'string' },
             status: { type: 'string' },
+            createdUserId: { type: 'string' },
+            projectName: { type: 'string' },
+            pathPrefix: { type: 'string' },
             perPage: { type: 'number', default: 20 },
             currentPage: { type: 'number', default: 1 }
           }
@@ -25,6 +28,28 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => services.experience.list(request.query)
+  );
+
+  fastify.get(
+    `${options.prefix}/experience/manage/path-tree`,
+    {
+      onRequest: adminAuth,
+      schema: {
+        summary: '经验路径文件夹树（用于筛选）'
+      }
+    },
+    async () => services.experience.pathTree()
+  );
+
+  fastify.get(
+    `${options.prefix}/experience/manage/filter-options`,
+    {
+      onRequest: adminAuth,
+      schema: {
+        summary: '经验筛选项（项目名等）'
+      }
+    },
+    async () => services.experience.filterOptions()
   );
 
   fastify.get(
@@ -102,7 +127,10 @@ module.exports = fp(async (fastify, options) => {
           properties: {
             keyword: { type: 'string' },
             category: { type: 'string' },
-            status: { type: 'string' }
+            status: { type: 'string' },
+            createdUserId: { type: 'string' },
+            projectName: { type: 'string' },
+            pathPrefix: { type: 'string' }
           }
         }
       }
