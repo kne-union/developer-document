@@ -54,22 +54,22 @@
 - `x-openapi-expire`
 - `x-openapi-signature`
 
-触发同步：
+触发同步（**后台无记录时会自动创建**，再异步拉 npm / 部署）：
 
 ```bash
-# NPM 包同步
+# NPM 包同步（不存在则 create：isPublic=true；type 仅创建时生效，缺省 other）
 curl -X POST http://localhost:8061/api/v1/open-api/sync/npm-package \
   -H 'Content-Type: application/json' \
   -H 'x-openapi-appid: ...' \
   -H 'x-openapi-timestamp: ...' \
   -H 'x-openapi-expire: ...' \
   -H 'x-openapi-signature: ...' \
-  -d '{"packageName":"@kne/xxx"}'
+  -d '{"packageName":"@kne/xxx","type":"frontend"}'
 
-# 远程组件部署
+# 远程组件部署（不存在则 create；packageName 缺省时按 @kne-components/{remote}）
 curl -X POST http://localhost:8061/api/v1/open-api/sync/remote-component \
   ... \
-  -d '{"remote":"components-core"}'
+  -d '{"remote":"components-core","packageName":"@kne-components/components-core"}'
 ```
 
 ### HTTP MCP（用户登录 token）

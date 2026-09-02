@@ -9,13 +9,18 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.openApi],
       schema: {
-        summary: 'Open API 触发 NPM 包同步',
+        summary: 'Open API 触发 NPM 包同步（不存在则自动创建后同步）',
         body: {
           type: 'object',
           properties: {
             packageName: { type: 'string' },
             version: { type: 'string' },
-            registry: { type: 'string' }
+            registry: { type: 'string' },
+            type: {
+              type: 'string',
+              enum: ['frontend', 'nodejs', 'engineering', 'miniprogram', 'prompts', 'other'],
+              description: '仅自动创建时生效；缺省或非法值为 other'
+            }
           },
           required: ['packageName']
         }
@@ -31,12 +36,13 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.openApi],
       schema: {
-        summary: 'Open API 触发远程组件部署',
+        summary: 'Open API 触发远程组件部署（不存在则按 remote/packageName 自动创建后部署）',
         body: {
           type: 'object',
           properties: {
             remote: { type: 'string' },
-            packageName: { type: 'string' }
+            packageName: { type: 'string' },
+            registry: { type: 'string' }
           }
         }
       }
