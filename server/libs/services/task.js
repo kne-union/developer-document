@@ -21,11 +21,12 @@ module.exports = fp(async (fastify, options) => {
     return result;
   };
 
-  const createNpmPackageSyncTask = async ({ targetId = 'all' } = {}) => {
+  const createNpmPackageSyncTask = async ({ targetId = 'all', version } = {}) => {
     const task = await fastify.task.services.create({
       runnerType: 'system',
       input: {
-        name: `NPM 包同步`
+        name: `NPM 包同步`,
+        version: version || null
       },
       targetId,
       targetType: 'npmPackageSync',
@@ -39,11 +40,12 @@ module.exports = fp(async (fastify, options) => {
     return result;
   };
 
-  const createRemoteComponentDeployTask = async ({ targetId = 'all' } = {}) => {
+  const createRemoteComponentDeployTask = async ({ targetId = 'all', version } = {}) => {
     const task = await fastify.task.services.create({
       runnerType: 'system',
       input: {
-        name: `远程组件部署`
+        name: `远程组件部署`,
+        version: version || null
       },
       targetId,
       targetType: 'remoteComponentDeploy',

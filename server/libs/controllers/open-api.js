@@ -9,7 +9,7 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.openApi],
       schema: {
-        summary: 'Open API 触发 NPM 包同步（不存在则自动创建后同步）',
+        summary: 'Open API 触发 NPM 包同步（不存在则自动创建；可回填 type/registry）',
         body: {
           type: 'object',
           properties: {
@@ -19,7 +19,7 @@ module.exports = fp(async (fastify, options) => {
             type: {
               type: 'string',
               enum: ['frontend', 'nodejs', 'engineering', 'miniprogram', 'prompts', 'other'],
-              description: '仅自动创建时生效；缺省或非法值为 other'
+              description: '创建时写入；已存在且传入非 other 时可更新（不会用 other 降级）'
             }
           },
           required: ['packageName']
@@ -36,13 +36,16 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.openApi],
       schema: {
-        summary: 'Open API 触发远程组件部署（不存在则按 remote/packageName 自动创建后部署）',
+        summary: 'Open API 触发远程组件部署（不存在则自动创建；无 url 时索引回退 npm README）',
         body: {
           type: 'object',
           properties: {
             remote: { type: 'string' },
             packageName: { type: 'string' },
-            registry: { type: 'string' }
+            registry: { type: 'string' },
+            url: { type: 'string' },
+            tpl: { type: 'string' },
+            version: { type: 'string' }
           }
         }
       }

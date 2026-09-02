@@ -83,15 +83,18 @@ const registerTools = (mcpServer, { services, userId }) => {
   mcpServer.registerTool(
     'search_document_index',
     {
-      description: 'PostgreSQL 全文搜索组件/npm 文档索引；若 docId 尚无索引会先拉取并建索引',
+      description: '全文搜索组件/npm 文档索引；匹配已登记包会先建索引；@kne/@kne-components 无记录时会先校验 npm 存在再自动创建并建索引',
       inputSchema: z.object({
-        query: z.string().optional().describe('搜索关键词'),
+        query: z.string().describe('搜索关键词（与 docId 至少提供一个）'),
         docId: z.string().optional().describe('限定文档 id（包名或 remote）'),
         version: z.string().optional().describe('限定版本'),
         limit: z.number().optional().describe('返回条数，默认 3')
       })
     },
     async ({ query, docId, version, limit }) => {
+      if (!query && !docId) {
+        return { content: [{ type: 'text', text: JSON.stringify({ error: 'query 或 docId 至少提供一个' }, null, 2) }], isError: true };
+      }
       const results = await services.documentIndex.search({ query, docId, version, limit, userId, source: 'mcp' });
       return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
     }

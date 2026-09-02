@@ -20,7 +20,7 @@ module.exports = fp(async (fastify, options) => {
             description: { type: 'string', default: '' },
             type: { type: 'string', default: '' },
             keywords: { type: 'array', items: { type: 'string' }, default: [] },
-            isPublic: { type: 'boolean', default: false }
+            isPublic: { type: 'boolean', default: true }
           },
           required: ['packageName']
         }
@@ -55,7 +55,7 @@ module.exports = fp(async (fastify, options) => {
             description: { type: 'string', default: '' },
             type: { type: 'string', default: '' },
             keywords: { type: 'array', items: { type: 'string' }, default: [] },
-            isPublic: { type: 'boolean', default: false }
+            isPublic: { type: 'boolean', default: true }
           },
           required: ['id']
         }
