@@ -1,62 +1,74 @@
--- 为 tasks 表添加 startedAt 字段
+-- @kne/fastify-task ^2 任务表字段升级（表名：t_task_task）
 DO
 $$
 BEGIN
-    IF
-NOT EXISTS (
+    IF NOT EXISTS (
         SELECT 1
         FROM information_schema.columns
-        WHERE table_name = 't_task'
-        AND column_name = 'started_at'
+        WHERE table_name = 't_task_task'
+          AND column_name = 'started_at'
     ) THEN
-ALTER TABLE t_task
-    ADD COLUMN "started_at" TIMESTAMP WITH TIME ZONE;
+        ALTER TABLE t_task_task
+            ADD COLUMN "started_at" TIMESTAMP WITH TIME ZONE;
 
-COMMENT
-ON COLUMN t_task."started_at" IS '任务实际开始执行时间';
-END IF;
+        COMMENT ON COLUMN t_task_task."started_at" IS '任务实际开始执行时间';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 't_task_task'
+          AND column_name = 'completed_at'
+    ) THEN
+        ALTER TABLE t_task_task
+            ADD COLUMN "completed_at" TIMESTAMP WITH TIME ZONE;
+
+        COMMENT ON COLUMN t_task_task."completed_at" IS '任务完成时间';
+    END IF;
 END $$;
 
--- 兼容旧数据：将已完成任务的 created_at 作为 startedAt 的回退值
-UPDATE t_task
+-- 兼容旧数据：将已开始/已完成任务的 created_at 作为 started_at 回退值
+UPDATE t_task_task
 SET "started_at" = created_at
 WHERE "started_at" IS NULL
-  AND status IN ('running', 'success', 'failed', 'canceled');
+  AND status IN ('running', 'waiting', 'success', 'failed', 'canceled');
+
 -- 新增字段（幂等）
-ALTER TABLE t_task ADD COLUMN IF NOT EXISTS "timeout" INTEGER NOT NULL DEFAULT 3600000;
-ALTER TABLE t_task ALTER COLUMN "timeout" SET DEFAULT 3600000;
-COMMENT ON COLUMN t_task."timeout" IS '任务超时时间（毫秒），0表示不超时，默认3600000ms';
+ALTER TABLE t_task_task ADD COLUMN IF NOT EXISTS "timeout" INTEGER NOT NULL DEFAULT 3600000;
+ALTER TABLE t_task_task ALTER COLUMN "timeout" SET DEFAULT 3600000;
+COMMENT ON COLUMN t_task_task."timeout" IS '任务超时时间（毫秒），0表示不超时，默认3600000ms';
 
-ALTER TABLE t_task ADD COLUMN IF NOT EXISTS "priority" INTEGER NOT NULL DEFAULT 0;
-COMMENT ON COLUMN t_task."priority" IS '任务优先级，数值越大越优先';
+ALTER TABLE t_task_task ADD COLUMN IF NOT EXISTS "priority" INTEGER NOT NULL DEFAULT 0;
+COMMENT ON COLUMN t_task_task."priority" IS '任务优先级，数值越大越优先';
 
-ALTER TABLE t_task ADD COLUMN IF NOT EXISTS "parent_task_id" BIGINT;
-COMMENT ON COLUMN t_task."parent_task_id" IS '父任务ID，用于任务依赖/链式执行';
+ALTER TABLE t_task_task ADD COLUMN IF NOT EXISTS "parent_task_id" BIGINT;
+COMMENT ON COLUMN t_task_task."parent_task_id" IS '父任务ID，用于任务依赖/链式执行';
 
-ALTER TABLE t_task ADD COLUMN IF NOT EXISTS "retry_count" INTEGER NOT NULL DEFAULT 0;
-COMMENT ON COLUMN t_task."retry_count" IS '已重试次数';
+ALTER TABLE t_task_task ADD COLUMN IF NOT EXISTS "retry_count" INTEGER NOT NULL DEFAULT 0;
+COMMENT ON COLUMN t_task_task."retry_count" IS '已重试次数';
 
-ALTER TABLE t_task ADD COLUMN IF NOT EXISTS "max_retries" INTEGER NOT NULL DEFAULT 0;
-COMMENT ON COLUMN t_task."max_retries" IS '最大重试次数，0表示不自动重试';
+ALTER TABLE t_task_task ADD COLUMN IF NOT EXISTS "max_retries" INTEGER NOT NULL DEFAULT 0;
+COMMENT ON COLUMN t_task_task."max_retries" IS '最大重试次数，0表示不自动重试';
 
-ALTER TABLE t_task ADD COLUMN IF NOT EXISTS "completed_user_id" BIGINT;
-COMMENT ON COLUMN t_task."completed_user_id" IS '完成任务的用户ID';
+ALTER TABLE t_task_task ADD COLUMN IF NOT EXISTS "completed_user_id" BIGINT;
+COMMENT ON COLUMN t_task_task."completed_user_id" IS '完成任务的用户ID';
 
 -- 修改字段默认值
-ALTER TABLE t_task ALTER COLUMN "input" SET DEFAULT NULL;
-ALTER TABLE t_task ALTER COLUMN "output" SET DEFAULT NULL;
+ALTER TABLE t_task_task ALTER COLUMN "input" SET DEFAULT NULL;
+ALTER TABLE t_task_task ALTER COLUMN "output" SET DEFAULT NULL;
 
 -- 新增索引（幂等）
-CREATE INDEX IF NOT EXISTS idx_t_task_parent_task_id ON t_task ("parent_task_id");
-CREATE INDEX IF NOT EXISTS idx_t_task_priority ON t_task ("priority");
+CREATE INDEX IF NOT EXISTS idx_t_task_task_parent_task_id ON t_task_task ("parent_task_id");
+CREATE INDEX IF NOT EXISTS idx_t_task_task_priority ON t_task_task ("priority");
 
 -- 新增外键（幂等）
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'fk_t_task_parent_task'
-  ) THEN
-ALTER TABLE t_task ADD CONSTRAINT fk_t_task_parent_task
-    FOREIGN KEY ("parent_task_id") REFERENCES t_task (id);
-END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_t_task_task_parent_task'
+    ) THEN
+        ALTER TABLE t_task_task
+            ADD CONSTRAINT fk_t_task_task_parent_task
+            FOREIGN KEY ("parent_task_id") REFERENCES t_task_task (id);
+    END IF;
 END $$;
