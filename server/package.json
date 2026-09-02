@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -43,7 +43,7 @@
     "@kne/fastify-task": "^2.0.7",
     "@kne/load-npm-info": "^0.1.5",
     "@kne/md-doc": "^0.1.16",
-    "@kne/npm-tools": "^0.1.60",
+    "@kne/npm-tools": "^0.1.66",
     "@modelcontextprotocol/fastify": "^2.0.0",
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
