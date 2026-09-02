@@ -208,11 +208,15 @@ module.exports = fp(async (fastify, options) => {
       }
     }
 
+    // 勿用 readme 回填 description（VARCHAR(255)；readme 过长会部署失败）
+    const rawDescription = component.description || npmInfo.description || null;
+    const nextDescription = rawDescription ? String(rawDescription).slice(0, 255) : null;
+
     await component.update({
       versions: normalizeVersions(allVersions),
       defaultVersion: latestVersion,
       examples: [...new Set(examples)],
-      description: component.description || npmInfo.description || (npmInfo.readme ? npmInfo.readme.slice(0, 500) : null)
+      description: nextDescription
     });
 
     return component.reload();
