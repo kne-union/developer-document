@@ -1,7 +1,10 @@
 const fp = require('fastify-plugin');
 const loadNpmInfo = require('@kne/load-npm-info');
 const { buildCatalogFromReadme, getRemoteModuleDocument, getRemoteComponentReadmeFromTarball } = require('@kne/npm-tools');
-const { buildSearchTextFromIndex, ftsWhere, ftsOrder } = require('../utils/fts');
+const { buildSearchTextFromIndex, ftsWhere, ftsOrder, hasCJK, bigrams, likeWhere } = require('../utils/fts');
+const { withApiSections, apiSectionsOf, apiMarkdownOf, htmlToMarkdown, PREAMBLE_SECTION_NAME } = require('../utils/api-markdown');
+const { rankSections, orderedComponentSections, parseTokenQuery } = require('../utils/doc-sections');
+const { formatDocIndexRef } = require('../utils/doc-ref');
 const { withRetry } = require('../utils/retry');
 
 // 必须有非空组件目录，避免空壳 builtAt 永久阻塞重建
@@ -24,57 +27,18 @@ const displayNameFromPackage = packageName => {
   return packageName.includes('/') ? packageName.split('/').slice(1).join('/') : packageName.replace(/^@/, '');
 };
 
-const parseTokenQuery = query => {
-  if (!query) {
-    return null;
-  }
-  const match = String(query)
-    .trim()
-    .match(/^([^:\s]+):([A-Za-z][\w.]*)$/);
-  return match ? { docId: match[1], componentName: match[2] } : null;
-};
-
 const parseTokenDocId = query => parseTokenQuery(query)?.docId || null;
 
 const isKneNpmPackage = name => /^@kne\/[A-Za-z0-9._-]+$/.test(name || '');
 const isKneComponentsPackage = name => /^@kne-components\/[A-Za-z0-9._-]+$/.test(name || '');
 
-const pickComponentHit = (row, query) => {
-  const index = row.indexData || [];
-  const components = row.componentsData || {};
-  if (!index.length) {
-    return { item: null, component: null };
-  }
-  if (!query) {
-    const item = index[0];
-    return { item, component: item?.name ? components[item.name] : null };
-  }
-
-  const token = parseTokenQuery(query);
-  const needles = [];
-  if (token?.componentName) {
-    needles.push(token.componentName.toLowerCase());
-  }
-  needles.push(String(query).toLowerCase());
-
-  for (const q of needles) {
-    const item =
-      index.find(entry => entry.name?.toLowerCase() === q) ||
-      index.find(entry => entry.token?.toLowerCase() === q) ||
-      index.find(entry => entry.name?.toLowerCase().includes(q)) ||
-      index.find(entry => entry.token?.toLowerCase().includes(q)) ||
-      index.find(entry => entry.summary?.toLowerCase().includes(q)) ||
-      index.find(entry => {
-        const component = components[entry.name];
-        return component?.api && String(component.api).toLowerCase().includes(q);
-      });
-    if (item) {
-      return { item, component: item?.name ? components[item.name] : null };
-    }
-  }
-
-  return { item: null, component: null };
-};
+// 候选行只用轻字段筛，避免把 searchText（可达 500KB）和 componentsData（可达 1MB+）整行拉回来
+const LIGHT_ATTRIBUTES = ['id', 'docId', 'version', 'source', 'meta'];
+const FULL_ATTRIBUTES = ['id', 'docId', 'version', 'source', 'meta', 'indexData', 'componentsData'];
+const CANDIDATE_ROW_LIMIT = 5;
+const DEFAULT_SECTION_LIMIT = 12;
+// 超出 limit 后仍然列出的 ref 条数，让调用方知道还能取什么
+const OVERFLOW_SECTION_LIMIT = 15;
 
 module.exports = fp(async (fastify, options) => {
   const { models, services } = fastify[options.name];
@@ -217,7 +181,9 @@ module.exports = fp(async (fastify, options) => {
   };
 
   const buildFromReadme = async ({ docId, version, readme, source, readmeUrl, packageName }) => {
-    const { index, components } = buildCatalogFromReadme(readme, docId);
+    const { index, components: rawComponents } = buildCatalogFromReadme(readme, docId);
+    // api 原文是 HTML（表格占 token 极多），建索引时一并产出可寻址的 markdown 子节
+    const components = withApiSections(rawComponents);
     const meta = {
       id: docId,
       version,
@@ -398,16 +364,10 @@ module.exports = fp(async (fastify, options) => {
     return existing || null;
   };
 
-  const search = async ({ query, docId, version, limit = 3, userId, source = 'rest' }) => {
-    const normalizedQuery = String(query || '').trim();
-    if (!normalizedQuery && !docId) {
-      return [];
-    }
-
-    const tokenDocId = parseTokenDocId(normalizedQuery);
-    const resolvedDocId = docId || tokenDocId;
-    const catalogDocIds = resolvedDocId ? [] : await resolveCatalogDocIds(normalizedQuery);
-    const kneCandidates = await resolveKnePackageCandidates({ query: normalizedQuery, docId: resolvedDocId });
+  const resolveEnsureDocIds = async ({ query, docId, version }) => {
+    const resolvedDocId = docId || parseTokenDocId(query);
+    const catalogDocIds = resolvedDocId ? [] : await resolveCatalogDocIds(query);
+    const kneCandidates = await resolveKnePackageCandidates({ query, docId: resolvedDocId });
 
     const ensureDocIds = [];
     const seen = new Set();
@@ -444,65 +404,243 @@ module.exports = fp(async (fastify, options) => {
       }
     }
 
-    const where = {};
-    if (docId) {
-      where.docId = docId;
-    } else if (tokenDocId) {
-      where.docId = tokenDocId;
+    return ensureDocIds;
+  };
+
+  const findCandidateRows = async ({ query, docId, version, ensureDocIds }) => {
+    const baseWhere = {};
+    const scopedDocId = docId || parseTokenDocId(query);
+    if (scopedDocId) {
+      baseWhere.docId = scopedDocId;
     }
     if (version) {
-      where.version = version;
-    }
-    if (normalizedQuery) {
-      Object.assign(where, ftsWhere(searchTextColumn));
+      baseWhere.version = version;
     }
 
-    let rows = await models.documentIndex.findAll({
-      where,
-      limit,
-      order: normalizedQuery ? ftsOrder(searchTextColumn) : [['updatedAt', 'DESC']],
-      bind: normalizedQuery ? { query: normalizedQuery } : undefined
-    });
+    const light = { attributes: LIGHT_ATTRIBUTES, limit: CANDIDATE_ROW_LIMIT };
 
-    // FTS 未命中时，回退到本次 ensure 的文档
-    if ((!rows || rows.length === 0) && ensureDocIds.length > 0) {
+    if (!query) {
+      return models.documentIndex.findAll({ ...light, where: baseWhere, order: [['updatedAt', 'DESC']] });
+    }
+
+    const byLike = async terms => {
+      const clause = likeWhere(searchTextColumn, terms);
+      if (!clause) {
+        return [];
+      }
+      return models.documentIndex.findAll({
+        ...light,
+        where: { ...baseWhere, ...clause.where },
+        order: [['updatedAt', 'DESC']],
+        bind: clause.bind
+      });
+    };
+
+    let rows = [];
+    if (!hasCJK(query)) {
       rows = await models.documentIndex.findAll({
-        where: {
-          docId: { [Op.in]: ensureDocIds },
-          ...(version ? { version } : {})
-        },
-        limit,
+        ...light,
+        where: { ...baseWhere, ...ftsWhere(searchTextColumn) },
+        order: ftsOrder(searchTextColumn),
+        bind: { query }
+      });
+    }
+    if (!rows.length) {
+      rows = await byLike([query]);
+    }
+    if (!rows.length && hasCJK(query)) {
+      rows = await byLike(bigrams(query));
+    }
+    if (!rows.length && ensureDocIds?.length) {
+      rows = await models.documentIndex.findAll({
+        ...light,
+        where: { docId: { [Op.in]: ensureDocIds }, ...(version ? { version } : {}) },
         order: [['updatedAt', 'DESC']]
       });
     }
+    return rows;
+  };
 
-    const results = rows
-      .map(row => {
-        const { item, component } = pickComponentHit(row, normalizedQuery);
-        if (normalizedQuery && !item) {
-          return {
-            id: row.id,
-            docId: row.docId,
-            version: row.version,
-            source: row.source,
-            token: null,
-            name: null,
-            summary: row.meta?.packageName || row.docId,
-            api: undefined
-          };
-        }
-        return {
-          id: row.id,
-          docId: row.docId,
-          version: row.version,
-          source: row.source,
-          token: item?.token,
-          name: item?.name,
-          summary: item?.summary,
-          api: component?.api ? String(component.api).slice(0, 2000) : undefined
-        };
-      })
-      .filter(Boolean);
+  const loadFullRows = async rows => {
+    if (!rows.length) {
+      return [];
+    }
+    const ids = rows.map(row => row.id);
+    const full = await models.documentIndex.findAll({
+      where: { id: { [Op.in]: ids } },
+      attributes: FULL_ATTRIBUTES
+    });
+    const byId = new Map(full.map(row => [row.id, row]));
+    return ids.map(id => byId.get(id)).filter(Boolean);
+  };
+
+  /**
+   * 返回排好序的「段」，段是可寻址的最小可读单位（组件概述 / API 子节 / 单条示例）。
+   * 超过 limit 的部分带 overflow 标记继续返回，交给渲染层进「未包含」清单，
+   * 避免调用方以为结果里就是全部。
+   */
+  const searchSections = async ({ query, docId, version, limit = DEFAULT_SECTION_LIMIT }) => {
+    const empty = { sections: [], total: 0 };
+    const normalizedQuery = String(query || '').trim();
+    if (!normalizedQuery && !docId) {
+      return empty;
+    }
+
+    const ensureDocIds = await resolveEnsureDocIds({ query: normalizedQuery, docId, version });
+    const candidates = await findCandidateRows({ query: normalizedQuery, docId, version, ensureDocIds });
+    const rows = await loadFullRows(candidates);
+    if (!rows.length) {
+      return empty;
+    }
+
+    const token = parseTokenQuery(normalizedQuery);
+    const ordered = token?.componentName ? orderedComponentSections({ rows, componentName: token.componentName }) : null;
+    const all = ordered || rankSections({ rows, query: normalizedQuery });
+
+    const sections = all.slice(0, limit + OVERFLOW_SECTION_LIMIT).map((section, i) => (i < limit ? section : { ...section, overflow: true }));
+    return { sections, total: all.length };
+  };
+
+  const resolveRow = async ({ docId, version }) => {
+    const where = { docId };
+    if (version && version !== 'latest') {
+      where.version = version;
+    }
+    return models.documentIndex.findOne({
+      where,
+      attributes: FULL_ATTRIBUTES,
+      order: [['updatedAt', 'DESC']]
+    });
+  };
+
+  const findComponent = (row, name) => {
+    const components = row?.componentsData || {};
+    if (components[name]) {
+      return components[name];
+    }
+    const target = String(name || '').toLowerCase();
+    return Object.values(components).find(component => String(component?.name || '').toLowerCase() === target) || null;
+  };
+
+  const componentOutline = (component, { docId, version }) => {
+    const lines = [];
+    const summary = htmlToMarkdown(component.summary);
+    if (summary) {
+      lines.push(summary, '');
+    }
+    const apiSections = apiSectionsOf(component);
+    if (apiSections.length) {
+      lines.push('可取的 API 子节：');
+      const single = apiSections.length === 1;
+      apiSections.forEach(section => {
+        const ref = formatDocIndexRef({ docId, version, name: component.name, kind: 'api', sub: single ? null : section.name });
+        lines.push(`- ${section.name === PREAMBLE_SECTION_NAME ? 'api' : section.name} (${section.md.length} chars) → ${ref}`);
+      });
+      lines.push('');
+    }
+    const examples = component.examples || [];
+    if (examples.length) {
+      lines.push('可取的示例：');
+      examples.forEach(example => {
+        const ref = formatDocIndexRef({ docId, version, name: component.name, kind: 'examples', sub: example.id });
+        lines.push(`- "${example.title}" (${String(example.code || '').length} chars) → ${ref}`);
+      });
+    }
+    return lines.join('\n').trim();
+  };
+
+  /**
+   * 按 ref 深读某一段；kind 为空时给该组件的目录（可取子节与示例及其体积）
+   */
+  const getSection = async ({ docId, version, name, kind, sub }) => {
+    const row = await resolveRow({ docId, version });
+    if (!row) {
+      return { error: `未找到文档索引 ${docId}@${version || 'latest'}` };
+    }
+    const resolvedVersion = row.version;
+    if (!name) {
+      const names = (row.indexData || []).map(item => item.name);
+      return {
+        heading: `${docId}@${resolvedVersion}`,
+        content: names.length ? `组件列表：\n${names.map(item => `- ${item} → ${formatDocIndexRef({ docId, version: resolvedVersion, name: item })}`).join('\n')}` : '该文档索引为空'
+      };
+    }
+
+    const component = findComponent(row, name);
+    if (!component) {
+      return { error: `${docId}@${resolvedVersion} 中没有组件 ${name}` };
+    }
+
+    if (!kind) {
+      return {
+        heading: `${component.name} · 目录`,
+        content: componentOutline(component, { docId, version: resolvedVersion })
+      };
+    }
+
+    if (kind === 'api') {
+      if (!sub) {
+        return { heading: `${component.name} · api`, content: apiMarkdownOf(component) };
+      }
+      const sections = apiSectionsOf(component);
+      const target = sections.find(section => section.name.toLowerCase() === String(sub).toLowerCase()) || (/^\d+$/.test(sub) ? sections[Number(sub)] : null);
+      if (!target) {
+        return { error: `${component.name} 没有 api 子节 ${sub}` };
+      }
+      return { heading: `${component.name} · api / ${target.name}`, content: target.md };
+    }
+
+    if (kind === 'examples') {
+      const examples = component.examples || [];
+      if (!sub) {
+        const content = examples.map(example => `### ${example.title}\n${example.description || ''}\n\n\`\`\`jsx\n${example.code}\n\`\`\``).join('\n\n');
+        return { heading: `${component.name} · examples`, content };
+      }
+      const target = examples.find(example => String(example.id) === String(sub)) || examples.find(example => example.title === sub);
+      if (!target) {
+        return { error: `${component.name} 没有示例 ${sub}` };
+      }
+      return {
+        heading: `${component.name} · example "${target.title}"`,
+        content: [target.description || '', `\`\`\`jsx\n${target.code}\n\`\`\``].filter(Boolean).join('\n\n')
+      };
+    }
+
+    return { error: `不支持的 ref 段类型 ${kind}` };
+  };
+
+  // 保持 REST / 管理端既有的 JSON 形态，内部改用段级排序
+  const search = async ({ query, docId, version, limit = 3, userId, source = 'rest' }) => {
+    const normalizedQuery = String(query || '').trim();
+    if (!normalizedQuery && !docId) {
+      return [];
+    }
+
+    const { sections } = await searchSections({
+      query: normalizedQuery,
+      docId,
+      version,
+      limit: Math.min(limit * 6, 30)
+    });
+
+    const results = [];
+    const seen = new Set();
+    sections.forEach(section => {
+      if (results.length >= limit || seen.has(section.token)) {
+        return;
+      }
+      seen.add(section.token);
+      results.push({
+        id: section.id,
+        docId: section.docId,
+        version: section.version,
+        source: section.source,
+        token: section.token,
+        name: section.name,
+        summary: String(section.content || '').slice(0, 400),
+        ref: section.ref
+      });
+    });
 
     await services.searchRecord.recordSearch({
       searchType: 'document_index',
@@ -522,7 +660,9 @@ module.exports = fp(async (fastify, options) => {
       buildFromRemoteComponent,
       ensureIndex,
       ensureKneCatalogRecord,
-      search
+      search,
+      searchSections,
+      getSection
     }
   });
 });

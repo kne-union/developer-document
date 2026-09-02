@@ -83,27 +83,73 @@ const registerTools = (mcpServer, { services, userId }) => {
   mcpServer.registerTool(
     'search_document_index',
     {
-      description: '全文搜索组件/npm 文档索引；匹配已登记包会先建索引；@kne/@kne-components 无记录时会先校验 npm 存在再自动创建并建索引',
+      description: [
+        '写 @kne 组件 / npm 包代码前的主检索工具，返回 markdown 正文（不是 JSON）。',
+        '一次调用就在预算内给出可直接照抄的示例与 API 表格，并合并经验与后台文档命中；',
+        '匹配已登记包会先建索引，@kne/@kne-components 无记录时会先校验 npm 存在再自动创建。',
+        '',
+        '用法：',
+        '- 先调用本工具，**一次通常就够**，不要习惯性再搜一遍或换关键词重试。',
+        '- 结果里出现 truncated 或「未包含」清单，且确实需要那部分时，才用 fetch_docs，一次传多个 ref。',
+        '- 只想看某个包里有什么，用 mode="locate"（只回 ref 与一句摘要）。',
+        '',
+        '禁止：不要为了拿示例去猜 README 路径；没有 ref 支撑的 API 一律不要臆造。'
+      ].join('\n'),
       inputSchema: z.object({
-        query: z.string().describe('搜索关键词（与 docId 至少提供一个）'),
+        query: z.string().describe('搜索关键词，可用组件名、包名、token（如 components-core:FormInfo）或中文场景词'),
         docId: z.string().optional().describe('限定文档 id（包名或 remote）'),
         version: z.string().optional().describe('限定版本'),
-        limit: z.number().optional().describe('返回条数，默认 3')
+        limit: z.number().optional().describe('最多命中段数，默认 12'),
+        maxChars: z.number().optional().describe('输出预算（字符），默认 12000'),
+        mode: z.enum(['answer', 'locate']).optional().describe('answer=带正文（默认）；locate=只回 ref 与摘要')
       })
     },
-    async ({ query, docId, version, limit }) => {
+    async ({ query, docId, version, limit, maxChars, mode }) => {
       if (!query && !docId) {
-        return { content: [{ type: 'text', text: JSON.stringify({ error: 'query 或 docId 至少提供一个' }, null, 2) }], isError: true };
+        return { content: [{ type: 'text', text: 'query 或 docId 至少提供一个' }], isError: true };
       }
-      const results = await services.documentIndex.search({ query, docId, version, limit, userId, source: 'mcp' });
-      return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
+      const text = await services.docRetrieval.search({
+        query,
+        docId,
+        version,
+        limit,
+        maxChars,
+        mode,
+        userId,
+        source: 'mcp'
+      });
+      return { content: [{ type: 'text', text }] };
+    }
+  );
+
+  mcpServer.registerTool(
+    'fetch_docs',
+    {
+      description: [
+        '按 ref 深读文档内容，返回 markdown。仅在 search_document_index 标注 truncated 或列出「未包含」时使用。',
+        'ref 形如：',
+        '- doc-index:{docId}@{version}#/{组件名}                 组件目录（有哪些 API 子节与示例、各多大）',
+        '- doc-index:{docId}@{version}#/{组件名}/api/{子节}      单个 API 子节（最省 token）',
+        '- doc-index:{docId}@{version}#/{组件名}/examples/{序号} 单条示例代码',
+        '- experience:{相对路径}  /  document:{id}',
+        '一次可传多个 ref，比多次调用便宜。'
+      ].join('\n'),
+      inputSchema: z.object({
+        refs: z.array(z.string()).describe('要深读的 ref 列表，最多 10 个'),
+        offset: z.number().optional().describe('内容字符偏移，用于翻页'),
+        limit: z.number().optional().describe('本次最多返回的字符数')
+      })
+    },
+    async ({ refs, offset, limit }) => {
+      const text = await services.docRetrieval.fetchRefs({ refs, offset, limit });
+      return { content: [{ type: 'text', text }] };
     }
   );
 
   mcpServer.registerTool(
     'search_document',
     {
-      description: 'PostgreSQL 全文搜索全部后台 document（含 draft/非公开）',
+      description: '只搜后台 document（含 draft/非公开）。组件与 npm 文档请用 search_document_index，它已包含后台文档命中。',
       inputSchema: z.object({
         query: z.string().describe('搜索关键词'),
         limit: z.number().optional().describe('返回条数，默认 3')
@@ -111,7 +157,8 @@ const registerTools = (mcpServer, { services, userId }) => {
     },
     async ({ query, limit }) => {
       const results = await services.document.searchByFts({ query, limit, userId, source: 'mcp' });
-      return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
+      const text = results.length ? results.map(row => `## ${row.name}\nref: document:${row.id}\n状态：${row.status}\n${row.snippet || ''}`).join('\n\n') : `无命中：${query}`;
+      return { content: [{ type: 'text', text }] };
     }
   );
 };
