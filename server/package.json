@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,8 @@
     "start": "node ./index.js",
     "build:md": "npx @kne/md-doc",
     "start:md": "npx @kne/md-doc --watch",
-    "sync:kne-document": "node ./scripts/sync-local-kne-document.js"
+    "sync:kne-document": "node ./scripts/sync-local-kne-document.js",
+    "rebuild:document-index": "node ./scripts/rebuild-document-index-search-text.js"
   },
   "files": [
     "index.js",
@@ -55,6 +56,8 @@
     "lodash": "^4.17.21",
     "pg": "^8.20.0",
     "qs": "^6.12.1",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2",
     "zod": "^4.5.4"
   },
   "devDependencies": {

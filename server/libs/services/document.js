@@ -1,6 +1,6 @@
 const fp = require('fastify-plugin');
 const { Op, literal } = require('sequelize');
-const { ftsWhere, ftsOrder, ftsHeadline } = require('../utils/fts');
+const { ftsWhere, ftsOrder, ftsHeadline, hasCJK, bigrams, likeWhere } = require('../utils/fts');
 
 const buildDocumentSearchText = ({ name, content }) => [name || '', content || ''].join('\n').trim();
 
@@ -182,19 +182,37 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
-  const searchByFts = async ({ query, limit = 3, userId, source = 'rest' }) => {
+  const searchByFts = async ({ query, limit = 3, userId, source = 'rest', record = true }) => {
     if (!query) {
       return [];
     }
-    const rows = await models.document.findAll({
-      where: ftsWhere(searchTextColumn),
-      limit,
-      order: ftsOrder(searchTextColumn),
-      bind: { query },
-      attributes: {
-        include: [[ftsHeadline(searchTextColumn), 'snippet']]
+
+    const attributes = ['id', 'name', 'status', 'isPublic'];
+    let rows = [];
+
+    // to_tsvector('simple') 不切 CJK，中文只能走 ILIKE
+    if (!hasCJK(query)) {
+      rows = await models.document.findAll({
+        where: ftsWhere(searchTextColumn),
+        limit,
+        order: ftsOrder(searchTextColumn),
+        bind: { query },
+        attributes: [...attributes, [ftsHeadline(searchTextColumn), 'snippet']]
+      });
+    }
+
+    if (!rows.length) {
+      const clause = likeWhere(searchTextColumn, [query]) || likeWhere(searchTextColumn, bigrams(query));
+      if (clause) {
+        rows = await models.document.findAll({
+          where: clause.where,
+          limit,
+          order: [['updatedAt', 'DESC']],
+          bind: clause.bind,
+          attributes
+        });
       }
-    });
+    }
 
     const results = rows.map(row => ({
       id: row.id,
@@ -204,13 +222,15 @@ module.exports = fp(async (fastify, options) => {
       snippet: row.get('snippet')
     }));
 
-    await services.searchRecord.recordSearch({
-      searchType: 'document',
-      query,
-      results,
-      userId,
-      source
-    });
+    if (record) {
+      await services.searchRecord.recordSearch({
+        searchType: 'document',
+        query,
+        results,
+        userId,
+        source
+      });
+    }
 
     return results;
   };

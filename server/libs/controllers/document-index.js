@@ -28,4 +28,22 @@ module.exports = fp(async (fastify, options) => {
         source: 'rest'
       })
   );
+
+  fastify.get(
+    `${options.prefix}/document-index/content`,
+    {
+      onRequest: [authenticate.user],
+      schema: {
+        summary: '按 ref 读取文档索引内容',
+        query: {
+          type: 'object',
+          required: ['ref'],
+          properties: {
+            ref: { type: 'string' }
+          }
+        }
+      }
+    },
+    async request => services.docRetrieval.resolveRef(request.query.ref)
+  );
 });

@@ -56,7 +56,7 @@ module.exports = fp(async (fastify, options) => {
     return { exists: !!row, id: row?.id, status: row?.status };
   };
 
-  const search = async ({ query, category, limit = 3, userId, source = 'rest' }) => {
+  const search = async ({ query, category, limit = 3, userId, source = 'rest', record = true }) => {
     const where = { status: 'active' };
     if (category) {
       where.category = category;
@@ -81,13 +81,15 @@ module.exports = fp(async (fastify, options) => {
       keywords: row.keywords
     }));
 
-    await services.searchRecord.recordSearch({
-      searchType: 'experience',
-      query: query || '',
-      results,
-      userId,
-      source
-    });
+    if (record) {
+      await services.searchRecord.recordSearch({
+        searchType: 'experience',
+        query: query || '',
+        results,
+        userId,
+        source
+      });
+    }
 
     return results;
   };
