@@ -241,12 +241,6 @@ const createServer = () => {
   fastify.register(
     require('fastify-plugin')(async fastify => {
       await fastify.sequelize.sync();
-      // 存量库 description 曾为 VARCHAR(255)，sync 不会自动扩成 TEXT
-      try {
-        await fastify.sequelize.query('ALTER TABLE t_remote_component ALTER COLUMN description TYPE TEXT');
-      } catch (e) {
-        fastify.log.warn({ err: e }, 'alter t_remote_component.description to TEXT skipped');
-      }
     })
   );
 

@@ -208,8 +208,9 @@ module.exports = fp(async (fastify, options) => {
       }
     }
 
-    // description 列为 TEXT；禁止用 readme 回填（曾 slice(0,500) 写入 VARCHAR(255) 导致部署失败）
-    const nextDescription = component.description || npmInfo.description || null;
+    // 勿用 readme 回填 description（VARCHAR(255)；readme 过长会部署失败）
+    const rawDescription = component.description || npmInfo.description || null;
+    const nextDescription = rawDescription ? String(rawDescription).slice(0, 255) : null;
 
     await component.update({
       versions: normalizeVersions(allVersions),

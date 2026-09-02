@@ -34,7 +34,7 @@ module.exports = ({ DataTypes, options }) => {
         comment: '组件名称'
       },
       description: {
-        type: DataTypes.TEXT,
+        type: DataTypes.STRING,
         comment: '组件描述'
       },
       group: {
