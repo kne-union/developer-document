@@ -24,7 +24,7 @@ module.exports = fp(async (fastify, options) => {
             group: { type: 'string', default: '' },
             versions: { type: 'array', items: { type: 'string' }, default: [] },
             defaultVersion: { type: 'string', default: '' },
-            isPublic: { type: 'boolean', default: false }
+            isPublic: { type: 'boolean', default: true }
           },
           required: ['remote']
         }
@@ -65,7 +65,7 @@ module.exports = fp(async (fastify, options) => {
             group: { type: 'string', default: '' },
             versions: { type: 'array', items: { type: 'string' }, default: [] },
             defaultVersion: { type: 'string', default: '' },
-            isPublic: { type: 'boolean', default: false }
+            isPublic: { type: 'boolean', default: true }
           },
           required: ['id']
         }

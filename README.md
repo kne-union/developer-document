@@ -57,20 +57,22 @@
 触发同步（**后台无记录时会自动创建**，再异步拉 npm / 部署）：
 
 ```bash
-# NPM 包同步（不存在则 create：isPublic=true；type 仅创建时生效，缺省 other）
+# NPM 包同步（不存在则 create；type 可回填；version 传入同步任务）
 curl -X POST http://localhost:8061/api/v1/open-api/sync/npm-package \
   -H 'Content-Type: application/json' \
   -H 'x-openapi-appid: ...' \
   -H 'x-openapi-timestamp: ...' \
   -H 'x-openapi-expire: ...' \
   -H 'x-openapi-signature: ...' \
-  -d '{"packageName":"@kne/xxx","type":"frontend"}'
+  -d '{"packageName":"@kne/xxx","type":"frontend","version":"1.2.3"}'
 
-# 远程组件部署（不存在则 create；packageName 缺省时按 @kne-components/{remote}）
+# 远程组件部署（不存在则 create；无 url 时索引回退 npm README）
 curl -X POST http://localhost:8061/api/v1/open-api/sync/remote-component \
   ... \
   -d '{"remote":"components-core","packageName":"@kne-components/components-core"}'
 ```
+
+搜索 `document-index`：已登记包会自动建索引；`@kne/` / `@kne-components/` 无记录时校验 npm 存在后自动创建再建索引；FTS 未命中会回退到本次 ensure 的文档。
 
 ### HTTP MCP（用户登录 token）
 

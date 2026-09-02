@@ -2,8 +2,17 @@ const fp = require('fastify-plugin');
 const loadNpmInfo = require('@kne/load-npm-info');
 const { buildCatalogFromReadme } = require('@kne/npm-tools');
 const { buildSearchTextFromIndex, ftsWhere, ftsOrder } = require('../utils/fts');
+const { withRetry } = require('../utils/retry');
 
-const hasValidIndex = row => row && Array.isArray(row.indexData) && row.indexData.length > 0;
+// 已构建即可（允许空目录，避免无 # 切分时反复 ensure）
+const hasValidIndex = row => Boolean(row && row.meta && row.meta.builtAt);
+
+const displayNameFromPackage = packageName => {
+  if (!packageName) {
+    return '';
+  }
+  return packageName.includes('/') ? packageName.split('/').slice(1).join('/') : packageName.replace(/^@/, '');
+};
 
 const parseTokenDocId = query => {
   if (!query) {
@@ -14,6 +23,9 @@ const parseTokenDocId = query => {
     .match(/^([^:\s]+):([A-Za-z][\w.]*)$/);
   return match ? match[1] : null;
 };
+
+const isKneNpmPackage = name => /^@kne\/[A-Za-z0-9._-]+$/.test(name || '');
+const isKneComponentsPackage = name => /^@kne-components\/[A-Za-z0-9._-]+$/.test(name || '');
 
 const pickComponentHit = (row, query) => {
   const index = row.indexData || [];
@@ -34,13 +46,147 @@ const pickComponentHit = (row, query) => {
       const component = components[entry.name];
       return component?.api && String(component.api).toLowerCase().includes(q);
     }) ||
-    index[0];
+    null;
   return { item, component: item?.name ? components[item.name] : null };
 };
 
 module.exports = fp(async (fastify, options) => {
   const { models, services } = fastify[options.name];
+  const { Op } = fastify.sequelize.Sequelize;
   const searchTextColumn = models.documentIndex.rawAttributes.searchText.field;
+
+  const resolveCatalogDocIds = async query => {
+    const q = String(query || '').trim();
+    if (!q || q.length < 2) {
+      return [];
+    }
+
+    const [exactPackages, suffixPackages, exactRemotes, fuzzyRemotes] = await Promise.all([
+      models.npmPackage.findAll({
+        where: { [Op.or]: [{ packageName: q }, { packageName: { [Op.iLike]: `%/${q}` } }] },
+        attributes: ['packageName'],
+        limit: 5,
+        order: [['updatedAt', 'DESC']]
+      }),
+      models.npmPackage.findAll({
+        where: {
+          [Op.and]: [{ packageName: { [Op.iLike]: `%${q}%` } }, { packageName: { [Op.notILike]: `%/${q}` } }, { packageName: { [Op.ne]: q } }]
+        },
+        attributes: ['packageName'],
+        limit: 3,
+        order: [['updatedAt', 'DESC']]
+      }),
+      models.remoteComponent.findAll({
+        where: { [Op.or]: [{ remote: q }, { packageName: q }, { packageName: { [Op.iLike]: `%/${q}` } }] },
+        attributes: ['remote'],
+        limit: 5,
+        order: [['updatedAt', 'DESC']]
+      }),
+      models.remoteComponent.findAll({
+        where: {
+          [Op.and]: [{ remote: { [Op.iLike]: `%${q}%` } }, { remote: { [Op.ne]: q } }]
+        },
+        attributes: ['remote'],
+        limit: 3,
+        order: [['updatedAt', 'DESC']]
+      })
+    ]);
+
+    const ids = [];
+    const seen = new Set();
+    const push = id => {
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        ids.push(id);
+      }
+    };
+    exactPackages.forEach(pkg => push(pkg.packageName));
+    exactRemotes.forEach(remote => push(remote.remote));
+    suffixPackages.forEach(pkg => push(pkg.packageName));
+    fuzzyRemotes.forEach(remote => push(remote.remote));
+    return ids.slice(0, 5);
+  };
+
+  const resolveKnePackageCandidates = ({ query, docId }) => {
+    const candidates = [];
+    const push = value => {
+      if (value && !candidates.includes(value)) {
+        candidates.push(value);
+      }
+    };
+
+    push(docId);
+    push(parseTokenDocId(query));
+
+    const q = String(query || '').trim();
+    if (!q) {
+      return candidates;
+    }
+
+    if (isKneNpmPackage(q) || isKneComponentsPackage(q)) {
+      push(q);
+      return candidates;
+    }
+
+    // 裸名：尝试 @kne/ 与 @kne-components/ 域（仅当 npm 上真实存在时才会创建）
+    if (/^[A-Za-z0-9._-]+$/.test(q)) {
+      push(`@kne/${q}`);
+      push(`@kne-components/${q}`);
+    }
+
+    return candidates;
+  };
+
+  const npmPackageExists = async packageName => {
+    try {
+      await withRetry(() => loadNpmInfo(packageName), { retries: 2, delays: [1500, 3000] });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const ensureKneCatalogRecord = async packageName => {
+    if (isKneNpmPackage(packageName)) {
+      let pkg = await models.npmPackage.findOne({ where: { packageName } });
+      if (pkg) {
+        return { docId: packageName, kind: 'npm', record: pkg };
+      }
+      if (!(await npmPackageExists(packageName))) {
+        return null;
+      }
+      pkg = await services.npmPackage.create({
+        packageName,
+        registry: 'https://registry.npmjs.org',
+        name: displayNameFromPackage(packageName),
+        type: 'other',
+        isPublic: true
+      });
+      return { docId: packageName, kind: 'npm', record: pkg, created: true };
+    }
+
+    if (isKneComponentsPackage(packageName)) {
+      const remote = displayNameFromPackage(packageName);
+      let component = (await models.remoteComponent.findOne({ where: { remote } })) || (await models.remoteComponent.findOne({ where: { packageName } }));
+      if (component) {
+        return { docId: component.remote, kind: 'remote', record: component };
+      }
+      if (!(await npmPackageExists(packageName))) {
+        return null;
+      }
+      component = await services.remoteComponent.create({
+        remote,
+        packageName,
+        registry: 'https://registry.npmjs.org',
+        name: remote,
+        group: 'general',
+        isPublic: true
+      });
+      return { docId: component.remote, kind: 'remote', record: component, created: true };
+    }
+
+    return null;
+  };
 
   const buildFromReadme = async ({ docId, version, readme, source, readmeUrl, packageName }) => {
     const { index, components } = buildCatalogFromReadme(readme, docId);
@@ -99,9 +245,13 @@ module.exports = fp(async (fastify, options) => {
   const buildFromNpmPackage = async ({ packageName, version, registry }) => {
     const { getNpmPackageDocument } = require('@kne/npm-tools');
     const resolvedName = version ? `${packageName}@${version}` : packageName;
-    const doc = await getNpmPackageDocument(resolvedName, {
-      loadNpmInfo: name => loadNpmInfo(name, registry ? { registry } : undefined)
-    });
+    const doc = await withRetry(
+      () =>
+        getNpmPackageDocument(resolvedName, {
+          loadNpmInfo: name => loadNpmInfo(name, registry ? { registry } : undefined)
+        }),
+      { retries: 3, delays: [2000, 5000, 10000] }
+    );
     return buildFromReadme({
       docId: packageName,
       version: version || doc.version,
@@ -113,22 +263,47 @@ module.exports = fp(async (fastify, options) => {
   };
 
   const buildFromRemoteComponent = async (component, { version: versionOverride } = {}) => {
-    const { getRemoteModuleDocument } = require('@kne/npm-tools');
-    const doc = await getRemoteModuleDocument({
-      url: component.url,
-      remote: component.remote,
-      tpl: component.tpl,
-      defaultVersion: component.defaultVersion,
-      version: versionOverride || component.defaultVersion
-    });
-    return buildFromReadme({
-      docId: component.remote,
-      version: doc.version || versionOverride || component.defaultVersion || 'latest',
-      readme: doc.readme,
-      source: 'remote',
-      readmeUrl: doc.readmeUrl,
-      packageName: component.packageName
-    });
+    const version = versionOverride || component.defaultVersion;
+    try {
+      const { getRemoteModuleDocument } = require('@kne/npm-tools');
+      const doc = await getRemoteModuleDocument({
+        url: component.url,
+        remote: component.remote,
+        tpl: component.tpl,
+        defaultVersion: component.defaultVersion,
+        version
+      });
+      return buildFromReadme({
+        docId: component.remote,
+        version: doc.version || version || 'latest',
+        readme: doc.readme,
+        source: 'remote',
+        readmeUrl: doc.readmeUrl,
+        packageName: component.packageName
+      });
+    } catch (error) {
+      if (!component.packageName) {
+        throw error;
+      }
+      // 无 url/tpl 或 CDN 失败时，回退 npm README，docId 仍用 remote
+      const { getNpmPackageDocument } = require('@kne/npm-tools');
+      const resolvedName = version ? `${component.packageName}@${version}` : component.packageName;
+      const doc = await withRetry(
+        () =>
+          getNpmPackageDocument(resolvedName, {
+            loadNpmInfo: name => loadNpmInfo(name, component.registry ? { registry: component.registry } : undefined)
+          }),
+        { retries: 3, delays: [2000, 5000, 10000] }
+      );
+      return buildFromReadme({
+        docId: component.remote,
+        version: version || doc.version,
+        readme: doc.readme,
+        source: 'remote',
+        readmeUrl: doc.readmeUrl,
+        packageName: component.packageName
+      });
+    }
   };
 
   const ensureIndex = async ({ docId, version }) => {
@@ -162,12 +337,31 @@ module.exports = fp(async (fastify, options) => {
       }
     }
 
-    const component = await models.remoteComponent.findOne({ where: { remote: docId } });
+    const component = (await models.remoteComponent.findOne({ where: { remote: docId } })) || (await models.remoteComponent.findOne({ where: { packageName: docId } }));
     if (component) {
       try {
         return await buildFromRemoteComponent(component, { version });
       } catch (e) {
         fastify.log.warn({ err: e, docId }, 'ensureIndex remote component build failed');
+      }
+    }
+
+    // @kne / @kne-components：无后台记录时先创建再建索引
+    if (isKneNpmPackage(docId) || isKneComponentsPackage(docId)) {
+      try {
+        const catalog = await ensureKneCatalogRecord(docId);
+        if (catalog?.docId) {
+          if (catalog.kind === 'npm') {
+            return await buildFromNpmPackage({
+              packageName: catalog.docId,
+              version,
+              registry: catalog.record?.registry
+            });
+          }
+          return await buildFromRemoteComponent(catalog.record, { version });
+        }
+      } catch (e) {
+        fastify.log.warn({ err: e, docId }, 'ensureIndex kne auto-create failed');
       }
     }
 
@@ -181,47 +375,114 @@ module.exports = fp(async (fastify, options) => {
   };
 
   const search = async ({ query, docId, version, limit = 3, userId, source = 'rest' }) => {
-    const resolvedDocId = docId || parseTokenDocId(query);
-    if (resolvedDocId) {
-      await ensureIndex({ docId: resolvedDocId, version });
+    const normalizedQuery = String(query || '').trim();
+    if (!normalizedQuery && !docId) {
+      return [];
     }
+
+    const tokenDocId = parseTokenDocId(normalizedQuery);
+    const resolvedDocId = docId || tokenDocId;
+    const catalogDocIds = resolvedDocId ? [] : await resolveCatalogDocIds(normalizedQuery);
+    const kneCandidates = resolveKnePackageCandidates({ query: normalizedQuery, docId: resolvedDocId });
+
+    const ensureDocIds = [];
+    const seen = new Set();
+    const pushEnsure = id => {
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        ensureDocIds.push(id);
+      }
+    };
+
+    catalogDocIds.forEach(pushEnsure);
+
+    for (const candidate of kneCandidates) {
+      try {
+        if (isKneNpmPackage(candidate) || isKneComponentsPackage(candidate)) {
+          const catalog = await ensureKneCatalogRecord(candidate);
+          if (catalog?.docId) {
+            pushEnsure(catalog.docId);
+            continue;
+          }
+        }
+        pushEnsure(candidate);
+      } catch (e) {
+        fastify.log.warn({ err: e, candidate }, 'search ensureKneCatalogRecord failed');
+        pushEnsure(candidate);
+      }
+    }
+
+    for (const id of ensureDocIds) {
+      try {
+        await ensureIndex({ docId: id, version });
+      } catch (e) {
+        fastify.log.warn({ err: e, docId: id }, 'search ensureIndex failed');
+      }
+    }
+
     const where = {};
     if (docId) {
       where.docId = docId;
-    } else if (resolvedDocId) {
-      where.docId = resolvedDocId;
+    } else if (tokenDocId) {
+      where.docId = tokenDocId;
     }
     if (version) {
       where.version = version;
     }
-    if (query) {
+    if (normalizedQuery) {
       Object.assign(where, ftsWhere(searchTextColumn));
     }
 
-    const rows = await models.documentIndex.findAll({
+    let rows = await models.documentIndex.findAll({
       where,
       limit,
-      order: query ? ftsOrder(searchTextColumn) : [['updatedAt', 'DESC']],
-      bind: query ? { query } : undefined
+      order: normalizedQuery ? ftsOrder(searchTextColumn) : [['updatedAt', 'DESC']],
+      bind: normalizedQuery ? { query: normalizedQuery } : undefined
     });
 
-    const results = rows.map(row => {
-      const { item, component } = pickComponentHit(row, query);
-      return {
-        id: row.id,
-        docId: row.docId,
-        version: row.version,
-        source: row.source,
-        token: item?.token,
-        name: item?.name,
-        summary: item?.summary,
-        api: component?.api ? String(component.api).slice(0, 2000) : undefined
-      };
-    });
+    // FTS 未命中时，回退到本次 ensure 的文档
+    if ((!rows || rows.length === 0) && ensureDocIds.length > 0) {
+      rows = await models.documentIndex.findAll({
+        where: {
+          docId: { [Op.in]: ensureDocIds },
+          ...(version ? { version } : {})
+        },
+        limit,
+        order: [['updatedAt', 'DESC']]
+      });
+    }
+
+    const results = rows
+      .map(row => {
+        const { item, component } = pickComponentHit(row, normalizedQuery);
+        if (normalizedQuery && !item) {
+          return {
+            id: row.id,
+            docId: row.docId,
+            version: row.version,
+            source: row.source,
+            token: null,
+            name: null,
+            summary: row.meta?.packageName || row.docId,
+            api: undefined
+          };
+        }
+        return {
+          id: row.id,
+          docId: row.docId,
+          version: row.version,
+          source: row.source,
+          token: item?.token,
+          name: item?.name,
+          summary: item?.summary,
+          api: component?.api ? String(component.api).slice(0, 2000) : undefined
+        };
+      })
+      .filter(Boolean);
 
     await services.searchRecord.recordSearch({
       searchType: 'document_index',
-      query: query || '',
+      query: normalizedQuery || docId || '',
       results,
       userId,
       source
@@ -236,6 +497,7 @@ module.exports = fp(async (fastify, options) => {
       buildFromNpmPackage,
       buildFromRemoteComponent,
       ensureIndex,
+      ensureKneCatalogRecord,
       search
     }
   });
