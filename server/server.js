@@ -47,7 +47,9 @@ const createServer = () => {
         ALISMTP_PASSWORD: { type: 'string' },
         ALISMTP_ENDPOINT: { type: 'string' },
 
-        DOCUMENT_INDEX_DIR: { type: 'string', default: '' }
+        DOCUMENT_INDEX_DIR: { type: 'string', default: '' },
+
+        ZHIHU_ACCESS_SECRET: { type: 'string', default: '' }
       }
     }
   });
@@ -130,14 +132,18 @@ const createServer = () => {
       fastify.register(require('fastify-cron'), {
         jobs: [
           {
-            cronTime: '0 9 * * *', // 每天早上9点执行
+            cronTime: '0 * * * *', // 每小时检查渠道周期
             onTick: async () => {
-              console.log('开始执行每日博客搜索任务...');
               try {
+                const shouldRun = await fastify.project.services.blogLead.shouldRunFetch();
+                if (!shouldRun) {
+                  return;
+                }
+                console.log('开始执行知乎文章线索拉取任务...');
                 await fastify.project.services.task.createBlogSearchTask();
-                console.log('每日博客搜索任务创建成功');
+                console.log('知乎文章线索拉取任务创建成功');
               } catch (error) {
-                console.error('每日博客搜索任务创建失败:', error.message);
+                console.error('知乎文章线索拉取任务创建失败:', error.message);
               }
             },
             start: true

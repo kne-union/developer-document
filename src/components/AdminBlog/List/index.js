@@ -1,6 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
-import { App } from 'antd';
-import { SyncOutlined } from '@ant-design/icons';
+import { useMemo } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useNavigate } from 'react-router-dom';
 import withLocale from '@root/withLocale';
@@ -34,11 +32,9 @@ const List = createWithRemoteLoader({
 })(
   withLocale(({ remoteModules, baseUrl, menu, ...props }) => {
     const [BizUnit, usePreset, Filter] = remoteModules;
-    const { apis, ajax } = usePreset();
+    const { apis } = usePreset();
     const { formatMessage } = useIntl();
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
-    const { message } = App.useApp();
     const { SuperSelectUserFilterItem, SuperSelectFilterItem, TypeDateRangePickerFilterItem } = Filter.fields;
 
     const filter = useMemo(
@@ -104,22 +100,6 @@ const List = createWithRemoteLoader({
       [SuperSelectFilterItem, SuperSelectUserFilterItem, TypeDateRangePickerFilterItem, apis, formatMessage]
     );
 
-    const handleTriggerSearch = useCallback(async () => {
-      setLoading(true);
-      try {
-        const { data: resData } = await ajax(apis.blog.triggerSearch);
-        if (resData.code === 0) {
-          message.success(formatMessage({ id: 'adminBlog.list.searchTaskCreated' }));
-        } else {
-          message.error(resData.message || formatMessage({ id: 'adminBlog.list.createTaskFailed' }));
-        }
-      } catch (error) {
-        message.error(formatMessage({ id: 'adminBlog.list.createTaskFailed' }));
-      } finally {
-        setLoading(false);
-      }
-    }, [ajax, apis.blog.triggerSearch, formatMessage, message]);
-
     const options = useMemo(
       () => ({
         createButtonProps: {
@@ -132,20 +112,10 @@ const List = createWithRemoteLoader({
         },
         mapFilterValue: (value, getFilterValue) => mapBlogFilterValue(getFilterValue(value)),
         tableProps: {
-          pagination: { paramsType: 'params' },
-          buttonGroup: {
-            list: [
-              {
-                children: formatMessage({ id: 'adminBlog.list.manualFetch' }),
-                icon: <SyncOutlined spin={loading} />,
-                loading,
-                onClick: handleTriggerSearch
-              }
-            ]
-          }
+          pagination: { paramsType: 'params' }
         }
       }),
-      [formatMessage, handleTriggerSearch, loading]
+      [formatMessage]
     );
 
     return (
@@ -157,7 +127,7 @@ const List = createWithRemoteLoader({
         apis={{ list: apis.blog.list, create: apis.blog.create }}
         getFormInner={() => <FormInner />}
         filter={filter}
-        getColumns={() => getColumns({ navigate, formatMessage })}
+        getColumns={() => getColumns({ navigate, formatMessage, baseUrl })}
         getActionList={actionProps => getActionList({ formatMessage })(actionProps)}
         options={options}
       />

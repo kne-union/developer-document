@@ -6,12 +6,17 @@ const resolveAdminRowId = item => {
   return String(id);
 };
 
-export const goAdminDetail = (navigate, colItem) => {
+export const goAdminDetail = (navigate, colItem, baseUrl) => {
   const id = resolveAdminRowId(colItem);
   if (!id || !navigate) {
     return;
   }
-  navigate(`detail?id=${encodeURIComponent(id)}`);
+  const query = `detail?id=${encodeURIComponent(id)}`;
+  if (baseUrl) {
+    navigate(`${String(baseUrl).replace(/\/$/, '')}/${query}`);
+    return;
+  }
+  navigate(query);
 };
 
 export const goAdminListBack = ({ navigate, location, baseUrl }) => {

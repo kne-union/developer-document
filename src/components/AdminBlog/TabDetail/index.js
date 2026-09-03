@@ -139,10 +139,11 @@ const TabDetail = createWithRemoteLoader({
           return (
             <StateBarPage
               {...props}
+              menu={null}
               headerFixed={false}
               header={
                 <PageHeader
-                  title={<DetailPageHeaderTitle baseUrl={baseUrl} title={data.title} />}
+                  title={<DetailPageHeaderTitle baseUrl={`${baseUrl}/list`} title={data.title} />}
                   info={`ID: ${data.id}`}
                   tags={[
                     <Tag className={styles.domainTag} icon={<ReadOutlined />} key="domain">

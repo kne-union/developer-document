@@ -52,6 +52,41 @@ const getApis = options => {
         method: 'POST'
       }
     },
+    blogLead: {
+      list: {
+        url: `${prefix}/blog-lead/list`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      detail: {
+        url: `${prefix}/blog-lead/detail`,
+        method: 'GET'
+      },
+      update: {
+        url: `${prefix}/blog-lead/update`,
+        method: 'POST'
+      },
+      delete: {
+        url: `${prefix}/blog-lead/delete`,
+        method: 'POST'
+      },
+      complete: {
+        url: `${prefix}/blog-lead/complete`,
+        method: 'POST'
+      },
+      settings: {
+        url: `${prefix}/blog-lead/settings`,
+        method: 'GET'
+      },
+      saveSettings: {
+        url: `${prefix}/blog-lead/settings`,
+        method: 'POST'
+      },
+      fetch: {
+        url: `${prefix}/blog-lead/fetch`,
+        method: 'POST'
+      }
+    },
     remoteComponent: {
       create: {
         url: `${prefix}/remote-component/create`,

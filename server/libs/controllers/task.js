@@ -10,7 +10,7 @@ module.exports = fp(async (fastify, options) => {
     {
       onRequest: [authenticate.user, authenticate.admin],
       schema: {
-        summary: '手动触发博客搜索任务'
+        summary: '手动触发知乎文章线索拉取任务'
       }
     },
     async request => {
@@ -18,7 +18,7 @@ module.exports = fp(async (fastify, options) => {
       return {
         success: true,
         taskId: task.id,
-        message: '博客搜索任务已创建'
+        message: '知乎文章线索拉取任务已创建'
       };
     }
   );

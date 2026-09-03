@@ -1,6 +1,6 @@
 import goAdminDetail from '@components/Shared/goAdminDetail';
 
-const getColumns = ({ navigate, formatMessage }) => {
+const getColumns = ({ navigate, formatMessage, baseUrl }) => {
   return [
     {
       name: 'id',
@@ -10,7 +10,7 @@ const getColumns = ({ navigate, formatMessage }) => {
       primary: true,
       hover: true,
       onClick: ({ colItem }) => {
-        goAdminDetail(navigate, colItem);
+        goAdminDetail(navigate, colItem, baseUrl);
       }
     },
     {
@@ -19,7 +19,7 @@ const getColumns = ({ navigate, formatMessage }) => {
       renderType: 'main',
       hover: true,
       onClick: ({ colItem }) => {
-        goAdminDetail(navigate, colItem);
+        goAdminDetail(navigate, colItem, baseUrl);
       }
     },
     {

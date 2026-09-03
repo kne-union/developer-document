@@ -144,7 +144,7 @@ export const globalInit = async () => {
 
   const enums = Object.assign({}, await safeLoadApis('components-admin:Task@enums'), {
     taskType: () => [
-      { value: 'blogSearch', description: '博客内容搜索', type: 'info' },
+      { value: 'blogSearch', description: '知乎文章线索拉取', type: 'info' },
       { value: 'npmPackageSync', description: 'NPM 包同步', type: 'info' },
       { value: 'remoteComponentDeploy', description: '远程组件部署', type: 'info' }
     ]
