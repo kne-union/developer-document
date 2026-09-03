@@ -7,9 +7,10 @@ module.exports = fp(async (fastify, options) => {
     const task = await fastify.task.services.create({
       runnerType: 'system',
       input: {
-        name: `每日博客内容搜索 - ${new Date().toLocaleDateString('zh-CN')}`
+        name: `知乎文章线索拉取 - ${new Date().toLocaleDateString('zh-CN')}`
       },
-      targetId: 'system',
+      // targetId 为 bigint 主键类型，系统级任务用 0 作哨兵（runner 不依赖该值）
+      targetId: 0,
       targetType: 'blogSearch',
       type: 'blogSearch'
     });
@@ -17,7 +18,7 @@ module.exports = fp(async (fastify, options) => {
   };
 
   const saveBlogSearch = async ({ result, task }) => {
-    console.log('博客搜索任务完成:', result);
+    console.log('知乎文章线索拉取任务完成:', result);
     return result;
   };
 
