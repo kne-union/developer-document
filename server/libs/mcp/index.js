@@ -81,6 +81,57 @@ const registerTools = (mcpServer, { services, userId }) => {
   );
 
   mcpServer.registerTool(
+    'search_worklog',
+    {
+      description: [
+        '查询工作日志，用于写周报/复盘。返回 markdown（按项目分组）。',
+        '',
+        '时间筛选（任选其一，默认近 7 天）：',
+        '- week="this"|"last"：按 Asia/Shanghai 自然周（周一～周日）',
+        '- days=N：近 N 天',
+        '- startAt / endAt：ISO 日期或日期时间',
+        '',
+        '创建人筛选（任选其一）：',
+        '- mine=true：当前登录用户',
+        '- creator：昵称 / 邮箱 / 用户 id（模糊匹配多人时会返回候选）',
+        '- createdUserId：精确用户 id',
+        '',
+        '还可按 project、query（标题/路径/项目名关键词）收窄。'
+      ].join('\n'),
+      inputSchema: z.object({
+        query: z.string().optional().describe('关键词（标题 / 路径 / 项目名）'),
+        project: z.string().optional().describe('项目名（模糊匹配 content.project.name）'),
+        creator: z.string().optional().describe('创建人：昵称、邮箱或用户 id'),
+        createdUserId: z.string().optional().describe('创建人用户 id（精确）'),
+        mine: z.boolean().optional().describe('仅当前 MCP 登录用户的日志'),
+        startAt: z.string().optional().describe('开始时间，ISO 日期或日期时间'),
+        endAt: z.string().optional().describe('结束时间，ISO 日期或日期时间'),
+        week: z.enum(['this', 'last']).optional().describe('this=本周，last=上周（上海时区，周一为一周起点）'),
+        days: z.number().optional().describe('近 N 天；未指定时间范围时默认 7'),
+        limit: z.number().optional().describe('最多返回条数，默认 50，上限 200'),
+        mode: z.enum(['report', 'list']).optional().describe('report=周报素材（默认）；list=紧凑列表')
+      })
+    },
+    async ({ query, project, creator, createdUserId, mine, startAt, endAt, week, days, limit, mode }) => {
+      const result = await services.worklog.search({
+        query,
+        projectName: project,
+        creator,
+        createdUserId,
+        mine,
+        startAt,
+        endAt,
+        week,
+        days,
+        limit,
+        mode,
+        currentUserId: userId
+      });
+      return { content: [{ type: 'text', text: result.text }], isError: !!result.error };
+    }
+  );
+
+  mcpServer.registerTool(
     'search_document_index',
     {
       description: [
