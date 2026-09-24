@@ -5,27 +5,23 @@ const getColumns = ({ navigate, formatMessage }) => {
     {
       name: 'id',
       title: 'ID',
-      width: 80,
-      renderType: 'main',
-      primary: true,
-      hover: true,
-      onClick: ({ colItem }) => {
-        goAdminDetail(navigate, colItem);
-      }
+      width: 80
     },
     {
       name: 'title',
       title: formatMessage({ id: 'common.title' }),
       renderType: 'main',
+      primary: true,
       hover: true,
       onClick: ({ colItem }) => {
         goAdminDetail(navigate, colItem);
-      }
+      },
+      getValueOf: item => item.title || null
     },
     {
       name: 'projectName',
       title: formatMessage({ id: 'adminWorklog.columns.project' }),
-      getValueOf: item => item.projectName || item.content?.project?.name || '-'
+      getValueOf: item => item.projectName || item.content?.project?.name || null
     },
     {
       name: 'relativePath',
@@ -36,7 +32,7 @@ const getColumns = ({ navigate, formatMessage }) => {
     {
       name: 'createdUser',
       title: formatMessage({ id: 'common.creator' }),
-      getValueOf: item => item.createdUser?.nickname || item.createdUser?.email || '-'
+      getValueOf: item => item.createdUser?.nickname || item.createdUser?.email || null
     },
     {
       name: 'writtenAt',

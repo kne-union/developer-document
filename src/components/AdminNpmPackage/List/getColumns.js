@@ -1,4 +1,3 @@
-import { Tag } from 'antd';
 import { NPM_PACKAGE_TYPE_COLORS } from '@components/Shared/catalogMeta';
 import goAdminDetail from '@components/Shared/goAdminDetail';
 
@@ -12,7 +11,8 @@ const getColumns = ({ navigate, formatMessage }) => {
       hover: true,
       onClick: ({ colItem }) => {
         goAdminDetail(navigate, colItem);
-      }
+      },
+      getValueOf: item => item.packageName || item.name || null
     },
     {
       name: 'name',
@@ -22,33 +22,41 @@ const getColumns = ({ navigate, formatMessage }) => {
       onClick: ({ colItem }) => {
         goAdminDetail(navigate, colItem);
       },
-      getValueOf: item => item.name || '-'
+      getValueOf: item => {
+        // 展示名与包名相同时不重复占副标题
+        if (!item.name || item.name === item.packageName) return null;
+        return item.name;
+      }
     },
     {
       name: 'type',
       title: formatMessage({ id: 'common.type' }),
-      render: (_, { dataSource }) => {
-        const type = dataSource.type || 'other';
-        return <Tag color={NPM_PACKAGE_TYPE_COLORS[type] || 'default'}>{formatMessage({ id: `shared.catalogMeta.${type}` })}</Tag>;
+      renderType: 'tag',
+      getValueOf: item => {
+        const type = item.type || 'other';
+        return {
+          type: NPM_PACKAGE_TYPE_COLORS[type] || 'default',
+          text: formatMessage({ id: `shared.catalogMeta.${type}` })
+        };
       }
     },
     {
       name: 'latestVersion',
       title: formatMessage({ id: 'adminNpmPackage.getColumns.latestVersion' }),
-      getValueOf: item => item.latestVersion || '-'
+      getValueOf: item => item.latestVersion || null
     },
     {
       name: 'isPublic',
       title: formatMessage({ id: 'common.isPublic' }),
       renderType: 'tag',
-      getValueOf: item => (item.isPublic ? { type: 'success', text: formatMessage({ id: 'common.yes' }) } : { type: 'warning', text: formatMessage({ id: 'common.no' }) })
+      getValueOf: item => (item.isPublic ? { type: 'success', text: formatMessage({ id: 'common.public' }) } : { type: 'default', text: formatMessage({ id: 'common.private' }) })
     },
     {
       name: 'description',
       title: formatMessage({ id: 'common.description' }),
       renderType: 'description',
       ellipsis: true,
-      getValueOf: item => item.description || '-'
+      getValueOf: item => item.description || null
     }
   ];
 };

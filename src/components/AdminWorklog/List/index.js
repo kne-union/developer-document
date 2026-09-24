@@ -7,6 +7,9 @@ import getColumns from './getColumns';
 import getKneDocumentZipButtonGroupList from '@components/Shared/KneDocumentZipActions';
 import { buildPathTreeApis, buildProjectNameFilterApi, buildUserListFilterApi, mapKneDocumentListFilterValue } from '@components/Shared/kneDocumentListFilters';
 import useTablePaginationSearchParams from '@components/Shared/useTablePaginationSearchParams';
+import createAdminListCards from '@components/Shared/createAdminListCards';
+
+const renderAdminListCards = createAdminListCards();
 
 const List = createWithRemoteLoader({
   modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter', 'components-admin:GroupSelect@GroupFolderFilterItem']
@@ -121,7 +124,9 @@ const List = createWithRemoteLoader({
             },
             buttonGroup: {
               list: zipButtonGroupList
-            }
+            },
+            renderMobile: renderAdminListCards,
+            renderCard: renderAdminListCards
           }
         }}
       >

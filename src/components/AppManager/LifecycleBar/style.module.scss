@@ -1,0 +1,159 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+/* 与 PageHeader 内容区对齐：padding 24px 32px */
+.lifecycle-panel {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 12px 32px 16px;
+  border: none;
+  border-radius: 0;
+  background: #f5f5f5;
+}
+
+.lifecycle-inner {
+  width: 100%;
+  min-width: 0;
+}
+
+.lifecycle-status {
+  min-width: 0;
+}
+
+.status-orb {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8c8c8c;
+}
+
+.status-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.status-label {
+  margin: 0 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  color: rgba(0, 0, 0, 0.88) !important;
+}
+
+.status-hint {
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
+.lifecycle-actions {
+  flex-shrink: 0;
+}
+
+.btn {
+  height: 32px;
+  padding-inline: 14px !important;
+  font-weight: 500;
+  border-radius: 6px !important;
+}
+
+.btn-pause {
+  color: #fff !important;
+  border: none !important;
+  background: #fa8c16 !important;
+
+  &:hover:not(:disabled) {
+    color: #fff !important;
+    background: #d46b08 !important;
+  }
+
+  &:active:not(:disabled) {
+    background: #ad4e00 !important;
+  }
+}
+
+.btn-restart {
+  color: rgba(0, 0, 0, 0.88) !important;
+  border: none !important;
+  background: #ffffff !important;
+
+  &:hover:not(:disabled) {
+    color: rgba(0, 0, 0, 0.88) !important;
+    background: #fafafa !important;
+  }
+
+  &:disabled {
+    color: rgba(0, 0, 0, 0.25) !important;
+    background: #f0f0f0 !important;
+  }
+}
+
+.tone-running {
+  background: #f6ffed;
+
+  .status-orb {
+    background: #52c41a;
+  }
+
+  .status-label {
+    color: #389e0d !important;
+  }
+}
+
+.tone-deploying {
+  background: #e6f4ff;
+
+  .status-orb {
+    background: #1677ff;
+  }
+
+  .status-label {
+    color: #0958d9 !important;
+  }
+}
+
+.tone-stopped,
+.tone-idle {
+  background: #fff7e6;
+
+  .status-orb {
+    background: #fa8c16;
+  }
+
+  .status-label {
+    color: #d46b08 !important;
+  }
+}
+
+.tone-error {
+  background: #fff2f0;
+
+  .status-orb {
+    background: #ff4d4f;
+  }
+
+  .status-label {
+    color: #cf1322 !important;
+  }
+}
+
+@include resp.mobile-container {
+  .lifecycle-panel {
+    /* PageHeader 移动端 padding: 16px */
+    padding: 12px 16px 14px;
+  }
+
+  .lifecycle-actions {
+    width: 100%;
+    display: flex;
+
+    :global(.ant-btn) {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+  }
+}

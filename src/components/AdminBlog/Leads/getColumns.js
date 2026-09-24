@@ -19,10 +19,8 @@ const getColumns = ({ formatMessage, onTitleClick }) => {
     {
       name: 'summary',
       title: formatMessage({ id: 'adminBlog.leads.summary' }),
-      getValueOf: item => {
-        const text = item.summary || '';
-        return text.length > 80 ? `${text.slice(0, 80)}...` : text || '-';
-      }
+      renderType: 'description',
+      getValueOf: item => item.summary || ''
     },
     {
       name: 'status',
@@ -38,12 +36,12 @@ const getColumns = ({ formatMessage, onTitleClick }) => {
     {
       name: 'meta',
       title: formatMessage({ id: 'adminBlog.leads.keyword' }),
-      getValueOf: item => item.meta?.keyword || '-'
+      getValueOf: item => item.meta?.keyword || null
     },
     {
       name: 'fetchedAt',
       title: formatMessage({ id: 'adminBlog.leads.fetchedAt' }),
-      getValueOf: item => (item.fetchedAt ? dayjs(item.fetchedAt).format('YYYY-MM-DD HH:mm:ss') : '-')
+      getValueOf: item => (item.fetchedAt ? dayjs(item.fetchedAt).format('YYYY-MM-DD HH:mm') : null)
     },
     {
       name: 'createdAt',

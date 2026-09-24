@@ -10,7 +10,10 @@ import getColumns from './getColumns';
 import getKneDocumentZipButtonGroupList from '@components/Shared/KneDocumentZipActions';
 import { buildPathTreeApis, buildProjectNameFilterApi, buildUserListFilterApi, mapKneDocumentListFilterValue } from '@components/Shared/kneDocumentListFilters';
 import useTablePaginationSearchParams from '@components/Shared/useTablePaginationSearchParams';
+import createAdminListCards from '@components/Shared/createAdminListCards';
 import styles from './list.module.scss';
+
+const renderAdminListCards = createAdminListCards();
 
 const { Search } = Input;
 const { Text } = Typography;
@@ -163,7 +166,9 @@ const List = createWithRemoteLoader({
             },
             buttonGroup: {
               list: zipButtonGroupList
-            }
+            },
+            renderMobile: renderAdminListCards,
+            renderCard: renderAdminListCards
           }
         }}
       >

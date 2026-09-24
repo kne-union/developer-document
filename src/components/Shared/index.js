@@ -7,3 +7,4 @@ export { default as BlogDetailView } from './BlogDetailView';
 export { default as DocumentDetailView } from './DocumentDetailView';
 export { default as RemoteComponentDetailView } from './RemoteComponentDetailView';
 export { default as NpmPackageDetailView } from './NpmPackageDetailView';
+export { default as createAdminListCards } from './createAdminListCards';

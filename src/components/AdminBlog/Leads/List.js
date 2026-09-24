@@ -1,11 +1,14 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { App } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import useTablePaginationSearchParams from '@components/Shared/useTablePaginationSearchParams';
+import createAdminListCards from '@components/Shared/createAdminListCards';
 import { getActionList } from './Actions';
 import getColumns from './getColumns';
+
+const renderAdminListCards = createAdminListCards();
 
 const mapLeadFilterValue = (filterValue, getFilterValue) => {
   const resolved = typeof getFilterValue === 'function' ? getFilterValue(filterValue) : filterValue;
@@ -23,16 +26,18 @@ const mapLeadFilterValue = (filterValue, getFilterValue) => {
 };
 
 const List = createWithRemoteLoader({
-  modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter']
+  modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter', 'components-core:Table']
 })(
   withLocale(({ remoteModules, menu }) => {
-    const [BizUnit, usePreset, Filter] = remoteModules;
-    const { apis } = usePreset();
-    const { message } = App.useApp();
+    const [BizUnit, usePreset, Filter, Table] = remoteModules;
+    const { apis, ajax } = usePreset();
+    const { message, modal } = App.useApp();
     const { formatMessage } = useIntl();
     const { SuperSelectFilterItem } = Filter.fields;
     const pendingLabel = formatMessage({ id: 'adminBlog.leads.statusPending' });
     const paginationSearchParams = useTablePaginationSearchParams();
+    const pageListRef = useRef([]);
+    const { selectedRows, getRowSelection, setSelectedRowKeys, clearSelectedRows } = Table.useSelectedRow({ rowKey: 'id' });
 
     const filter = useMemo(
       () => ({
@@ -56,6 +61,15 @@ const List = createWithRemoteLoader({
       [SuperSelectFilterItem, formatMessage, pendingLabel]
     );
 
+    const rowSelection = useMemo(() => {
+      const base = getRowSelection(pageListRef.current);
+      return Object.assign({}, base, {
+        onChange: keys => {
+          setSelectedRowKeys(keys, pageListRef.current);
+        }
+      });
+    }, [getRowSelection, setSelectedRowKeys]);
+
     const options = useMemo(
       () => ({
         mapFilterValue: mapLeadFilterValue,
@@ -64,10 +78,53 @@ const List = createWithRemoteLoader({
             paramsType: 'params',
             searchParams: paginationSearchParams.searchParams,
             setSearchParams: paginationSearchParams.setSearchParams
-          }
+          },
+          renderMobile: renderAdminListCards,
+          renderCard: renderAdminListCards,
+          rowKey: 'id',
+          rowSelection,
+          selectedRows,
+          dataFormat: data => {
+            const list = data.pageData || [];
+            pageListRef.current = list;
+            return {
+              list,
+              total: data.totalCount ?? data.total,
+              data
+            };
+          },
+          batchActions: [
+            {
+              key: 'batch-remove',
+              label: formatMessage({ id: 'adminBlog.leads.batchRemove' }),
+              danger: true,
+              onClick: ({ selectedRowKeys, reload }) => {
+                const ids = (selectedRowKeys || []).filter(Boolean);
+                if (!ids.length) {
+                  return;
+                }
+                modal.confirm({
+                  title: formatMessage({ id: 'adminBlog.leads.batchRemoveConfirm' }, { count: ids.length }),
+                  onOk: async () => {
+                    const { data: resData } = await ajax(
+                      Object.assign({}, apis.blogLead.batchDelete, {
+                        data: { ids }
+                      })
+                    );
+                    if (resData.code !== 0) {
+                      return;
+                    }
+                    message.success(formatMessage({ id: 'adminBlog.leads.batchRemoveSuccess' }, { count: ids.length }));
+                    clearSelectedRows();
+                    reload && reload();
+                  }
+                });
+              }
+            }
+          ]
         }
       }),
-      [paginationSearchParams.searchParams, paginationSearchParams.setSearchParams]
+      [ajax, apis.blogLead.batchDelete, clearSelectedRows, formatMessage, message, modal, paginationSearchParams.searchParams, paginationSearchParams.setSearchParams, rowSelection, selectedRows]
     );
 
     const onTitleClick = useCallback(

@@ -20,7 +20,8 @@ export const NPM_PACKAGE_TYPE_COLORS = toMetaMap(NPM_PACKAGE_TYPE_OPTIONS, 'colo
 
 export const REMOTE_COMPONENT_GROUP_OPTIONS = [
   { value: 'business', label: 'shared.catalogMeta.business', color: 'blue' },
-  { value: 'common', label: 'shared.catalogMeta.common', color: 'green' }
+  { value: 'common', label: 'shared.catalogMeta.common', color: 'green' },
+  { value: 'general', label: 'shared.catalogMeta.general', color: 'green' }
 ];
 
 export const REMOTE_COMPONENT_GROUP_ORDER = REMOTE_COMPONENT_GROUP_OPTIONS.map(item => item.value);

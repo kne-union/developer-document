@@ -4,7 +4,7 @@ const LOCAL_SERVER = 'http://localhost:8061';
 
 function isSseRequest(req) {
   const url = req.originalUrl || req.url || '';
-  if (url.includes('/sse')) return true;
+  if (url.includes('/sse') || url.includes('/logs/stream')) return true;
   const accept = req.headers.accept;
   return accept && String(accept).includes('text/event-stream');
 }
@@ -32,6 +32,13 @@ module.exports = function (app) {
           req.socket?.once('close', abortUpstream);
         }
       }
+    })
+  );
+  app.use(
+    '/app',
+    createProxyMiddleware({
+      target: LOCAL_SERVER,
+      changeOrigin: true
     })
   );
   app.use(

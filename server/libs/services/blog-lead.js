@@ -266,6 +266,21 @@ module.exports = fp(async (fastify, options) => {
     return { success: true };
   };
 
+  const batchRemove = async ({ ids }) => {
+    const uniqueIds = [...new Set((Array.isArray(ids) ? ids : []).filter(Boolean).map(String))];
+    if (uniqueIds.length === 0) {
+      throw new Error('请选择要删除的线索');
+    }
+    const deletedCount = await models.blogLead.destroy({
+      where: {
+        id: {
+          [Op.in]: uniqueIds
+        }
+      }
+    });
+    return { success: true, deletedCount };
+  };
+
   const complete = async (userInfo, { id, title, content, groups, isPublic, status }) => {
     const lead = await models.blogLead.findByPk(id);
     if (!lead) {
@@ -307,6 +322,8 @@ module.exports = fp(async (fastify, options) => {
     };
   };
 
+  const resolveLeadTitle = (item, keyword) => stripTrailingZhihuTitleSuffix(item?.title) || keyword || '未命名';
+
   const findExistingExternalIds = async (channel, externalIds) => {
     if (!externalIds.length) {
       return new Set();
@@ -323,10 +340,26 @@ module.exports = fp(async (fastify, options) => {
     return new Set(rows.map(row => row.externalId).filter(Boolean));
   };
 
-  const createLeadFromItem = async ({ item, channel, keyword }) => {
-    const title = stripTrailingZhihuTitleSuffix(item.title) || keyword || '未命名';
+  const findExistingTitles = async titles => {
+    const uniqueTitles = [...new Set((titles || []).map(title => String(title || '').trim()).filter(Boolean))];
+    if (!uniqueTitles.length) {
+      return new Set();
+    }
+    const rows = await models.blogLead.findAll({
+      attributes: ['title'],
+      where: {
+        title: {
+          [Op.in]: uniqueTitles
+        }
+      }
+    });
+    return new Set(rows.map(row => row.title).filter(Boolean));
+  };
+
+  const createLeadFromItem = async ({ item, channel, keyword, title }) => {
+    const nextTitle = title || resolveLeadTitle(item, keyword);
     return models.blogLead.create({
-      title,
+      title: nextTitle,
       summary: item.summary || '',
       content: '',
       status: 'pending',
@@ -343,6 +376,37 @@ module.exports = fp(async (fastify, options) => {
       },
       fetchedAt: new Date()
     });
+  };
+
+  const ingestZhihuItems = async ({ items, keyword, existingExternalIds, existingTitles, created, skipped }) => {
+    for (const item of items) {
+      const title = resolveLeadTitle(item, keyword);
+
+      if (item.externalId && existingExternalIds.has(item.externalId)) {
+        skipped.push(item.externalId);
+        continue;
+      }
+      if (item.sourceUrl) {
+        const byUrl = await models.blogLead.findOne({
+          where: { channel: 'zhihu', sourceUrl: item.sourceUrl }
+        });
+        if (byUrl) {
+          skipped.push(item.sourceUrl);
+          continue;
+        }
+      }
+      if (existingTitles.has(title)) {
+        skipped.push(title);
+        continue;
+      }
+
+      const lead = await createLeadFromItem({ item, channel: 'zhihu', keyword, title });
+      created.push(lead);
+      existingTitles.add(title);
+      if (item.externalId) {
+        existingExternalIds.add(item.externalId);
+      }
+    }
   };
 
   const fetchFromZhihu = async ({ force = false } = {}) => {
@@ -375,6 +439,7 @@ module.exports = fp(async (fastify, options) => {
     let requestCount = 0;
     const maxRequests = clamp(settings.maxRequestsPerRun, 1, 100, 20);
     const countPerKeyword = clamp(settings.countPerKeyword, 1, 10, 5);
+    const existingTitles = new Set();
 
     for (const keyword of keywords) {
       if (requestCount >= maxRequests) {
@@ -386,28 +451,18 @@ module.exports = fp(async (fastify, options) => {
         count: countPerKeyword,
         secret
       });
-      const existing = await findExistingExternalIds('zhihu', items.map(item => item.externalId).filter(Boolean));
+      const titles = items.map(item => resolveLeadTitle(item, keyword));
+      const [existingExternalIds, titlesInDb] = await Promise.all([findExistingExternalIds('zhihu', items.map(item => item.externalId).filter(Boolean)), findExistingTitles(titles)]);
+      titlesInDb.forEach(title => existingTitles.add(title));
 
-      for (const item of items) {
-        if (item.externalId && existing.has(item.externalId)) {
-          skipped.push(item.externalId);
-          continue;
-        }
-        if (item.sourceUrl) {
-          const byUrl = await models.blogLead.findOne({
-            where: { channel: 'zhihu', sourceUrl: item.sourceUrl }
-          });
-          if (byUrl) {
-            skipped.push(item.sourceUrl);
-            continue;
-          }
-        }
-        const lead = await createLeadFromItem({ item, channel: 'zhihu', keyword });
-        created.push(lead);
-        if (item.externalId) {
-          existing.add(item.externalId);
-        }
-      }
+      await ingestZhihuItems({
+        items,
+        keyword,
+        existingExternalIds,
+        existingTitles,
+        created,
+        skipped
+      });
 
       await new Promise(resolve => setTimeout(resolve, 300));
     }
@@ -418,15 +473,18 @@ module.exports = fp(async (fastify, options) => {
         limit: settings.hotLimit,
         secret
       });
-      const existing = await findExistingExternalIds('zhihu', hotItems.map(item => item.externalId).filter(Boolean));
-      for (const item of hotItems) {
-        if (item.externalId && existing.has(item.externalId)) {
-          skipped.push(item.externalId);
-          continue;
-        }
-        const lead = await createLeadFromItem({ item, channel: 'zhihu', keyword: 'hot' });
-        created.push(lead);
-      }
+      const titles = hotItems.map(item => resolveLeadTitle(item, 'hot'));
+      const [existingExternalIds, titlesInDb] = await Promise.all([findExistingExternalIds('zhihu', hotItems.map(item => item.externalId).filter(Boolean)), findExistingTitles(titles)]);
+      titlesInDb.forEach(title => existingTitles.add(title));
+
+      await ingestZhihuItems({
+        items: hotItems,
+        keyword: 'hot',
+        existingExternalIds,
+        existingTitles,
+        created,
+        skipped
+      });
     }
 
     await touchLastRunAt();
@@ -452,6 +510,7 @@ module.exports = fp(async (fastify, options) => {
       detail,
       update,
       remove,
+      batchRemove,
       complete,
       fetchFromZhihu
     }

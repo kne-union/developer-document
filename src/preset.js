@@ -6,6 +6,7 @@ import createAjax from '@kne/axios-fetch';
 import { getToken } from '@kne/token-storage';
 import transform from 'lodash/transform';
 import { getApis } from '@components/Apis';
+import { getApis as getAppManagerApis } from '@components/AppManager/Apis';
 import ensureSlash from '@kne/ensure-slash';
 
 window.PUBLIC_URL = window.runtimePublicUrl || process.env.PUBLIC_URL;
@@ -63,14 +64,14 @@ export const globalInit = async () => {
     }
   });
   const registry = {
-    url: 'https://uc.fatalent.cn',
-    tpl: '{{url}}/packages/@kne-components/{{remote}}/{{version}}/build'
+    url: 'https://cdn.leapin-ai.com',
+    tpl: '{{url}}/components/@kne-components/{{remote}}/{{version}}/build'
   };
 
   const componentsCoreRemote = {
     ...registry,
     remote: 'components-core',
-    defaultVersion: '0.5.50'
+    defaultVersion: '0.6.13'
   };
   remoteLoaderPreset({
     remotes: {
@@ -84,19 +85,19 @@ export const globalInit = async () => {
       'components-file-manager': {
         ...registry,
         remote: 'components-file-manager',
-        defaultVersion: '0.1.1'
+        defaultVersion: '0.1.9'
       },
       'components-admin': {
         ...registry,
         //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.94'
+        defaultVersion: '1.1.112'
       },
       'components-thirdparty': {
         ...registry,
         remote: 'components-thirdparty',
-        defaultVersion: '0.1.38'
+        defaultVersion: '0.1.49'
       },
       'developer-document':
         process.env.NODE_ENV === 'development'
@@ -156,8 +157,8 @@ export const globalInit = async () => {
     remoteApis,
     {
       file: {
-        contentWindowUrl: 'https://uc.fatalent.cn/components/@kne/iframe-resizer/0.1.3/dist/contentWindow.js',
-        pdfjsUrl: 'https://uc.fatalent.cn/components/pdfjs-dist/4.4.168',
+        contentWindowUrl: 'https://cdn.leapin-ai.com/components/@kne/iframe-resizer/0.1.3/dist/contentWindow.js',
+        pdfjsUrl: 'https://cdn.leapin-ai.com/components/pdfjs-dist/4.4.168',
         getUrl: {
           url: `/api/v1/static/file-url/{id}`,
           paramsType: 'urlParams',
@@ -184,7 +185,10 @@ export const globalInit = async () => {
         }
       }
     },
-    getApis()
+    getApis(),
+    {
+      appManager: getAppManagerApis()
+    }
   );
   let setting = {};
   try {

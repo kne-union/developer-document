@@ -7,6 +7,9 @@ import FormInner from '../FormInner';
 import { getActionList } from '../Actions';
 import getColumns from './getColumns';
 import { REMOTE_COMPONENT_GROUP_OPTIONS } from '@components/Shared/catalogMeta';
+import createAdminListCards from '@components/Shared/createAdminListCards';
+
+const renderAdminListCards = createAdminListCards();
 
 const List = createWithRemoteLoader({
   modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter']
@@ -65,6 +68,10 @@ const List = createWithRemoteLoader({
           createFormModalProps: {
             title: formatMessage({ id: 'adminRemoteComponent.create.modalTitle' }),
             size: 'small'
+          },
+          tableProps: {
+            renderMobile: renderAdminListCards,
+            renderCard: renderAdminListCards
           }
         }}
       />

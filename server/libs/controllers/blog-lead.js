@@ -91,6 +91,30 @@ module.exports = fp(async (fastify, options) => {
   );
 
   fastify.post(
+    `${options.prefix}/blog-lead/batch-delete`,
+    {
+      onRequest: [authenticate.user, authenticate.admin],
+      schema: {
+        summary: '批量删除文章线索',
+        body: {
+          type: 'object',
+          properties: {
+            ids: {
+              type: 'array',
+              items: { type: 'string' },
+              minItems: 1
+            }
+          },
+          required: ['ids']
+        }
+      }
+    },
+    async request => {
+      return services.blogLead.batchRemove(request.body);
+    }
+  );
+
+  fastify.post(
     `${options.prefix}/blog-lead/complete`,
     {
       onRequest: [authenticate.user, authenticate.admin],
