@@ -131,4 +131,6 @@ pnpm-lock.yaml
 package-lock.json
 server/data.db
 server/static
+server/managed-apps
+managed-apps
 .DS_Store

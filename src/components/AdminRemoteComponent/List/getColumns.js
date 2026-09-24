@@ -1,5 +1,4 @@
-import { Tag } from 'antd';
-import { REMOTE_COMPONENT_GROUP_COLORS } from '@components/Shared/catalogMeta';
+import { REMOTE_COMPONENT_GROUP_COLORS, REMOTE_COMPONENT_GROUP_LABELS } from '@components/Shared/catalogMeta';
 import goAdminDetail from '@components/Shared/goAdminDetail';
 
 const getColumns = ({ navigate, formatMessage }) => {
@@ -7,50 +6,56 @@ const getColumns = ({ navigate, formatMessage }) => {
     {
       name: 'id',
       title: 'ID',
-      width: 80,
-      renderType: 'main',
-      primary: true,
-      hover: true,
-      onClick: ({ colItem }) => {
-        goAdminDetail(navigate, colItem);
-      }
+      width: 80
     },
     {
       name: 'remote',
       title: formatMessage({ id: 'adminRemoteComponent.getColumns.componentName' }),
       renderType: 'main',
+      primary: true,
       hover: true,
       onClick: ({ colItem }) => {
         goAdminDetail(navigate, colItem);
-      }
+      },
+      getValueOf: item => item.remote || null
     },
     {
       name: 'name',
       title: formatMessage({ id: 'adminNpmPackage.getColumns.displayName' }),
-      getValueOf: item => item.name || '-'
+      renderType: 'main',
+      hover: true,
+      onClick: ({ colItem }) => {
+        goAdminDetail(navigate, colItem);
+      },
+      getValueOf: item => item.name || null
     },
     {
       name: 'group',
       title: formatMessage({ id: 'common.category' }),
-      render: (_, { dataSource }) => {
-        const group = dataSource.group || 'common';
-        return <Tag color={REMOTE_COMPONENT_GROUP_COLORS[group] || 'default'}>{formatMessage({ id: `shared.catalogMeta.${group}` })}</Tag>;
+      renderType: 'tag',
+      getValueOf: item => {
+        const group = item.group || 'common';
+        const labelId = REMOTE_COMPONENT_GROUP_LABELS[group] || `shared.catalogMeta.${group}`;
+        return {
+          type: REMOTE_COMPONENT_GROUP_COLORS[group] || 'default',
+          text: formatMessage({ id: labelId, defaultMessage: group })
+        };
       }
     },
     {
       name: 'packageName',
       title: formatMessage({ id: 'adminRemoteComponent.getColumns.npmPackageName' }),
-      getValueOf: item => item.packageName || '-'
+      getValueOf: item => item.packageName || null
     },
     {
       name: 'registry',
       title: 'NPM Registry',
-      getValueOf: item => item.registry || '-'
+      getValueOf: item => item.registry || null
     },
     {
       name: 'defaultVersion',
       title: formatMessage({ id: 'adminRemoteComponent.getColumns.deployedVersions' }),
-      getValueOf: item => item.defaultVersion || '-'
+      getValueOf: item => item.defaultVersion || null
     },
     {
       name: 'isPublic',

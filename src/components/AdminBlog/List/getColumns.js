@@ -5,22 +5,18 @@ const getColumns = ({ navigate, formatMessage, baseUrl }) => {
     {
       name: 'id',
       title: 'ID',
-      width: 80,
-      renderType: 'main',
-      primary: true,
-      hover: true,
-      onClick: ({ colItem }) => {
-        goAdminDetail(navigate, colItem, baseUrl);
-      }
+      width: 80
     },
     {
       name: 'title',
       title: formatMessage({ id: 'common.title' }),
       renderType: 'main',
+      primary: true,
       hover: true,
       onClick: ({ colItem }) => {
         goAdminDetail(navigate, colItem, baseUrl);
-      }
+      },
+      getValueOf: item => item.title || null
     },
     {
       name: 'status',
@@ -60,13 +56,13 @@ const getColumns = ({ navigate, formatMessage, baseUrl }) => {
     {
       name: 'createdUser',
       title: formatMessage({ id: 'common.creator' }),
-      getValueOf: item => item.createdUser?.email || '-'
+      getValueOf: item => item.createdUser?.email || null
     },
     {
       name: 'publishTime',
       title: formatMessage({ id: 'adminBlog.getColumns.publishTime' }),
       format: 'datetime',
-      getValueOf: item => (item.publishTime ? item.publishTime : '-')
+      getValueOf: item => item.publishTime || null
     },
     {
       name: 'createdAt',

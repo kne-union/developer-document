@@ -5,22 +5,18 @@ const getColumns = ({ navigate, formatMessage }) => {
     {
       name: 'id',
       title: 'ID',
-      width: 80,
-      renderType: 'main',
-      primary: true,
-      hover: true,
-      onClick: ({ colItem }) => {
-        goAdminDetail(navigate, colItem);
-      }
+      width: 80
     },
     {
       name: 'title',
       title: formatMessage({ id: 'common.title' }),
       renderType: 'main',
+      primary: true,
       hover: true,
       onClick: ({ colItem }) => {
         goAdminDetail(navigate, colItem);
-      }
+      },
+      getValueOf: item => item.title || null
     },
     {
       name: 'relativePath',
@@ -49,7 +45,7 @@ const getColumns = ({ navigate, formatMessage }) => {
     {
       name: 'createdUser',
       title: formatMessage({ id: 'common.creator' }),
-      getValueOf: item => item.createdUser?.email || item.createdUser?.nickname || '-'
+      getValueOf: item => item.createdUser?.email || item.createdUser?.nickname || null
     },
     {
       name: 'updatedAt',

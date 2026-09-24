@@ -70,6 +70,10 @@ const getApis = options => {
         url: `${prefix}/blog-lead/delete`,
         method: 'POST'
       },
+      batchDelete: {
+        url: `${prefix}/blog-lead/batch-delete`,
+        method: 'POST'
+      },
       complete: {
         url: `${prefix}/blog-lead/complete`,
         method: 'POST'

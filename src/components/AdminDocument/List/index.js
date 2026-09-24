@@ -6,6 +6,9 @@ import { useIntl } from '@kne/react-intl';
 import FormInner from '../FormInner';
 import { getActionList } from '../Actions';
 import getColumns from './getColumns';
+import createAdminListCards from '@components/Shared/createAdminListCards';
+
+const renderAdminListCards = createAdminListCards();
 
 const List = createWithRemoteLoader({
   modules: ['components-admin:BizUnit', 'components-core:Global@usePreset', 'components-core:Filter', 'components-admin:GroupSelect@GroupFolder']
@@ -104,7 +107,11 @@ const List = createWithRemoteLoader({
             createFormModalProps: {
               title: formatMessage({ id: 'adminDocument.create.modalTitle' })
             },
-            mapFilterValue
+            mapFilterValue,
+            tableProps: {
+              renderMobile: renderAdminListCards,
+              renderCard: renderAdminListCards
+            }
           }}
         />
       </GroupFolder>

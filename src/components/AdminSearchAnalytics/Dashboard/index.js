@@ -5,6 +5,9 @@ import Fetch from '@kne/react-fetch';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import dayjs from 'dayjs';
+import createAdminListCards from '@components/Shared/createAdminListCards';
+
+const renderAdminListCards = createAdminListCards();
 
 const mapSearchRecordsFilterValue = filterValue => {
   const result = Object.assign({}, filterValue);
@@ -74,7 +77,9 @@ const RecordsTab = createWithRemoteLoader({
           },
           {
             name: 'query',
-            title: formatMessage({ id: 'adminSearchAnalytics.columns.query' })
+            title: formatMessage({ id: 'adminSearchAnalytics.columns.query' }),
+            renderType: 'main',
+            primary: true
           },
           {
             name: 'hitCount',
@@ -104,7 +109,11 @@ const RecordsTab = createWithRemoteLoader({
         options={{
           keywordFilterName: 'query',
           keywordFilterLabel: formatMessage({ id: 'adminSearchAnalytics.columns.query' }),
-          mapFilterValue: (value, getFilterValue) => mapSearchRecordsFilterValue(getFilterValue(value))
+          mapFilterValue: (value, getFilterValue) => mapSearchRecordsFilterValue(getFilterValue(value)),
+          tableProps: {
+            renderMobile: renderAdminListCards,
+            renderCard: renderAdminListCards
+          }
         }}
       >
         {({ tableOptions }) => <BizUnit.TablePageRender withPage={false} tableOptions={tableOptions} />}

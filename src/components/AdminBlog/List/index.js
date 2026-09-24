@@ -6,6 +6,9 @@ import { useIntl } from '@kne/react-intl';
 import FormInner from '../FormInner';
 import { getActionList } from '../Actions';
 import getColumns from './getColumns';
+import createAdminListCards from '@components/Shared/createAdminListCards';
+
+const renderAdminListCards = createAdminListCards();
 
 const mapBlogFilterValue = filterValue => {
   const result = Object.assign({}, filterValue);
@@ -112,7 +115,9 @@ const List = createWithRemoteLoader({
         },
         mapFilterValue: (value, getFilterValue) => mapBlogFilterValue(getFilterValue(value)),
         tableProps: {
-          pagination: { paramsType: 'params' }
+          pagination: { paramsType: 'params' },
+          renderMobile: renderAdminListCards,
+          renderCard: renderAdminListCards
         }
       }),
       [formatMessage]
