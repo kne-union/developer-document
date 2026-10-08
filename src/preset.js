@@ -92,12 +92,12 @@ export const globalInit = async () => {
         //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.112'
+        defaultVersion: '1.1.113'
       },
       'components-thirdparty': {
         ...registry,
         remote: 'components-thirdparty',
-        defaultVersion: '0.1.49'
+        defaultVersion: '0.1.50'
       },
       'developer-document':
         process.env.NODE_ENV === 'development'
