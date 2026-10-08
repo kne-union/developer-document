@@ -231,6 +231,7 @@ module.exports = {
   saveConfig,
   loadRegistry,
   saveRegistry,
+  hashContent,
   walkJsonFiles,
   needsSync,
   syncOneFile,
