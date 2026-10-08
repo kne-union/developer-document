@@ -3,11 +3,11 @@ import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 
 const FormInner = createWithRemoteLoader({
-  modules: ['components-core:FormInfo']
+  modules: ['components-core:FormInfo', 'components-admin:GroupSelect@GroupFolderField']
 })(
   withLocale(({ remoteModules, isEdit }) => {
-    const [FormInfo] = remoteModules;
-    const { Input, TextArea, Avatar } = FormInfo.fields;
+    const [FormInfo, GroupFolderField] = remoteModules;
+    const { Input, TextArea, Avatar, Switch } = FormInfo.fields;
     const { formatMessage } = useIntl();
 
     return (
@@ -16,6 +16,8 @@ const FormInner = createWithRemoteLoader({
         <Input name="name" label={formatMessage({ id: 'appManager.form.name' })} rule="REQ LEN-1-64" placeholder={formatMessage({ id: 'appManager.form.namePlaceholder' })} disabled={!!isEdit} block />
         <Input name="label" label={formatMessage({ id: 'appManager.form.label' })} rule="REQ LEN-1-100" block />
         <Input name="domain" label={formatMessage({ id: 'appManager.form.domain' })} rule="LEN-0-200" placeholder={formatMessage({ id: 'appManager.form.domainPlaceholder' })} block />
+        <GroupFolderField name="category" type="app" showColor label={formatMessage({ id: 'appManager.form.category' })} groupName={formatMessage({ id: 'appManager.form.category' })} block />
+        <Switch name="isPublic" label={formatMessage({ id: 'common.isPublic' })} defaultValue={true} />
         <TextArea name="description" label={formatMessage({ id: 'common.description' })} rule="LEN-0-1000" block />
       </>
     );

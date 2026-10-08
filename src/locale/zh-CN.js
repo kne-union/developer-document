@@ -65,6 +65,14 @@ export default {
   'app.nav.blog': '博客',
   'app.nav.documents': '文档',
   'app.nav.about': '关于我们',
+  'app.nav.apps': '应用中心',
+  'appCenter.identityLabel': '应用',
+  'appCenter.pageDescription': '汇集平台已上线的应用，点击图标即可在新窗口打开。',
+  'appCenter.uncategorized': '其他',
+  'appCenter.count': '共 {value} 个应用',
+  'appCenter.searchPlaceholder': '搜索应用',
+  'appCenter.empty': '暂无可用应用',
+  'appCenter.noMatch': '没有匹配的应用',
   'app.footer.desc': '组件与工程实践沉淀',
 
   // RightOptions
@@ -653,6 +661,7 @@ export default {
   'appManager.form.label': '显示名称',
   'appManager.form.domain': '绑定域名',
   'appManager.form.domainPlaceholder': '可选，精确匹配 Host',
+  'appManager.form.category': '应用分类',
   'appManager.columns.name': '应用标识',
   'appManager.columns.label': '显示名称',
   'appManager.columns.port': '端口',

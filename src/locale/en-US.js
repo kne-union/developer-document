@@ -65,6 +65,14 @@ export default {
   'app.nav.blog': 'Blog',
   'app.nav.documents': 'Documents',
   'app.nav.about': 'About Us',
+  'app.nav.apps': 'Apps',
+  'appCenter.identityLabel': 'Apps',
+  'appCenter.pageDescription': 'Apps available on the platform. Click an icon to open it in a new tab.',
+  'appCenter.uncategorized': 'Other',
+  'appCenter.count': '{value} apps',
+  'appCenter.searchPlaceholder': 'Search apps',
+  'appCenter.empty': 'No apps available',
+  'appCenter.noMatch': 'No matching apps',
   'app.footer.desc': 'Component and Engineering Practice Accumulation',
 
   // RightOptions
@@ -654,6 +662,7 @@ export default {
   'appManager.form.label': 'Display Name',
   'appManager.form.domain': 'Domain',
   'appManager.form.domainPlaceholder': 'Optional exact Host match',
+  'appManager.form.category': 'Category',
   'appManager.columns.name': 'App ID',
   'appManager.columns.label': 'Display Name',
   'appManager.columns.port': 'Port',

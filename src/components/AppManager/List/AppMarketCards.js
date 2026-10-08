@@ -1,6 +1,7 @@
 import classnames from 'classnames';
 import { Flex, Typography } from 'antd';
 import { ExportOutlined } from '@ant-design/icons';
+import DefaultAppIcon from '@components/Shared/DefaultAppIcon';
 import StatusTag from '../StatusTag';
 import style from './style.module.scss';
 
@@ -16,11 +17,7 @@ const AppIcon = ({ item, Image }) => {
   if (item.icon && Image?.Avatar) {
     return <Image.Avatar id={item.icon} alt={item.label || item.name} size={72} shape="square" />;
   }
-  const initial = String(item.label || item.name || '?')
-    .trim()
-    .charAt(0)
-    .toUpperCase();
-  return <div className={style['icon-fallback']}>{initial}</div>;
+  return <DefaultAppIcon />;
 };
 
 /**

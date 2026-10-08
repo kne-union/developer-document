@@ -54,6 +54,14 @@ const getApis = options => {
       method: 'GET',
       paramsType: 'params'
     },
+    centerList: {
+      url: `${prefix}/app/center/list`,
+      method: 'GET'
+    },
+    centerPublicList: {
+      url: `${prefix}/app/center/public-list`,
+      method: 'GET'
+    },
     detail: {
       url: `${prefix}/app/detail`,
       method: 'GET',

@@ -341,6 +341,11 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
                     path: '/documents'
                   },
                   {
+                    key: 'apps',
+                    title: formatMessage({ id: 'app.nav.apps' }),
+                    path: '/apps'
+                  },
+                  {
                     key: 'about',
                     title: formatMessage({ id: 'app.nav.about' }),
                     path: '/about'
@@ -373,6 +378,10 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
             {
               path: 'npm-packages/*',
               element: <NpmPackage baseUrl={baseUrl + '/npm-packages'} />
+            },
+            {
+              path: 'apps',
+              loader: () => import('@components/AppCenter')
             }
           ]}
         />
