@@ -92,7 +92,7 @@ export const globalInit = async () => {
         //url: 'http://localhost:3016',
         //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.113'
+        defaultVersion: '1.1.114'
       },
       'components-thirdparty': {
         ...registry,
