@@ -31,6 +31,8 @@ const Save = createWithRemoteLoader({
                       label: formData.label,
                       domain: formData.domain || null,
                       icon: formData.icon,
+                      category: formData.category || null,
+                      isPublic: !!formData.isPublic,
                       description: formData.description
                     }
                   })

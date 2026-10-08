@@ -1,0 +1,314 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+.page {
+  --apps-primary: #4f46e5;
+  --apps-soft-bg: #eef2ff;
+  --apps-soft-border: #c7d2fe;
+  --apps-soft-text: #4338ca;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 20px 24px 40px;
+
+  @include resp.responsive-container;
+}
+
+.header,
+.panel {
+  border: 1px solid #e8edf3;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.header {
+  position: relative;
+  padding: 20px 24px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(124, 92, 255, 0.05) 45%, rgba(255, 255, 255, 0.92) 100%), linear-gradient(145deg, #ffffff 0%, #f7f9ff 100%);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -120px;
+    left: -90px;
+    width: 260px;
+    height: 260px;
+    border-radius: 999px;
+    background: radial-gradient(circle at center, rgba(79, 70, 229, 0.14) 0%, rgba(79, 70, 229, 0) 70%);
+    pointer-events: none;
+  }
+}
+
+.header-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.title-block {
+  flex: 1;
+  min-width: 0;
+}
+
+.identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.identity-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--apps-soft-border);
+  border-radius: 999px;
+  background: var(--apps-soft-bg);
+  color: var(--apps-primary);
+  font-size: 14px;
+}
+
+.identity-text {
+  color: var(--apps-soft-text);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.title {
+  margin: 0 0 8px !important;
+}
+
+.description {
+  margin: 0 !important;
+  color: #64748b;
+  line-height: 1.75;
+}
+
+.search {
+  width: min(360px, 100%);
+  flex-shrink: 0;
+
+  :global(.ant-input-affix-wrapper) {
+    border-radius: 999px;
+  }
+}
+
+.panel {
+  min-height: 360px;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 120px 0;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #eef2f6;
+  background: linear-gradient(180deg, #fafbff 0%, #fff 100%);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tab {
+  padding: 5px 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #475467;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+
+  &:hover {
+    color: var(--apps-primary);
+    background: var(--apps-soft-bg);
+  }
+}
+
+.tab-active,
+.tab-active:hover {
+  border-color: var(--apps-soft-border);
+  background: var(--apps-soft-bg);
+  color: var(--apps-soft-text);
+  font-weight: 600;
+}
+
+.count {
+  flex-shrink: 0;
+  color: #98a2b3;
+  font-size: 13px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 12px;
+  padding: 24px 20px 28px;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px 8px 12px;
+  border: none;
+  border-radius: 16px;
+  background: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #f6f7fb;
+
+    .icon {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
+    }
+  }
+
+  &:active .icon {
+    transform: scale(0.96);
+  }
+}
+
+.icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+
+  // Image.Avatar 外层容器按 size 写了内联宽高，需与头像一起撑满图标容器
+  > div,
+  :global(.ant-avatar) {
+    width: 100% !important;
+    height: 100% !important;
+    border: none !important;
+    border-radius: 0;
+  }
+}
+
+.label {
+  max-width: 100%;
+  overflow: hidden;
+  color: #1d2939;
+  font-size: 13px;
+  line-height: 18px;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.empty {
+  padding: 96px 0;
+}
+
+@include resp.mobile-container {
+  .page {
+    padding: 16px 16px 32px;
+  }
+
+  .header {
+    padding: 16px;
+  }
+
+  .header-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search {
+    width: 100%;
+  }
+
+  .panel {
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .panel-header {
+    padding: 0;
+    border-bottom: none;
+    background: none;
+  }
+
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .tab {
+    flex-shrink: 0;
+  }
+
+  .count {
+    display: none;
+  }
+
+  .grid {
+    // 每行 5 个等分，图标撑满列宽：首/末图标与上方边缘对齐，且顶部、行、列间距统一
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4vw;
+    padding: 4vw 0 0;
+  }
+
+  .app {
+    padding: 0;
+    gap: 6px;
+    border-radius: 0;
+    -webkit-tap-highlight-color: transparent;
+
+    &:hover {
+      background: none;
+
+      .icon {
+        transform: none;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+      }
+    }
+  }
+
+  .icon {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: 16px;
+  }
+
+  .label {
+    width: 100%;
+    font-size: 12px;
+  }
+}

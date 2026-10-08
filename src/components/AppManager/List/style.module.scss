@@ -58,18 +58,6 @@
   }
 }
 
-.icon-fallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-size: 28px;
-  font-weight: 600;
-  color: #334155;
-  background: linear-gradient(145deg, #eef2f7 0%, #e2e8f0 100%);
-}
-
 .card-body {
   flex: 1;
   min-width: 0;
@@ -168,10 +156,6 @@
       height: 56px !important;
       border-radius: 12px;
     }
-  }
-
-  .icon-fallback {
-    font-size: 22px;
   }
 
   .card-actions {

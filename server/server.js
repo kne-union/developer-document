@@ -247,7 +247,8 @@ const createServer = () => {
           const { authenticate } = fastify.account;
           // admin 依赖 user 先写入 request.userInfo，不可只挂 authenticate.admin
           return [authenticate.user, authenticate.admin];
-        }
+        },
+        createUserAuthenticate: () => [fastify.account.authenticate.user]
       });
 
       fastify.register(require('@kne/fastify-namespace'), {
