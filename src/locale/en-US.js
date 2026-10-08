@@ -693,6 +693,7 @@ export default {
   'appManager.deploy.versionRequired': 'Please select a version',
   'appManager.deploy.success': 'Deploy started',
   'appManager.version.hasMigration': 'Has Migration',
+  'appManager.version.sqlCount': '{count} SQL files',
   'appManager.version.actions': 'Actions',
   'appManager.version.current': 'Current',
   'appManager.env.key': 'Key',

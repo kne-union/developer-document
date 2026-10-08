@@ -692,6 +692,7 @@ export default {
   'appManager.deploy.versionRequired': '请选择要部署的版本',
   'appManager.deploy.success': '已开始部署',
   'appManager.version.hasMigration': '含迁移',
+  'appManager.version.sqlCount': '{count} 个 SQL',
   'appManager.version.actions': '操作',
   'appManager.version.current': '当前部署',
   'appManager.env.key': '变量名',
