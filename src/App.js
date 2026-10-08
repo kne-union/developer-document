@@ -20,7 +20,7 @@ const AdminRemoteComponent = loadable(() => import('@components/AdminRemoteCompo
 const AdminNpmPackage = loadable(() => import('@components/AdminNpmPackage'), { fallback: pageLoading });
 const AppManager = loadable(() => import('@components/AppManager'), { fallback: pageLoading });
 
-const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage }) => {
+const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage, appManagerEnabled }) => {
   return (
     <Routes>
       <Route
@@ -57,7 +57,7 @@ const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage }) => {
                   title: formatMessage({ id: 'app.adminNav.devManagement' }),
                   path: '/admin/dev-management'
                 },
-                {
+                appManagerEnabled && {
                   key: 'app-manager',
                   title: formatMessage({ id: 'app.adminNav.appManager' }),
                   path: '/admin/app-manager'
@@ -87,7 +87,7 @@ const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage }) => {
                   title: formatMessage({ id: 'app.adminNav.setting' }),
                   path: '/admin/setting'
                 }
-              ]
+              ].filter(Boolean)
             }}
           />
         }
@@ -99,7 +99,7 @@ const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage }) => {
         <Route path="dev-management/*" element={<AdminDevManagement baseUrl={`${baseUrl}/admin`} />} />
         <Route path="remote-component/*" element={<AdminRemoteComponent baseUrl={`${baseUrl}/admin`} />} />
         <Route path="npm-package/*" element={<AdminNpmPackage baseUrl={`${baseUrl}/admin`} />} />
-        <Route path="app-manager/*" element={<AppManager baseUrl={`${baseUrl}/admin`} />} />
+        {appManagerEnabled && <Route path="app-manager/*" element={<AppManager baseUrl={`${baseUrl}/admin`} />} />}
         <Route path="task/*" element={<RemoteLoader key="task" module="components-admin:Task" baseUrl={baseUrl + '/admin'} />} />
         <Route path="signature" element={<RemoteLoader key="signature" module="components-admin:Signature" />} />
         <Route path="setting/*" element={<RemoteLoader key="setting" module="developer-document:Setting" baseUrl={`${baseUrl}/admin/setting`} />} />
@@ -262,7 +262,7 @@ const AdminFooter = () => {
   );
 };
 
-const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout }) => {
+const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout, appManagerEnabled }) => {
   const { formatMessage } = useIntl();
   const baseUrl = '';
 
@@ -296,7 +296,7 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
           },
           {
             path: 'admin/*',
-            element: <AdminApp AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} baseUrl={baseUrl} formatMessage={formatMessage} />
+            element: <AdminApp AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} baseUrl={baseUrl} formatMessage={formatMessage} appManagerEnabled={appManagerEnabled} />
           },
           {
             path: 'share',
@@ -340,7 +340,7 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
                     title: formatMessage({ id: 'app.nav.documents' }),
                     path: '/documents'
                   },
-                  {
+                  appManagerEnabled && {
                     key: 'apps',
                     title: formatMessage({ id: 'app.nav.apps' }),
                     path: '/apps'
@@ -350,7 +350,7 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
                     title: formatMessage({ id: 'app.nav.about' }),
                     path: '/about'
                   }
-                ]
+                ].filter(Boolean)
               }}
             />
           }
@@ -379,11 +379,11 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
               path: 'npm-packages/*',
               element: <NpmPackage baseUrl={baseUrl + '/npm-packages'} />
             },
-            {
+            appManagerEnabled && {
               path: 'apps',
               loader: () => import('@components/AppCenter')
             }
-          ]}
+          ].filter(Boolean)}
         />
       </AppChildrenRouter>
       <AdminFooter />
@@ -397,7 +397,7 @@ const App = createWithRemoteLoader({
   const [Global, Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout] = remoteModules;
   return (
     <Global preset={globalPreset} themeToken={globalPreset.themeToken}>
-      <AppInner Layout={Layout} AfterUserLoginLayout={AfterUserLoginLayout} AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} />
+      <AppInner Layout={Layout} AfterUserLoginLayout={AfterUserLoginLayout} AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} appManagerEnabled={Boolean(globalPreset.setting?.capabilities?.appManager)} />
     </Global>
   );
 });

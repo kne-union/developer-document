@@ -31,7 +31,7 @@ const createServer = () => {
         DB_PASSWORD: { type: 'string' },
         DB_DATABASE: { type: 'string' },
 
-        APPS_DB_DATABASE: { type: 'string', default: 'app-manager-apps' },
+        APPS_DB_DATABASE: { type: 'string', default: '' },
 
         ENV: { type: 'string', default: 'local' },
         PORT: { type: 'number', default: 8061 },
@@ -69,21 +69,23 @@ const createServer = () => {
           username: fastify.config.DB_USERNAME,
           password: fastify.config.DB_PASSWORD
         },
-        connections: {
-          appManagerApps: {
-            db: {
-              dialect: fastify.config.DB_DIALECT,
-              host: fastify.config.DB_HOST,
-              port: fastify.config.DB_PORT,
-              database: fastify.config.APPS_DB_DATABASE || 'app-manager-apps',
-              username: fastify.config.DB_USERNAME,
-              password: fastify.config.DB_PASSWORD,
-              logging: false
-            },
-            sqlPath: false,
-            modelsPath: null
-          }
-        },
+        connections: fastify.config.APPS_DB_DATABASE
+          ? {
+              appManagerApps: {
+                db: {
+                  dialect: fastify.config.DB_DIALECT,
+                  host: fastify.config.DB_HOST,
+                  port: fastify.config.DB_PORT,
+                  database: fastify.config.APPS_DB_DATABASE,
+                  username: fastify.config.DB_USERNAME,
+                  password: fastify.config.DB_PASSWORD,
+                  logging: false
+                },
+                sqlPath: false,
+                modelsPath: null
+              }
+            }
+          : {},
         getUserModel: () => {
           return fastify.account.models.user;
         },
@@ -228,28 +230,30 @@ const createServer = () => {
         prefix: `${options.prefix}/signature`
       });
 
-      fastify.register(require('./libs/plugins/register-app-manager'), {
-        prefix: `${options.prefix}/app-manager`,
-        name: 'appManager',
-        appsRoot: path.resolve(fastify.config.APPS_ROOT || './managed-apps'),
-        migrateBeforeStart: true,
-        defaultAppDbConnection: 'appManagerApps',
-        defaultAppDb: {
-          dialect: fastify.config.DB_DIALECT,
-          host: fastify.config.DB_HOST,
-          port: fastify.config.DB_PORT,
-          database: fastify.config.APPS_DB_DATABASE || 'app-manager-apps',
-          username: fastify.config.DB_USERNAME,
-          password: fastify.config.DB_PASSWORD,
-          logging: false
-        },
-        createAuthenticate: () => {
-          const { authenticate } = fastify.account;
-          // admin 依赖 user 先写入 request.userInfo，不可只挂 authenticate.admin
-          return [authenticate.user, authenticate.admin];
-        },
-        createUserAuthenticate: () => [fastify.account.authenticate.user]
-      });
+      if (fastify.config.APPS_DB_DATABASE) {
+        fastify.register(require('./libs/plugins/register-app-manager'), {
+          prefix: `${options.prefix}/app-manager`,
+          name: 'appManager',
+          appsRoot: path.resolve(fastify.config.APPS_ROOT || './managed-apps'),
+          migrateBeforeStart: true,
+          defaultAppDbConnection: 'appManagerApps',
+          defaultAppDb: {
+            dialect: fastify.config.DB_DIALECT,
+            host: fastify.config.DB_HOST,
+            port: fastify.config.DB_PORT,
+            database: fastify.config.APPS_DB_DATABASE,
+            username: fastify.config.DB_USERNAME,
+            password: fastify.config.DB_PASSWORD,
+            logging: false
+          },
+          createAuthenticate: () => {
+            const { authenticate } = fastify.account;
+            // admin 依赖 user 先写入 request.userInfo，不可只挂 authenticate.admin
+            return [authenticate.user, authenticate.admin];
+          },
+          createUserAuthenticate: () => [fastify.account.authenticate.user]
+        });
+      }
 
       fastify.register(require('@kne/fastify-namespace'), {
         options,
