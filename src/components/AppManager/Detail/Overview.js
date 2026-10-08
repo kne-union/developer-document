@@ -5,6 +5,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIsMobile } from '@kne/responsive-utils';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
+import DefaultAppIcon from '@components/Shared/DefaultAppIcon';
 import StatusTag from '../StatusTag';
 import style from './style.module.scss';
 
@@ -34,16 +35,12 @@ const Overview = createWithRemoteLoader({
     const { formatMessage } = useIntl();
     const isMobile = useIsMobile();
     const title = data.label || data.name;
-    const initial = String(title || '?')
-      .trim()
-      .charAt(0)
-      .toUpperCase();
 
     return (
       <div className={style['overview']}>
         <section className={classnames(style['hero'], style[`hero-${data.status || 'idle'}`])}>
           <Flex gap={isMobile ? 14 : 20} align="flex-start" className={style['hero-main']}>
-            <div className={style['hero-icon']}>{data.icon && Image?.Avatar ? <Image.Avatar id={data.icon} alt={title} size={isMobile ? 64 : 80} shape="square" /> : <div className={style['hero-icon-fallback']}>{initial}</div>}</div>
+            <div className={style['hero-icon']}>{data.icon && Image?.Avatar ? <Image.Avatar id={data.icon} alt={title} size={isMobile ? 64 : 80} shape="square" /> : <DefaultAppIcon />}</div>
             <div className={style['hero-body']}>
               <Flex justify="space-between" align="flex-start" gap={12} wrap="wrap">
                 <div className={style['hero-titles']}>

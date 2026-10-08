@@ -1,3 +1,4 @@
+import DefaultAppIcon from '@components/Shared/DefaultAppIcon';
 import StatusTag from '../StatusTag';
 
 const goAppDetail = (navigate, item) => {
@@ -13,7 +14,7 @@ const getColumns = ({ navigate, formatMessage, Image }) => {
       name: 'icon',
       title: formatMessage({ id: 'common.icon' }),
       width: 72,
-      render: (_, { dataSource }) => (dataSource.icon ? <Image.Avatar id={dataSource.icon} alt={dataSource.label || dataSource.name} size={36} shape="square" /> : null)
+      render: (_, { dataSource }) => (dataSource.icon ? <Image.Avatar id={dataSource.icon} alt={dataSource.label || dataSource.name} size={36} shape="square" /> : <DefaultAppIcon size={36} rounded />)
     },
     {
       name: 'label',
@@ -36,6 +37,12 @@ const getColumns = ({ navigate, formatMessage, Image }) => {
       name: 'status',
       title: formatMessage({ id: 'common.status' }),
       render: (_, { dataSource }) => <StatusTag status={dataSource.status} />
+    },
+    {
+      name: 'isPublic',
+      title: formatMessage({ id: 'common.isPublic' }),
+      renderType: 'tag',
+      getValueOf: item => (item.isPublic ? { type: 'success', text: formatMessage({ id: 'common.public' }) } : { type: 'default', text: formatMessage({ id: 'common.private' }) })
     },
     {
       name: 'port',

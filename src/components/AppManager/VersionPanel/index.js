@@ -5,6 +5,7 @@ import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import UploadVersion from '../Actions/UploadVersion';
 import Deploy from '../Actions/Deploy';
+import MigrationManager from '../Actions/MigrationManager';
 import createAdminListCards from '@components/Shared/createAdminListCards';
 
 const renderAdminListCards = createAdminListCards();
@@ -76,6 +77,15 @@ const VersionPanel = createWithRemoteLoader({
               versionId: item.id,
               onSuccess: handleReload,
               children: formatMessage({ id: 'appManager.actions.deploy' })
+            },
+            {
+              type: 'link',
+              buttonComponent: MigrationManager,
+              data,
+              versionId: item.id,
+              version: item.version,
+              onSuccess: handleReload,
+              children: formatMessage({ id: 'appManager.migration.manage' })
             }
           ]
         }

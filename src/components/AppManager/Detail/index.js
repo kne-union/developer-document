@@ -1,7 +1,7 @@
 import { Empty } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import Actions from '../Actions';
@@ -22,6 +22,7 @@ const Detail = createWithRemoteLoader({
     const [usePreset, StateBarPage, PageHeader] = remoteModules;
     const { apis } = usePreset();
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
     const { formatMessage } = useIntl();
     const name = searchParams.get('name');
 
@@ -66,7 +67,7 @@ const Detail = createWithRemoteLoader({
                         title={<DetailPageHeaderTitle baseUrl={baseUrl} title={data.label || data.name || formatMessage({ id: 'common.loading' })} />}
                         info={data.name}
                         tags={undefined}
-                        buttonOptions={<Actions data={data} onSuccess={reload} includeLifecycle={false} />}
+                        buttonOptions={<Actions data={data} onSuccess={reload} onRemoveSuccess={() => navigate(baseUrl, { replace: true })} includeLifecycle={false} />}
                       />
                       <LifecycleBar data={data} onSuccess={reload} />
                     </div>

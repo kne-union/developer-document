@@ -27,10 +27,40 @@ const getApis = options => {
       url: `${prefix}/app/deploy`,
       method: 'POST'
     },
+    migrationList: {
+      url: `${prefix}/app/version/migration/list`,
+      method: 'GET',
+      paramsType: 'params'
+    },
+    migrationContent: {
+      url: `${prefix}/app/version/migration/content`,
+      method: 'GET',
+      paramsType: 'params'
+    },
+    migrationSave: {
+      url: `${prefix}/app/version/migration/save`,
+      method: 'POST'
+    },
+    migrationRemove: {
+      url: `${prefix}/app/version/migration/remove`,
+      method: 'POST'
+    },
+    migrationAction: {
+      url: `${prefix}/app/version/migration/action`,
+      method: 'POST'
+    },
     list: {
       url: `${prefix}/app/list`,
       method: 'GET',
       paramsType: 'params'
+    },
+    centerList: {
+      url: `${prefix}/app/center/list`,
+      method: 'GET'
+    },
+    centerPublicList: {
+      url: `${prefix}/app/center/public-list`,
+      method: 'GET'
     },
     detail: {
       url: `${prefix}/app/detail`,
