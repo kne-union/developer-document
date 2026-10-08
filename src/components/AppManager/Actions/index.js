@@ -8,7 +8,7 @@ import { useIntl } from '@kne/react-intl';
 
 export const getActionList =
   ({ formatMessage, includeLifecycle = true }) =>
-  ({ data, onSuccess, ...rest }) => {
+  ({ data, onSuccess, onRemoveSuccess, ...rest }) => {
     const actionProps = { data, onSuccess, ...rest };
     const status = data?.status;
     const list = [
@@ -48,6 +48,7 @@ export const getActionList =
 
     list.push({
       ...actionProps,
+      onSuccess: onRemoveSuccess || onSuccess,
       buttonComponent: Remove,
       children: formatMessage({ id: 'common.delete' })
     });
