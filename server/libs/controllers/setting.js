@@ -32,7 +32,10 @@ module.exports = fp(async (fastify, options) => {
       }
     },
     async request => {
-      return services.setting.detail();
+      const setting = await services.setting.detail();
+      return Object.assign({}, setting, {
+        capabilities: { appManager: Boolean(fastify.config.APPS_DB_DATABASE) }
+      });
     }
   );
 });
