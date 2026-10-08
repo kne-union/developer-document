@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { Tag } from 'antd';
+import { Tag, Tooltip } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
@@ -47,7 +47,16 @@ const VersionPanel = createWithRemoteLoader({
         {
           name: 'hasMigration',
           title: formatMessage({ id: 'appManager.version.hasMigration' }),
-          render: (_, { dataSource }) => (dataSource.hasMigration ? <Tag color="blue">{(dataSource.sqlFiles || []).join(', ') || formatMessage({ id: 'common.yes' })}</Tag> : formatMessage({ id: 'common.no' }))
+          render: (_, { dataSource }) => {
+            if (!dataSource.hasMigration) return formatMessage({ id: 'common.no' });
+            const sqlFiles = dataSource.sqlFiles || [];
+            if (!sqlFiles.length) return <Tag color="blue">{formatMessage({ id: 'common.yes' })}</Tag>;
+            return (
+              <Tooltip title={<div style={{ whiteSpace: 'pre-line' }}>{sqlFiles.join('\n')}</div>}>
+                <Tag color="blue">{formatMessage({ id: 'appManager.version.sqlCount' }, { count: sqlFiles.length })}</Tag>
+              </Tooltip>
+            );
+          }
         },
         {
           name: 'createdAt',
