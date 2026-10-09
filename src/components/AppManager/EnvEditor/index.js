@@ -77,18 +77,21 @@ const EnvEditor = createWithRemoteLoader({
     const dataRef = useRef(data);
     dataRef.current = data;
 
-    const saveEnv = async (env, nextSecretKeys) => {
-      const payload = { name: dataRef.current.name, env };
-      if (nextSecretKeys !== undefined) {
-        payload.secretEnvKeys = nextSecretKeys;
-      }
-      const { data: resData } = await ajax(
-        Object.assign({}, apis.appManager.saveEnv, {
-          data: payload
-        })
-      );
-      return resData;
-    };
+    const saveEnv = useCallback(
+      async (env, nextSecretKeys) => {
+        const payload = { name: dataRef.current.name, env };
+        if (nextSecretKeys !== undefined) {
+          payload.secretEnvKeys = nextSecretKeys;
+        }
+        const { data: resData } = await ajax(
+          Object.assign({}, apis.appManager.saveEnv, {
+            data: payload
+          })
+        );
+        return resData;
+      },
+      [ajax, apis.appManager.saveEnv]
+    );
 
     const handleSuccess = useCallback(() => {
       onSuccess && onSuccess();
@@ -176,8 +179,6 @@ const EnvEditor = createWithRemoteLoader({
               nextEnv[key] = row.value == null ? '' : String(row.value);
               if (row.secret) {
                 nextSecrets.add(key);
-              } else {
-                nextSecrets.delete(key);
               }
             }
             if (!Object.keys(nextEnv).length) {
@@ -256,6 +257,13 @@ const EnvEditor = createWithRemoteLoader({
               message.error(formatMessage({ id: 'appManager.env.keyRequired' }));
               return false;
             }
+            const submittedKeys = (formData.args || []).map(row => (row.key || '').trim());
+            const existingKeys = Object.keys(dataRef.current?.env || {});
+            const duplicated = [...new Set(submittedKeys.filter((key, index) => existingKeys.includes(key) || submittedKeys.indexOf(key) !== index))];
+            if (duplicated.length) {
+              message.error(formatMessage({ id: 'appManager.env.keyExists' }, { keys: duplicated.join(', ') }));
+              return false;
+            }
             const resData = await saveEnv(env, [...nextSecrets]);
             if (resData.code !== 0) {
               return false;
@@ -266,6 +274,39 @@ const EnvEditor = createWithRemoteLoader({
         }
       });
     };
+
+    const openEditModal = useCallback(
+      item => {
+        formModal({
+          title: formatMessage({ id: 'appManager.env.edit' }),
+          size: 'small',
+          formProps: {
+            data: { key: item.key, value: item.value, secret: item.secret },
+            onSubmit: async formData => {
+              const secretEnvKeys = dataRef.current?.secretEnvKeys || [];
+              const nextSecrets = formData.secret ? [...new Set([...secretEnvKeys, item.key])] : secretEnvKeys;
+              const value = formData.value == null ? '' : String(formData.value);
+              // 密钥值保持掩码即未改动，不提交该值，服务端沿用原值
+              const env = item.secret && value === SECRET_MASK ? {} : { [item.key]: value };
+              const resData = await saveEnv(env, nextSecrets);
+              if (resData.code !== 0) {
+                return false;
+              }
+              message.success(formatMessage({ id: 'common.saveSuccess' }));
+              handleSuccess();
+            }
+          },
+          children: (
+            <>
+              <Input name="key" label={formatMessage({ id: 'appManager.env.key' })} disabled block />
+              <Input name="value" label={formatMessage({ id: 'appManager.env.value' })} rule="LEN-0-2000" block />
+              <Switch name="secret" label={formatMessage({ id: 'appManager.env.secret' })} disabled={item.secret} />
+            </>
+          )
+        });
+      },
+      [formModal, formatMessage, handleSuccess, message, saveEnv]
+    );
 
     const columns = useCallback(
       () => [
@@ -294,7 +335,12 @@ const EnvEditor = createWithRemoteLoader({
           fixed: 'right',
           getValueOf: item => {
             const secretEnvKeys = dataRef.current?.secretEnvKeys || [];
-            const list = [];
+            const list = [
+              {
+                children: formatMessage({ id: 'common.edit' }),
+                onClick: () => openEditModal(item)
+              }
+            ];
             if (!item.secret) {
               list.push({
                 children: formatMessage({ id: 'appManager.env.markSecret' }),
@@ -328,7 +374,7 @@ const EnvEditor = createWithRemoteLoader({
           }
         }
       ],
-      [formatMessage, handleSuccess, message]
+      [formatMessage, handleSuccess, message, openEditModal, saveEnv]
     );
 
     return (

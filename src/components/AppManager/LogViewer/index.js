@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import classnames from 'classnames';
-import { Flex, Input, Radio, Space, Switch, Tag, Typography } from 'antd';
-import { ClearOutlined, PauseCircleOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { Button, Flex, Input, Radio, Space, Switch, Tag, Typography } from 'antd';
+import { ClearOutlined, FolderOpenOutlined, PauseCircleOutlined, PlayCircleOutlined, RollbackOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIsMobile } from '@kne/responsive-utils';
-import { getToken } from '@kne/token-storage';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
+import buildAuthUrl from '../utils/buildAuthUrl';
+import LogArchives from './LogArchives';
 import style from './style.module.scss';
 
 const { Text } = Typography;
@@ -14,29 +15,6 @@ const { CheckableTag } = Tag;
 
 const HISTORY_PAGE_SIZE = 100;
 const LOG_LEVELS = ['ERROR', 'WARN', 'INFO', 'DEBUG'];
-
-const buildStreamUrl = (baseUrl, apiUrl, { name, stream }) => {
-  const path = apiUrl || '/api/v1/app-manager/app/logs/stream';
-  const url = new URL(path, window.location.origin);
-  if (baseUrl) {
-    try {
-      const staticBase = new URL(baseUrl, window.location.origin);
-      url.protocol = staticBase.protocol;
-      url.host = staticBase.host;
-    } catch (e) {
-      // keep current origin
-    }
-  }
-  url.searchParams.set('name', name);
-  if (stream) {
-    url.searchParams.set('stream', stream);
-  }
-  const token = getToken('X-User-Token');
-  if (token) {
-    url.searchParams.set('token', token);
-  }
-  return url.toString();
-};
 
 const matchLogLine = (content, { query, levels, useRegex }) => {
   const text = content == null ? '' : String(content);
@@ -88,6 +66,8 @@ const LogViewer = createWithRemoteLoader({
     const [filterQuery, setFilterQuery] = useState('');
     const [filterLevels, setFilterLevels] = useState([]);
     const [filterRegex, setFilterRegex] = useState(false);
+    const [archivesOpen, setArchivesOpen] = useState(false);
+    const [archiveFile, setArchiveFile] = useState(null);
     const boxRef = useRef(null);
     const stickToBottomRef = useRef(true);
     const loadingHistoryRef = useRef(false);
@@ -101,7 +81,7 @@ const LogViewer = createWithRemoteLoader({
       if (!live || !data?.name) {
         return null;
       }
-      return buildStreamUrl(staticUrl, apis.appManager.logsStream.url, { name: data.name, stream });
+      return buildAuthUrl(staticUrl, apis.appManager.logsStream.url || '/api/v1/app-manager/app/logs/stream', { name: data.name, stream });
     }, [live, data?.name, staticUrl, apis.appManager.logsStream.url, stream]);
 
     useEffect(() => {
@@ -149,7 +129,10 @@ const LogViewer = createWithRemoteLoader({
       hasMoreRef.current = true;
       historyPageRef.current = 0;
       stickToBottomRef.current = true;
-    }, [stream, data?.name]);
+    }, [stream, data?.name, archiveFile?.fileName]);
+
+    const archiveFileName = archiveFile?.fileName;
+    const lineStream = archiveFile?.stream || stream;
 
     const loadOlderHistory = useCallback(
       async ({ reset = false } = {}) => {
@@ -172,11 +155,8 @@ const LogViewer = createWithRemoteLoader({
             }
             return Math.min(min, Number(item.line));
           }, Infinity);
-          const params = {
-            name: data.name,
-            stream,
-            perPage: HISTORY_PAGE_SIZE
-          };
+          const target = archiveFileName ? { name: data.name, file: archiveFileName } : { name: data.name, stream };
+          const params = Object.assign({}, target, { perPage: HISTORY_PAGE_SIZE });
           if (reset) {
             historyPageRef.current = 1;
             params.currentPage = 1;
@@ -186,7 +166,7 @@ const LogViewer = createWithRemoteLoader({
             // 实时流可能尚未带行号：用文件总行数估算锚点，再 beforeLine 上翻
             const { data: probe } = await ajax(
               Object.assign({}, apis.appManager.logs, {
-                params: { name: data.name, stream, perPage: 1, currentPage: 1 }
+                params: Object.assign({}, target, { perPage: 1, currentPage: 1 })
               })
             );
             const total = probe?.code === 0 ? Number(probe.data?.totalCount) || 0 : 0;
@@ -214,7 +194,7 @@ const LogViewer = createWithRemoteLoader({
           const pageData = (resData.data?.pageData || []).slice().reverse();
           const mapped = pageData.map(item => ({
             content: item.content,
-            stream,
+            stream: lineStream,
             line: item.line
           }));
           const more = resData.data?.hasMore === true;
@@ -253,8 +233,14 @@ const LogViewer = createWithRemoteLoader({
           setLoadingHistory(false);
         }
       },
-      [ajax, apis.appManager.logs, data?.name, stream]
+      [ajax, apis.appManager.logs, data?.name, stream, archiveFileName, lineStream]
     );
+
+    useEffect(() => {
+      if (archiveFileName) {
+        loadOlderHistory({ reset: true });
+      }
+    }, [archiveFileName, loadOlderHistory]);
 
     useEffect(() => {
       if (live) {
@@ -301,8 +287,34 @@ const LogViewer = createWithRemoteLoader({
       return lines.filter(item => matchLogLine(item.content, opts));
     }, [lines, filterQuery, filterLevels, filterRegex]);
 
+    const toggleLive = useCallback(() => {
+      if (archiveFileName) {
+        setArchiveFile(null);
+        setLive(true);
+        return;
+      }
+      setLive(v => !v);
+    }, [archiveFileName]);
+
+    const exitArchive = useCallback(() => {
+      setArchiveFile(null);
+      setLive(true);
+    }, []);
+
+    const viewFile = useCallback(item => {
+      setArchivesOpen(false);
+      if (item.current) {
+        setArchiveFile(null);
+        setStream(item.stream);
+        return;
+      }
+      setLive(false);
+      setArchiveFile({ fileName: item.fileName, stream: item.stream });
+    }, []);
+
     const liveLabel = live ? formatMessage({ id: 'appManager.logs.stopLive' }) : formatMessage({ id: 'appManager.logs.startLive' });
     const clearLabel = formatMessage({ id: 'appManager.logs.clear' });
+    const archivesLabel = formatMessage({ id: 'appManager.logs.archives' });
 
     const actionList = useMemo(
       () => [
@@ -310,16 +322,21 @@ const LogViewer = createWithRemoteLoader({
           type: live ? 'primary' : 'default',
           icon: live ? <PauseCircleOutlined /> : <PlayCircleOutlined />,
           children: liveLabel,
-          onClick: () => setLive(v => !v)
+          onClick: toggleLive
         },
         {
           icon: <ClearOutlined />,
           children: clearLabel,
           disabled: lines.length === 0,
           onClick: () => setLines([])
+        },
+        {
+          icon: <FolderOpenOutlined />,
+          children: archivesLabel,
+          onClick: () => setArchivesOpen(true)
         }
       ],
-      [clearLabel, live, liveLabel, lines.length]
+      [archivesLabel, clearLabel, live, liveLabel, lines.length, toggleLive]
     );
 
     const statusTag = (
@@ -328,7 +345,16 @@ const LogViewer = createWithRemoteLoader({
       </Tag>
     );
 
-    const streamGroup = (
+    const streamGroup = archiveFileName ? (
+      <Flex align="center" gap={6} className={style['archive-bar']}>
+        <Tag color="purple" className={style['archive-tag']}>
+          {formatMessage({ id: 'appManager.logs.viewingArchive' }, { file: archiveFileName })}
+        </Tag>
+        <Button size="small" icon={<RollbackOutlined />} onClick={exitArchive}>
+          {formatMessage({ id: 'appManager.logs.backToCurrent' })}
+        </Button>
+      </Flex>
+    ) : (
       <Radio.Group
         className={style['stream-group']}
         size="small"
@@ -377,7 +403,7 @@ const LogViewer = createWithRemoteLoader({
             </Flex>
             {filterBar}
             <div className={style['mobile-actions']}>
-              <button type="button" className={classnames(style['mobile-action'], live && style['is-active'])} onClick={() => setLive(v => !v)}>
+              <button type="button" className={classnames(style['mobile-action'], live && style['is-active'])} onClick={toggleLive}>
                 <span className={style['mobile-action-icon']}>{live ? <PauseCircleOutlined /> : <PlayCircleOutlined />}</span>
                 <span className={style['mobile-action-label']}>{live ? formatMessage({ id: 'appManager.logs.mobileStop' }) : formatMessage({ id: 'appManager.logs.mobileStart' })}</span>
               </button>
@@ -386,6 +412,12 @@ const LogViewer = createWithRemoteLoader({
                   <ClearOutlined />
                 </span>
                 <span className={style['mobile-action-label']}>{formatMessage({ id: 'appManager.logs.mobileClear' })}</span>
+              </button>
+              <button type="button" className={style['mobile-action']} onClick={() => setArchivesOpen(true)}>
+                <span className={style['mobile-action-icon']}>
+                  <FolderOpenOutlined />
+                </span>
+                <span className={style['mobile-action-label']}>{formatMessage({ id: 'appManager.logs.mobileArchives' })}</span>
               </button>
             </div>
             {!live && loadingHistory ? (
@@ -435,6 +467,7 @@ const LogViewer = createWithRemoteLoader({
             visibleLines.map((item, index) => <div key={`${item.line || index}-${index}`}>{item.content}</div>)
           )}
         </div>
+        <LogArchives data={data} open={archivesOpen} onClose={() => setArchivesOpen(false)} onView={viewFile} />
       </Flex>
     );
   })
