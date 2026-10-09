@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { Alert, App, Button, Drawer, Empty, Input, Space, Table, Tag, Typography } from 'antd';
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useRef, useState } from 'react';
+import { Alert, App, Button, Drawer, Input, Space, Tag, Typography } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
-import Fetch from '@kne/react-fetch';
+import createAdminListCards from '@components/Shared/createAdminListCards';
 
 const { Text } = Typography;
+const renderAdminListCards = createAdminListCards();
 const SQL_FILE_NAME_RE = /^[A-Za-z0-9_\-.]+\.sql$/;
 
 const formatTime = value => (value ? new Date(value).toLocaleString() : '-');
@@ -27,17 +27,20 @@ export const MigrationStatus = ({ item, formatMessage }) => {
 };
 
 const MigrationManager = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-thirdparty:CodeEditor']
+  modules: ['components-core:Global@usePreset', 'components-thirdparty:CodeEditor', 'components-core:TablePage']
 })(
   withLocale(({ remoteModules, data, versionId, version, onSuccess, children, ...props }) => {
-    const [usePreset, CodeEditor] = remoteModules;
+    const [usePreset, CodeEditor, TablePage] = remoteModules;
     const { ajax, apis } = usePreset();
     const { message, modal } = App.useApp();
     const { formatMessage } = useIntl();
     const [open, setOpen] = useState(false);
     const [editor, setEditor] = useState(null);
     const [saving, setSaving] = useState(false);
+    const tableRef = useRef(null);
     const appName = data?.name;
+
+    const reload = () => tableRef.current?.reload?.();
 
     const request = async (api, payload) => {
       const { data: resData } = await ajax(Object.assign({}, api, { data: Object.assign({ name: appName, versionId }, payload) }));
@@ -53,9 +56,9 @@ const MigrationManager = createWithRemoteLoader({
       });
     };
 
-    const openEditor = async (item, reload) => {
+    const openEditor = async item => {
       if (!item) {
-        setEditor({ isNew: true, file: '', content: '', executed: false, reload });
+        setEditor({ isNew: true, file: '', content: '', executed: false });
         return;
       }
       const { data: resData } = await ajax(
@@ -66,7 +69,7 @@ const MigrationManager = createWithRemoteLoader({
       if (resData.code !== 0) {
         return;
       }
-      setEditor({ isNew: false, file: item.name, content: resData.data.content || '', executed: !!item.executed, reload });
+      setEditor({ isNew: false, file: item.name, content: resData.data.content || '', executed: !!item.executed });
     };
 
     const saveEditor = async () => {
@@ -86,7 +89,7 @@ const MigrationManager = createWithRemoteLoader({
           return;
         }
         message.success(formatMessage({ id: 'common.saveSuccess' }));
-        editor.reload && editor.reload();
+        reload();
         onSuccess && onSuccess();
         setEditor(null);
       } finally {
@@ -94,7 +97,7 @@ const MigrationManager = createWithRemoteLoader({
       }
     };
 
-    const runAction = (item, action, reload) => {
+    const runAction = (item, action) => {
       confirmAction({
         content: formatMessage({ id: `appManager.migration.${action}Confirm` }, { file: item.name }),
         onOk: async () => {
@@ -108,7 +111,7 @@ const MigrationManager = createWithRemoteLoader({
       });
     };
 
-    const removeFile = (item, reload) => {
+    const removeFile = item => {
       confirmAction({
         danger: true,
         content: formatMessage({ id: 'appManager.migration.removeConfirm' }, { file: item.name }),
@@ -131,84 +134,97 @@ const MigrationManager = createWithRemoteLoader({
         </Button>
         <Drawer title={formatMessage({ id: 'appManager.migration.drawerTitle' }, { version: version || '' })} width={860} open={open} onClose={() => setOpen(false)} destroyOnClose>
           {open ? (
-            <Fetch
-              {...Object.assign({}, apis.appManager.migrationList, {
-                params: { name: appName, versionId }
-              })}
-              render={({ data: listData, reload }) => {
-                const files = listData?.pageData || [];
-                const statusKnown = !listData?.dbError;
-                return (
-                  <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                    <Alert type="info" showIcon message={formatMessage({ id: 'appManager.migration.sharedHint' })} />
-                    {listData?.dbError ? <Alert type="error" showIcon message={formatMessage({ id: 'appManager.migration.dbError' }, { error: listData.dbError })} /> : null}
-                    <Space>
-                      <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => openEditor(null, reload)}>
-                        {formatMessage({ id: 'appManager.migration.add' })}
-                      </Button>
-                      <Button size="small" icon={<ReloadOutlined />} onClick={() => reload()}>
-                        {formatMessage({ id: 'common.refresh' })}
-                      </Button>
-                    </Space>
-                    {!files.length ? (
-                      <Empty description={formatMessage({ id: 'appManager.migration.empty' })} />
-                    ) : (
-                      <Table
-                        size="small"
-                        rowKey="name"
-                        pagination={false}
-                        dataSource={files}
-                        columns={[
+            <Space direction="vertical" size={12} style={{ width: '100%' }}>
+              <Alert type="info" showIcon message={formatMessage({ id: 'appManager.migration.sharedHint' })} />
+              <TablePage
+                {...Object.assign({}, apis.appManager.migrationList, {
+                  params: { name: appName, versionId }
+                })}
+                ref={tableRef}
+                name="app-manager-migrations"
+                rowKey="name"
+                controllerOpen={false}
+                pagination={{ open: false }}
+                renderMobile={renderAdminListCards}
+                renderCard={renderAdminListCards}
+                summary={({ data: listData }) => (listData?.dbError ? <Alert type="error" showIcon message={formatMessage({ id: 'appManager.migration.dbError' }, { error: listData.dbError })} /> : null)}
+                buttonGroup={{
+                  list: [
+                    {
+                      type: 'primary',
+                      children: formatMessage({ id: 'appManager.migration.add' }),
+                      onClick: () => openEditor(null)
+                    },
+                    {
+                      children: formatMessage({ id: 'common.refresh' }),
+                      onClick: reload
+                    }
+                  ]
+                }}
+                columns={listData => [
+                  {
+                    name: 'name',
+                    title: formatMessage({ id: 'appManager.migration.file' }),
+                    renderType: 'main',
+                    getValueOf: item => item.name
+                  },
+                  {
+                    name: 'status',
+                    title: formatMessage({ id: 'appManager.migration.status' }),
+                    render: (_, { dataSource }) => <MigrationStatus item={dataSource} formatMessage={formatMessage} />
+                  },
+                  {
+                    name: 'updatedAt',
+                    title: formatMessage({ id: 'appManager.migration.updatedAt' }),
+                    getValueOf: item => formatTime(item.updatedAt)
+                  },
+                  {
+                    name: 'options',
+                    title: formatMessage({ id: 'appManager.version.actions' }),
+                    renderType: 'options',
+                    fixed: 'right',
+                    getValueOf: item => {
+                      const statusKnown = !listData?.dbError;
+                      const list = [
+                        {
+                          type: 'link',
+                          children: formatMessage({ id: 'common.edit' }),
+                          onClick: () => openEditor(item)
+                        }
+                      ];
+                      if (statusKnown && !item.executed) {
+                        list.push(
                           {
-                            title: formatMessage({ id: 'appManager.migration.file' }),
-                            dataIndex: 'name'
+                            type: 'link',
+                            children: formatMessage({ id: 'appManager.migration.execute' }),
+                            onClick: () => runAction(item, 'execute')
                           },
                           {
-                            title: formatMessage({ id: 'appManager.migration.status' }),
-                            key: 'status',
-                            render: (_, item) => <MigrationStatus item={item} formatMessage={formatMessage} />
-                          },
-                          {
-                            title: formatMessage({ id: 'appManager.migration.updatedAt' }),
-                            dataIndex: 'updatedAt',
-                            render: value => formatTime(value)
-                          },
-                          {
-                            title: formatMessage({ id: 'appManager.version.actions' }),
-                            key: 'actions',
-                            render: (_, item) => (
-                              <Space size={0} wrap>
-                                <Button type="link" size="small" onClick={() => openEditor(item, reload)}>
-                                  {formatMessage({ id: 'common.edit' })}
-                                </Button>
-                                {statusKnown && !item.executed ? (
-                                  <>
-                                    <Button type="link" size="small" onClick={() => runAction(item, 'execute', reload)}>
-                                      {formatMessage({ id: 'appManager.migration.execute' })}
-                                    </Button>
-                                    <Button type="link" size="small" onClick={() => runAction(item, 'mark', reload)}>
-                                      {formatMessage({ id: 'appManager.migration.mark' })}
-                                    </Button>
-                                  </>
-                                ) : null}
-                                {statusKnown && item.executed ? (
-                                  <Button type="link" size="small" onClick={() => runAction(item, 'unmark', reload)}>
-                                    {formatMessage({ id: 'appManager.migration.unmark' })}
-                                  </Button>
-                                ) : null}
-                                <Button type="link" size="small" danger onClick={() => removeFile(item, reload)}>
-                                  {formatMessage({ id: 'common.delete' })}
-                                </Button>
-                              </Space>
-                            )
+                            type: 'link',
+                            children: formatMessage({ id: 'appManager.migration.mark' }),
+                            onClick: () => runAction(item, 'mark')
                           }
-                        ]}
-                      />
-                    )}
-                  </Space>
-                );
-              }}
-            />
+                        );
+                      }
+                      if (statusKnown && item.executed) {
+                        list.push({
+                          type: 'link',
+                          children: formatMessage({ id: 'appManager.migration.unmark' }),
+                          onClick: () => runAction(item, 'unmark')
+                        });
+                      }
+                      list.push({
+                        type: 'link',
+                        danger: true,
+                        children: formatMessage({ id: 'common.delete' }),
+                        onClick: () => removeFile(item)
+                      });
+                      return list;
+                    }
+                  }
+                ]}
+              />
+            </Space>
           ) : null}
         </Drawer>
         <Drawer

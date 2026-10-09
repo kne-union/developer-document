@@ -66,17 +66,20 @@
 .title-block {
   min-width: 0;
   flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 
 .title {
-  display: block;
+  flex-shrink: 0;
+  max-width: 100%;
   font-size: 16px;
   line-height: 1.35;
 }
 
 .app-name {
-  display: block;
-  margin-top: 2px;
+  min-width: 0;
   font-size: 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }

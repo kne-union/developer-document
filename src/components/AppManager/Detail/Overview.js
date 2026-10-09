@@ -7,6 +7,7 @@ import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import DefaultAppIcon from '@components/Shared/DefaultAppIcon';
 import StatusTag from '../StatusTag';
+import LoadCard from '../LoadCard';
 import style from './style.module.scss';
 
 const { Text, Paragraph, Title } = Typography;
@@ -98,6 +99,8 @@ const Overview = createWithRemoteLoader({
             </Text>
           ) : null}
         </section>
+
+        <LoadCard data={data} />
 
         <section className={style['detail-card']}>
           <div className={style['detail-card-title']}>{formatMessage({ id: 'appManager.detail.sectionMore' })}</div>

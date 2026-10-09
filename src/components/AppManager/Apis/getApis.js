@@ -93,6 +93,35 @@ const getApis = options => {
       method: 'GET',
       paramsType: 'params'
     },
+    logsFiles: {
+      url: `${prefix}/app/logs/files`,
+      method: 'GET',
+      paramsType: 'params'
+    },
+    logsDownload: {
+      url: `${prefix}/app/logs/download`,
+      method: 'GET',
+      paramsType: 'params'
+    },
+    logsDownloadZip: {
+      url: `${prefix}/app/logs/download-zip`,
+      method: 'GET',
+      paramsType: 'params'
+    },
+    logsRemove: {
+      url: `${prefix}/app/logs/remove`,
+      method: 'POST'
+    },
+    load: {
+      url: `${prefix}/app/load`,
+      method: 'GET',
+      paramsType: 'params'
+    },
+    loadStream: {
+      url: `${prefix}/app/load/stream`,
+      method: 'GET',
+      paramsType: 'params'
+    },
     dbTables: {
       url: `${prefix}/app/db/tables`,
       method: 'GET',

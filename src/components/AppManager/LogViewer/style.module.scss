@@ -33,6 +33,19 @@
   margin-inline-end: 0 !important;
 }
 
+.archive-bar {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.archive-tag {
+  margin-inline-end: 0 !important;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .line-count {
   white-space: nowrap;
   font-size: 12px;
@@ -86,7 +99,7 @@
 
 .mobile-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -192,5 +205,9 @@
 @include resp.mobile-container {
   .log-viewer {
     padding-inline: 0;
+  }
+
+  .archive-tag {
+    max-width: 160px;
   }
 }
