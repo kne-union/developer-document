@@ -83,6 +83,11 @@ const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage, appManage
                   path: '/admin/signature'
                 },
                 {
+                  key: 'oidc',
+                  title: formatMessage({ id: 'app.adminNav.oidc' }),
+                  path: '/admin/oidc'
+                },
+                {
                   key: 'setting',
                   title: formatMessage({ id: 'app.adminNav.setting' }),
                   path: '/admin/setting'
@@ -102,6 +107,7 @@ const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage, appManage
         {appManagerEnabled && <Route path="app-manager/*" element={<AppManager baseUrl={`${baseUrl}/admin`} />} />}
         <Route path="task/*" element={<RemoteLoader key="task" module="components-admin:Task" baseUrl={baseUrl + '/admin'} />} />
         <Route path="signature" element={<RemoteLoader key="signature" module="components-admin:Signature" />} />
+        <Route path="oidc/*" element={<RemoteLoader key="oidc" module="components-admin:OidcAdmin" baseUrl={`${baseUrl}/admin/oidc`} />} />
         <Route path="setting/*" element={<RemoteLoader key="setting" module="developer-document:Setting" baseUrl={`${baseUrl}/admin/setting`} />} />
         <Route path="*" element={<RemoteLoader key="admin" module="components-admin:Admin" baseUrl={baseUrl + '/admin'} />} />
       </Route>
@@ -239,11 +245,46 @@ const DefaultLocaleHandler = createWithRemoteLoader({
   return null;
 });
 
+const toSameOriginPath = value => {
+  try {
+    const url = new URL(value, window.location.origin);
+    return url.origin === window.location.origin ? `${url.pathname}${url.search}${url.hash}` : '/';
+  } catch (e) {
+    return '/';
+  }
+};
+
+// 站内「去登录」按钮与 UserTool 的退出登录都会跳到 /account/login：未登录时发起 OIDC 登录，已登录时退出 IdP 会话
+const OidcLoginBridge = createWithRemoteLoader({
+  modules: ['components-core:Global@usePreset']
+})(({ remoteModules }) => {
+  const [usePreset] = remoteModules;
+  const { oidc } = usePreset();
+  const [searchParams] = useSearchParams();
+  const referer = searchParams.get('referer');
+
+  useEffect(() => {
+    if (oidc.isAuthenticated()) {
+      oidc.logout();
+      return;
+    }
+    oidc.login({ returnTo: referer ? toSameOriginPath(referer) : '/' });
+  }, [oidc, referer]);
+
+  return pageLoading;
+});
+
 const AdminFooter = () => {
   const { formatMessage } = useIntl();
   const location = useLocation();
   const currentYear = new Date().getFullYear();
-  const shouldShowFooter = !(location.pathname.startsWith('/account') || location.pathname.startsWith('/admin') || location.pathname === '/remote-components/detail' || location.pathname.startsWith('/share'));
+  const shouldShowFooter = !(
+    location.pathname.startsWith('/account') ||
+    location.pathname.startsWith('/oidc-') ||
+    location.pathname.startsWith('/admin') ||
+    location.pathname === '/remote-components/detail' ||
+    location.pathname.startsWith('/share')
+  );
 
   if (!shouldShowFooter) {
     return null;
@@ -262,7 +303,7 @@ const AdminFooter = () => {
   );
 };
 
-const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout, appManagerEnabled }) => {
+const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout, OidcAuthenticate, oidc, appManagerEnabled }) => {
   const { formatMessage } = useIntl();
   const baseUrl = '';
 
@@ -275,28 +316,46 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
         baseUrl={baseUrl}
         list={[
           {
+            path: 'oidc-interaction',
+            element: <RemoteLoader module="components-admin:Oidc@Interaction" className="login-container" systemName="Developer Document" forgetUrl={`${baseUrl}/account/forget`} allowLanguageSwitch={false} />
+          },
+          {
+            path: 'oidc-callback',
+            element: <RemoteLoader module="components-admin:Oidc@Callback" systemName="Developer Document" />
+          },
+          {
+            path: 'account/login',
+            element: <OidcLoginBridge />
+          },
+          {
             path: 'account/*',
             element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" systemName="Developer Document" registerOpen={false} allowLanguageSwitch={false} />
           },
           {
             path: 'admin/initAdmin',
             element: (
-              <AppChildrenRouter
-                errorPage
-                notFoundPage
-                element={<AfterUserLoginLayout />}
-                list={[
-                  {
-                    index: true,
-                    element: <RemoteLoader module="components-admin:Admin@InitAdmin" />
-                  }
-                ]}
-              />
+              <OidcAuthenticate>
+                <AppChildrenRouter
+                  errorPage
+                  notFoundPage
+                  element={<AfterUserLoginLayout />}
+                  list={[
+                    {
+                      index: true,
+                      element: <RemoteLoader module="components-admin:Admin@InitAdmin" />
+                    }
+                  ]}
+                />
+              </OidcAuthenticate>
             )
           },
           {
             path: 'admin/*',
-            element: <AdminApp AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} baseUrl={baseUrl} formatMessage={formatMessage} appManagerEnabled={appManagerEnabled} />
+            element: (
+              <OidcAuthenticate>
+                <AdminApp AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} baseUrl={baseUrl} formatMessage={formatMessage} appManagerEnabled={appManagerEnabled} />
+              </OidcAuthenticate>
+            )
           },
           {
             path: 'share',
@@ -310,12 +369,7 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
           baseUrl={baseUrl}
           element={
             <Layout
-              login={() => {
-                const searchParams = new URLSearchParams(window.location.search);
-                const referer = encodeURIComponent(window.location.pathname + window.location.search);
-                searchParams.append('referer', referer);
-                window.location.href = '/account/login?' + searchParams.toString();
-              }}
+              login={() => oidc.login()}
               navigation={{
                 defaultTitle: 'Developer Document',
                 rightOptions: <RightOptions />,
@@ -392,12 +446,19 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
 });
 
 const App = createWithRemoteLoader({
-  modules: ['components-core:Global', 'components-admin:Authenticate@Layout', 'components-admin:Authenticate@AfterUserLoginLayout', 'components-admin:Authenticate@AfterAdminUserLoginLayout']
+  modules: ['components-core:Global', 'components-admin:Authenticate@Layout', 'components-admin:Authenticate@AfterUserLoginLayout', 'components-admin:Authenticate@AfterAdminUserLoginLayout', 'components-admin:Oidc@OidcAuthenticate']
 })(({ remoteModules, globalPreset }) => {
-  const [Global, Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout] = remoteModules;
+  const [Global, Layout, AfterUserLoginLayout, AfterAdminUserLoginLayout, OidcAuthenticate] = remoteModules;
   return (
     <Global preset={globalPreset} themeToken={globalPreset.themeToken}>
-      <AppInner Layout={Layout} AfterUserLoginLayout={AfterUserLoginLayout} AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} appManagerEnabled={Boolean(globalPreset.setting?.capabilities?.appManager)} />
+      <AppInner
+        Layout={Layout}
+        AfterUserLoginLayout={AfterUserLoginLayout}
+        AfterAdminUserLoginLayout={AfterAdminUserLoginLayout}
+        OidcAuthenticate={OidcAuthenticate}
+        oidc={globalPreset.oidc}
+        appManagerEnabled={Boolean(globalPreset.setting?.capabilities?.appManager)}
+      />
     </Global>
   );
 });

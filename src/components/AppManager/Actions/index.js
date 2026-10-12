@@ -62,7 +62,7 @@ const Actions = createWithRemoteLoader({
   withLocale(props => {
     const [ButtonGroup] = props.remoteModules;
     const { formatMessage } = useIntl();
-    const { moreType, children, itemClassName, includeLifecycle = true, ...rest } = props;
+    const { moreType, place, children, itemClassName, includeLifecycle = true, ...rest } = props;
     const actionList = getActionList({ formatMessage, includeLifecycle })(rest);
 
     if (typeof children === 'function') {
@@ -73,7 +73,7 @@ const Actions = createWithRemoteLoader({
       });
     }
 
-    return <ButtonGroup itemClassName={itemClassName} list={actionList} moreType={moreType} />;
+    return <ButtonGroup itemClassName={itemClassName} list={actionList} moreType={moreType} place={place} />;
   })
 );
 

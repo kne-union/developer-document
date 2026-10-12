@@ -9,6 +9,7 @@ import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import { hasUserToken } from '@components/Shared/auth';
 import DefaultAppIcon from '@components/Shared/DefaultAppIcon';
+import { useOpenApp } from '@components/Shared/AppEntry';
 import style from './style.module.scss';
 
 const { Title, Paragraph, Text } = Typography;
@@ -27,6 +28,7 @@ const AppIcon = ({ item, Image, size }) => {
 const AppPanel = ({ list, groups, keyword, Image }) => {
   const { formatMessage } = useIntl();
   const isMobile = useIsMobile();
+  const openApp = useOpenApp();
   const [category, setCategory] = useState('all');
 
   const categories = useMemo(() => {
@@ -81,7 +83,7 @@ const AppPanel = ({ list, groups, keyword, Image }) => {
       ) : (
         <div className={style['grid']}>
           {filtered.map(item => (
-            <button type="button" key={item.name} className={style['app']} title={item.description || item.label || item.name} onClick={() => window.open(item.pathUrl, '_blank', 'noopener')}>
+            <button type="button" key={item.name} className={style['app']} title={item.description || item.label || item.name} onClick={() => openApp(item)}>
               <div className={style['icon']}>
                 <AppIcon item={item} Image={Image} size={isMobile ? 64 : 72} />
               </div>

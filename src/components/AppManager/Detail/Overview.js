@@ -6,6 +6,7 @@ import { useIsMobile } from '@kne/responsive-utils';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import DefaultAppIcon from '@components/Shared/DefaultAppIcon';
+import { OpenAppLink } from '@components/Shared/AppEntry';
 import StatusTag from '../StatusTag';
 import LoadCard from '../LoadCard';
 import style from './style.module.scss';
@@ -57,12 +58,10 @@ const Overview = createWithRemoteLoader({
               <Paragraph type="secondary" className={style['hero-desc']} ellipsis={{ rows: 2 }}>
                 {data.description || formatMessage({ id: 'appManager.list.noDescription' })}
               </Paragraph>
-              {data.pathUrl ? (
-                <a className={style['open-link']} href={data.pathUrl} target="_blank" rel="noreferrer">
-                  <ExportOutlined />
-                  <span>{formatMessage({ id: 'appManager.list.openApp' })}</span>
-                </a>
-              ) : null}
+              <OpenAppLink app={data} className={style['open-link']}>
+                <ExportOutlined />
+                <span>{formatMessage({ id: 'appManager.list.openApp' })}</span>
+              </OpenAppLink>
             </div>
           </Flex>
 

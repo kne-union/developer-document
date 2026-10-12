@@ -1,10 +1,12 @@
 const fp = require('fastify-plugin');
 const { readZipUploadBuffer, sendZipDownload } = require('../utils/kne-document-io');
+const { createDevTokenAuthenticate } = require('../utils/dev-token');
 
 module.exports = fp(async (fastify, options) => {
   const { services } = fastify[options.name];
   const { authenticate } = fastify.account;
   const adminAuth = [authenticate.user, authenticate.admin];
+  const authenticateDevToken = createDevTokenAuthenticate(fastify);
 
   fastify.get(
     `${options.prefix}/experience/manage/list`,
@@ -174,7 +176,7 @@ module.exports = fp(async (fastify, options) => {
   fastify.get(
     `${options.prefix}/experience/exists`,
     {
-      onRequest: [authenticate.user],
+      onRequest: [authenticateDevToken],
       schema: {
         summary: '检查经验是否已存在（按 relativePath）',
         query: {
@@ -190,7 +192,7 @@ module.exports = fp(async (fastify, options) => {
   fastify.post(
     `${options.prefix}/experience/upload`,
     {
-      onRequest: [authenticate.user],
+      onRequest: [authenticateDevToken],
       schema: {
         summary: '上传经验',
         body: {
@@ -214,7 +216,7 @@ module.exports = fp(async (fastify, options) => {
   fastify.get(
     `${options.prefix}/experience/search`,
     {
-      onRequest: [authenticate.user],
+      onRequest: [authenticateDevToken],
       schema: {
         summary: '搜索经验',
         query: {

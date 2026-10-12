@@ -2,6 +2,12 @@ const getApis = options => {
   const { prefix } = Object.assign({}, { prefix: '/api/v1' }, options);
 
   return {
+    devToken: {
+      issue: {
+        url: `${prefix}/dev-token/issue`,
+        method: 'POST'
+      }
+    },
     setting: {
       saveOrCreate: {
         url: `${prefix}/setting/saveOrCreate`,

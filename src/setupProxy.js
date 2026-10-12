@@ -41,6 +41,15 @@ module.exports = function (app) {
       changeOrigin: true
     })
   );
+  // IdP 的 issuer 是前端地址（http://localhost:3040/oidc），保留 Host 让 oidc-provider 生成的 cookie / 跳转地址与 issuer 一致
+  app.use(
+    '/oidc',
+    createProxyMiddleware({
+      target: LOCAL_SERVER,
+      changeOrigin: false,
+      xfwd: true
+    })
+  );
   app.use(
     '/@kne-components',
     createProxyMiddleware({

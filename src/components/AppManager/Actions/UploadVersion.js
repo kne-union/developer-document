@@ -3,13 +3,35 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 
+const PackageUpload = ({ FormInfo, ajax, appName, ...props }) => {
+  const { Upload } = FormInfo.fields;
+  const formApi = FormInfo.useFormContext();
+  const { formatMessage } = useIntl();
+  return (
+    <Upload
+      {...props}
+      onUpload={async ({ file }) => {
+        const version = formApi.formData?.version;
+        if (!version) {
+          throw new Error(formatMessage({ id: 'appManager.upload.versionFirst' }));
+        }
+        return ajax.postForm({
+          url: '/api/v1/static/upload',
+          params: { path: `应用中心/${appName}` },
+          data: { file: new File([file], `${appName}-${version}.zip`, { type: file.type || 'application/zip' }) }
+        });
+      }}
+    />
+  );
+};
+
 const UploadVersion = createWithRemoteLoader({
   modules: ['components-core:FormInfo@useFormModal', 'components-core:FormInfo', 'components-core:Global@usePreset']
 })(
   withLocale(({ remoteModules, data, onSuccess, children, ...props }) => {
     const [useFormModal, FormInfo, usePreset] = remoteModules;
     const formModal = useFormModal();
-    const { Input, Upload } = FormInfo.fields;
+    const { Input } = FormInfo.fields;
     const { ajax, apis } = usePreset();
     const { message } = App.useApp();
     const { formatMessage } = useIntl();
@@ -22,23 +44,19 @@ const UploadVersion = createWithRemoteLoader({
           formModal({
             title: formatMessage({ id: 'appManager.upload.modalTitle' }),
             size: 'small',
+            okText: formatMessage({ id: 'appManager.upload.submit' }),
             formProps: {
               onSubmit: async formData => {
-                const fileItem = Array.isArray(formData.file) ? formData.file[0] : formData.file;
-                const file = fileItem?.file || fileItem?.originFileObj;
-                if (!file) {
-                  message.error(formatMessage({ id: 'appManager.upload.fileRequired' }));
-                  return false;
-                }
-                const { data: resData } = await ajax.postForm({
-                  url: apis.appManager.uploadVersion.url,
-                  data: {
-                    file,
-                    name: data.name,
-                    version: formData.version,
-                    label: formData.label || ''
-                  }
-                });
+                const { data: resData } = await ajax(
+                  Object.assign({}, apis.appManager.uploadVersion, {
+                    data: {
+                      fileId: formData.fileId,
+                      name: data.name,
+                      version: formData.version,
+                      label: formData.label || ''
+                    }
+                  })
+                );
                 if (resData.code !== 0) {
                   return false;
                 }
@@ -50,24 +68,18 @@ const UploadVersion = createWithRemoteLoader({
               <>
                 <Input name="version" label={formatMessage({ id: 'appManager.upload.version' })} rule="REQ" block />
                 <Input name="label" label={formatMessage({ id: 'appManager.upload.label' })} block />
-                <Upload
-                  name="file"
+                <PackageUpload
+                  FormInfo={FormInfo}
+                  ajax={ajax}
+                  appName={data.name}
+                  name="fileId"
                   label={formatMessage({ id: 'appManager.upload.file' })}
                   rule="REQ"
+                  interceptor={['object-output-value', 'array-single']}
                   accept={['.zip']}
                   maxLength={1}
                   multiple={false}
                   fileSize={200}
-                  onUpload={async ({ file }) => ({
-                    data: {
-                      code: 0,
-                      data: {
-                        id: `local-${Date.now()}`,
-                        filename: file.name,
-                        file
-                      }
-                    }
-                  })}
                   block
                 />
               </>

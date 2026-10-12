@@ -82,7 +82,7 @@
 | `GET /api/v1/app-manager/app/center/list` | 用户登录 | 运行中的全部应用 |
 | `GET /api/v1/app-manager/app/center/public-list` | 无需登录 | 运行中且公开的应用 |
 
-返回 `{ pageData, totalCount }`，每项包含 `name`、`label`、`icon`、`description`、`category`、`isPublic`、`pathUrl`。
+返回 `{ pageData, totalCount }`，每项包含 `name`、`label`、`icon`、`description`、`category`、`isPublic`、`pathUrl`、`entries`（应用入口 `[{ label, path, url }]`；多于一个时前端让用户选择入口后打开）。
 
 ## Open API / MCP / 搜索统计
 
@@ -115,9 +115,9 @@ curl -X POST http://localhost:8061/api/v1/open-api/sync/remote-component \
 
 搜索 `document-index`：已登记包会自动建索引；`@kne/` / `@kne-components/` 无记录时校验 npm 存在后自动创建再建索引；FTS 未命中会回退到本次 ensure 的文档。
 
-### HTTP MCP（用户登录 token）
+### HTTP MCP（长期令牌）
 
-1. 登录获取 token：`POST /api/v1/account/login`
+1. 登录后台，在「开发管理 → 安装说明 → 获取安装信息」签发长期令牌（`POST /api/v1/dev-token/issue`：OIDC token exchange 签发，audience 为 `${ORIGIN}/api/dev-token`，有效期 `DEV_TOKEN_TTL`，默认 180 天；只能访问 MCP 与 worklog / experience 同步接口）
 2. 运行初始化命令（写入 `~/.kne_document/config.json` 并安装 MCP）：
 
 ```bash
@@ -125,7 +125,7 @@ npx @kne/npm-tools initDevDocumentMcp \
   --target cursor \
   --sync-url http://localhost:8061/api/v1 \
   --mcp-url http://localhost:8061/api/v1/mcp \
-  --token "<登录 token>"
+  --token "<长期令牌>"
 ```
 
 `--target` 目前支持 `cursor`（合并到 `~/.cursor/mcp.json`）；省略时可交互选择。
@@ -138,7 +138,7 @@ MCP 服务配置示例：
     "developer-document": {
       "url": "http://localhost:8061/api/v1/mcp",
       "headers": {
-        "x-user-token": "<登录 token>"
+        "Authorization": "Bearer <长期令牌>"
       }
     }
   }
@@ -155,7 +155,7 @@ MCP 服务配置示例：
 # 全量同步（未同步 / 换服务 / 本地有改动）
 cd server && npm run sync:kne-document -- \
   --sync-url http://localhost:8061/api/v1 \
-  --token "<登录 token>"
+  --token "<长期令牌>"
 
 # 单条同步（每次本地写入后）
 npm run sync:kne-document -- --file "worklog/project/2026-01-01-12-00-00/title.json"
@@ -172,14 +172,14 @@ npm run sync:kne-document -- --sync-url <新地址> --token "<token>" --force
     "syncUrl": "http://localhost:8061/api/v1",
     "mcpUrl": "http://localhost:8061/api/v1/mcp",
     "apiUrl": "http://localhost:8061/api/v1",
-    "token": "<登录 token>"
+    "token": "<长期令牌>"
   }
 }
 ```
 
 同步列表 `~/.kne_document/sync-registry.json` 由脚本维护；条目含 `apiUrl`，换服务后须重传。
 
-### REST 调试接口（登录 token）
+### REST 调试接口（长期令牌，`Authorization: Bearer <token>`）
 
 | 接口 | 说明 |
 |------|------|

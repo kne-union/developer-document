@@ -33,6 +33,7 @@ const Save = createWithRemoteLoader({
                       icon: formData.icon,
                       category: formData.category || null,
                       isPublic: !!formData.isPublic,
+                      entries: (formData.entries || []).map(({ label, path }) => ({ label, path })),
                       description: formData.description
                     }
                   })

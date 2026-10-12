@@ -7,6 +7,7 @@ import UploadVersion from '../Actions/UploadVersion';
 import Deploy from '../Actions/Deploy';
 import MigrationManager from '../Actions/MigrationManager';
 import createAdminListCards from '@components/Shared/createAdminListCards';
+import buildAuthUrl from '../utils/buildAuthUrl';
 
 const renderAdminListCards = createAdminListCards();
 
@@ -15,9 +16,23 @@ const VersionPanel = createWithRemoteLoader({
 })(
   withLocale(({ remoteModules, data, onSuccess }) => {
     const [usePreset, TablePage] = remoteModules;
-    const { apis } = usePreset();
+    const { apis, staticUrl } = usePreset();
     const { formatMessage } = useIntl();
     const tableRef = useRef(null);
+
+    // 原生导航下载由浏览器流式落盘，部署包不占用页面内存
+    const download = useCallback(
+      item => {
+        const link = document.createElement('a');
+        link.href = buildAuthUrl(staticUrl, apis.appManager.versionDownload.url, { name: data.name, versionId: item.id });
+        link.download = `${data.name}-${item.version}.zip`;
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      },
+      [apis.appManager.versionDownload.url, data.name, staticUrl]
+    );
 
     const handleReload = useCallback(() => {
       tableRef.current?.reload?.();
@@ -75,6 +90,7 @@ const VersionPanel = createWithRemoteLoader({
               buttonComponent: Deploy,
               data,
               versionId: item.id,
+              version: item.version,
               onSuccess: handleReload,
               children: formatMessage({ id: 'appManager.actions.deploy' })
             },
@@ -86,11 +102,16 @@ const VersionPanel = createWithRemoteLoader({
               version: item.version,
               onSuccess: handleReload,
               children: formatMessage({ id: 'appManager.migration.manage' })
+            },
+            {
+              type: 'link',
+              children: formatMessage({ id: 'appManager.version.download' }),
+              onClick: () => download(item)
             }
           ]
         }
       ],
-      [currentVersionId, data, formatMessage, handleReload]
+      [currentVersionId, data, download, formatMessage, handleReload]
     );
 
     return (

@@ -105,7 +105,7 @@ const apiRequest = async ({ apiUrl, token, method, pathname, body }) => {
     method,
     headers: {
       'Content-Type': 'application/json',
-      'x-user-token': token
+      Authorization: `Bearer ${token}`
     },
     body: body ? JSON.stringify(body) : undefined
   });

@@ -6,6 +6,15 @@ const fastify = require('fastify')({
 const fastifyEnv = require('@fastify/env');
 const packageJson = require('./package.json');
 const path = require('node:path');
+const resolveOidcOptions = require('./libs/utils/oidc-options');
+const createAppOidc = require('./libs/plugins/app-oidc');
+
+// 日志 SSE、原生导航下载无法带请求头，token 放在 query 中
+const queryTokenToAuthorization = async request => {
+  if (!request.headers.authorization && typeof request.query?.token === 'string' && request.query.token) {
+    request.headers.authorization = `Bearer ${request.query.token}`;
+  }
+};
 
 const version = `v${packageJson.version.split('.')[0]}`;
 
@@ -39,6 +48,13 @@ const createServer = () => {
 
         ORIGIN: { type: 'string', default: '' },
         TASK_CRON: { type: 'string', default: '' },
+
+        OIDC_KEY_SECRET: { type: 'string', default: '' },
+        OIDC_COOKIE_SECRET: { type: 'string', default: '' },
+        OIDC_IS_MAIN: { type: 'boolean', default: true },
+        OIDC_SERVICE_CLIENT_ID: { type: 'string', default: 'developer-document-service' },
+        OIDC_SERVICE_CLIENT_SECRET: { type: 'string', default: '' },
+        DEV_TOKEN_TTL: { type: 'number', default: 180 * 24 * 60 * 60 },
 
         OSS_REGION: { type: 'string' },
         OSS_BUCKET: { type: 'string' },
@@ -98,9 +114,13 @@ const createServer = () => {
 
   fastify.register(
     require('fastify-plugin')(async fastify => {
+      const oidcOptions = resolveOidcOptions(fastify.config);
+      fastify.decorate('oidcOptions', oidcOptions);
+
       fastify.register(require('@kne/fastify-account'), {
         isTest: fastify.config.IS_TEST,
         prefix: `${options.prefix}`,
+        getUserAuthenticate: () => fastify.oidc.authenticate.user,
         sendMessage: async ({ name, type, messageType, props }) => {
           // messageType: 0:短信验证码，1:邮件验证码 type: 0:注册,2:登录,4:验证租户管理员,5:忘记密码
           if (messageType === 1 && type === 0) {
@@ -115,6 +135,36 @@ const createServer = () => {
             });
           }
         }
+      });
+
+      fastify.register(require('@kne/fastify-oidc'), {
+        mode: 'standalone',
+        origin: oidcOptions.origin,
+        isMain: fastify.config.OIDC_IS_MAIN,
+        keyEncryptionSecret: oidcOptions.keySecret,
+        cookieSecret: fastify.config.OIDC_COOKIE_SECRET || undefined,
+        legacyToken: false,
+        // 应用中心子应用的 back-channel logout 直连 127.0.0.1:{port}
+        allowPrivateFetch: url => fastify.config.ENV === 'local' || url.hostname === '127.0.0.1',
+        selfClient: { clientName: 'Developer Document' },
+        resourceServers: [
+          {
+            identifier: oidcOptions.devTokenAudience,
+            name: 'Developer Document 开发者令牌',
+            accessTokenTTL: fastify.config.DEV_TOKEN_TTL
+          }
+        ],
+        clients: [
+          {
+            clientId: oidcOptions.serviceClient.clientId,
+            clientName: 'Developer Document 服务端',
+            clientSecret: oidcOptions.serviceClient.clientSecret,
+            grant_types: ['client_credentials', 'urn:ietf:params:oauth:grant-type:token-exchange'],
+            response_types: [],
+            token_endpoint_auth_method: 'client_secret_basic',
+            allowedResources: [oidcOptions.audience, oidcOptions.devTokenAudience]
+          }
+        ]
       });
     })
   );
@@ -231,6 +281,7 @@ const createServer = () => {
       });
 
       if (fastify.config.APPS_DB_DATABASE) {
+        const appOidc = createAppOidc(fastify, { pathPrefix: '/app' });
         fastify.register(require('./libs/plugins/register-app-manager'), {
           prefix: `${options.prefix}/app-manager`,
           name: 'appManager',
@@ -246,12 +297,19 @@ const createServer = () => {
             password: fastify.config.DB_PASSWORD,
             logging: false
           },
+          systemEnvKeys: appOidc.systemEnvKeys,
+          resolveSystemEnv: appOidc.resolveSystemEnv,
+          onAppRemoved: appOidc.onAppRemoved,
+          resolveVersionFile: async ({ fileId }) => {
+            const { buffer } = await fastify.fileManager.services.fileRecord.getFileBlob({ id: fileId });
+            return buffer;
+          },
           createAuthenticate: () => {
             const { authenticate } = fastify.account;
             // admin 依赖 user 先写入 request.userInfo，不可只挂 authenticate.admin
-            return [authenticate.user, authenticate.admin];
+            return [queryTokenToAuthorization, authenticate.user, authenticate.admin];
           },
-          createUserAuthenticate: () => [fastify.account.authenticate.user]
+          createUserAuthenticate: () => [queryTokenToAuthorization, fastify.account.authenticate.user]
         });
       }
 

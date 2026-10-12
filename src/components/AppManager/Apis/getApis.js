@@ -23,6 +23,11 @@ const getApis = options => {
       method: 'GET',
       paramsType: 'params'
     },
+    versionDownload: {
+      url: `${prefix}/app/version/download`,
+      method: 'GET',
+      paramsType: 'params'
+    },
     deploy: {
       url: `${prefix}/app/deploy`,
       method: 'POST'
@@ -119,6 +124,11 @@ const getApis = options => {
     },
     loadStream: {
       url: `${prefix}/app/load/stream`,
+      method: 'GET',
+      paramsType: 'params'
+    },
+    deployStream: {
+      url: `${prefix}/app/deploy/stream`,
       method: 'GET',
       paramsType: 'params'
     },
