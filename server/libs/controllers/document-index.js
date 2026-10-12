@@ -1,13 +1,15 @@
 const fp = require('fastify-plugin');
+const { createDevTokenAuthenticate } = require('../utils/dev-token');
 
 module.exports = fp(async (fastify, options) => {
   const { services } = fastify[options.name];
   const { authenticate } = fastify.account;
+  const authenticateDevToken = createDevTokenAuthenticate(fastify);
 
   fastify.get(
     `${options.prefix}/document-index/search`,
     {
-      onRequest: [authenticate.user],
+      onRequest: [authenticateDevToken],
       schema: {
         summary: '搜索组件/npm 文档索引',
         query: {

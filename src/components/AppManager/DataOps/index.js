@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Drawer, Empty, Space, Switch, Tag, Typography, Alert } from 'antd';
+import { App, Button, Drawer, Empty, Input, Select, Space, Switch, Tag, Typography, Alert } from 'antd';
 import { PlusOutlined, ReloadOutlined, SearchOutlined, DatabaseOutlined, SyncOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
+import { useIsMobile, usePopupContainer } from '@kne/responsive-utils';
+import classnames from 'classnames';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import Fetch from '@kne/react-fetch';
@@ -90,6 +92,8 @@ const DataOps = createWithRemoteLoader({
     const formModal = useFormModal();
     const { message, modal } = App.useApp();
     const { formatMessage } = useIntl();
+    const isMobile = useIsMobile();
+    const getPopupContainer = usePopupContainer();
 
     const [selectedTable, setSelectedTable] = useState(null);
     const [includeDeleted, setIncludeDeleted] = useState(false);
@@ -100,8 +104,11 @@ const DataOps = createWithRemoteLoader({
     const [queryHistory, setQueryHistory] = useState([]);
     const [queryRunning, setQueryRunning] = useState(false);
     const [restartHint, setRestartHint] = useState(false);
+    const [tableKeyword, setTableKeyword] = useState('');
+    const [dedicatedSaving, setDedicatedSaving] = useState(false);
 
     const tableRef = useRef(null);
+    const gridRef = useRef(null);
     const queryResultRef = useRef(null);
     const pageListRef = useRef([]);
     const primaryKeyRef = useRef([]);
@@ -449,6 +456,33 @@ const DataOps = createWithRemoteLoader({
       reloadParent();
     };
 
+    const toggleDedicatedDb = async (checked, reloadTables) => {
+      setDedicatedSaving(true);
+      try {
+        const { data: resData } = await ajax(
+          Object.assign({}, apis.appManager.saveEnv, {
+            data: { name: appName, env: { DB_DEDICATED: checked ? 'true' : 'false' } }
+          })
+        );
+        if (resData.code !== 0) {
+          return;
+        }
+      } finally {
+        setDedicatedSaving(false);
+      }
+      setSelectedTable(null);
+      reloadTables();
+      reloadParent();
+      modal.confirm({
+        title: formatMessage({ id: 'appManager.db.restartNowTitle' }),
+        content: formatMessage({ id: checked ? 'appManager.db.dedicatedOnHint' : 'appManager.db.dedicatedOffHint' }),
+        okText: formatMessage({ id: 'appManager.db.restartNow' }),
+        cancelText: formatMessage({ id: 'appManager.db.restartLater' }),
+        onOk: restartApp,
+        onCancel: () => setRestartHint(true)
+      });
+    };
+
     const connectionLabel = useMemo(() => {
       const dialect = appEnv.DB_DIALECT;
       const database = appEnv.DB_DATABASE || appEnv.DB_STORAGE;
@@ -465,6 +499,8 @@ const DataOps = createWithRemoteLoader({
         })}
         render={({ data: tablesData, reload: reloadTables }) => {
           const pageData = tablesData?.pageData || [];
+          const tableFilterKeyword = tableKeyword.trim().toLowerCase();
+          const filteredTables = tableFilterKeyword ? pageData.filter(item => String(item.table).toLowerCase().includes(tableFilterKeyword)) : pageData;
           const metaMap = {};
           pageData.forEach(item => {
             metaMap[item.table] = {
@@ -501,10 +537,10 @@ const DataOps = createWithRemoteLoader({
           };
           const conn = tablesData?.connection || {};
           const scope = tablesData?.dbScope || 'shared';
-          const summary = connectionLabel || [conn.dialect, conn.database].filter(Boolean).join(' · ') || formatMessage({ id: 'appManager.db.defaultConnection' });
+          const summary = [conn.dialect, conn.database].filter(Boolean).join(' · ') || connectionLabel || formatMessage({ id: 'appManager.db.defaultConnection' });
 
           return (
-            <div className={style['data-ops']}>
+            <div className={classnames(style['data-ops'], isMobile && style['is-mobile'])}>
               <div className={style['topbar']}>
                 <Space size={12} wrap>
                   <DatabaseOutlined />
@@ -514,7 +550,13 @@ const DataOps = createWithRemoteLoader({
                     {summary}
                   </Text>
                 </Space>
-                <Space>
+                <Space wrap>
+                  {conn.hasCustomDb ? (
+                    <Space size={6}>
+                      <Text type="secondary">{formatMessage({ id: 'appManager.db.useDedicatedDb' })}</Text>
+                      <Switch size="small" checked={scope === 'dedicated'} loading={dedicatedSaving} onChange={checked => toggleDedicatedDb(checked, reloadTables)} />
+                    </Space>
+                  ) : null}
                   <Button size="small" onClick={openDbConfig}>
                     {formatMessage({ id: 'appManager.db.configureDb' })}
                   </Button>
@@ -533,12 +575,20 @@ const DataOps = createWithRemoteLoader({
               )}
 
               <div className={style['workspace']}>
-                <aside className={style['sidebar']}>
-                  <div className={style['sidebar-head']}>
-                    <Text strong>{formatMessage({ id: 'appManager.db.tables' })}</Text>
+                {isMobile ? (
+                  <div className={style['mobile-picker']}>
+                    <Select
+                      className={style['mobile-picker-select']}
+                      showSearch
+                      allowClear
+                      value={selectedTable || undefined}
+                      placeholder={formatMessage({ id: 'appManager.db.selectTableMobile' })}
+                      getPopupContainer={getPopupContainer}
+                      notFoundContent={<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: pageData.length ? 'appManager.db.noMatchTables' : 'appManager.db.noTables' })} />}
+                      options={pageData.map(item => ({ value: item.table, label: item.table }))}
+                      onChange={value => setSelectedTable(value || null)}
+                    />
                     <Button
-                      type="text"
-                      size="small"
                       icon={<ReloadOutlined />}
                       onClick={() => {
                         reloadTables();
@@ -546,21 +596,47 @@ const DataOps = createWithRemoteLoader({
                       }}
                     />
                   </div>
-                  {!pageData.length ? (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: 'appManager.db.noTables' })} />
-                  ) : (
-                    <ul className={style['table-nav']}>
-                      {pageData.map(item => (
-                        <li key={item.table} className={item.table === selectedTable ? style['table-nav-active'] : undefined} onClick={() => setSelectedTable(item.table)}>
-                          <span className={style['table-icon']} />
-                          <span className={style['table-name']} title={item.table}>
-                            {item.table}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </aside>
+                ) : (
+                  <aside className={style['sidebar']}>
+                    <div className={style['sidebar-head']}>
+                      <Text strong>{formatMessage({ id: 'appManager.db.tables' })}</Text>
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<ReloadOutlined />}
+                        onClick={() => {
+                          reloadTables();
+                          reloadParent();
+                        }}
+                      />
+                      <Input
+                        className={style['sidebar-filter']}
+                        size="small"
+                        allowClear
+                        prefix={<SearchOutlined />}
+                        placeholder={formatMessage({ id: 'appManager.db.filterTables' })}
+                        value={tableKeyword}
+                        onChange={e => setTableKeyword(e.target.value)}
+                      />
+                    </div>
+                    {!pageData.length ? (
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: 'appManager.db.noTables' })} />
+                    ) : !filteredTables.length ? (
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: 'appManager.db.noMatchTables' })} />
+                    ) : (
+                      <ul className={style['table-nav']}>
+                        {filteredTables.map(item => (
+                          <li key={item.table} className={item.table === selectedTable ? style['table-nav-active'] : undefined} onClick={() => setSelectedTable(item.table)}>
+                            <span className={style['table-icon']} />
+                            <span className={style['table-name']} title={item.table}>
+                              {item.table}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </aside>
+                )}
 
                 <section className={style['main-pane']}>
                   {selectedTable && selectedMeta ? (
@@ -576,6 +652,11 @@ const DataOps = createWithRemoteLoader({
                           <Button size="small" icon={<SearchOutlined />} onClick={() => openQuery(`SELECT * FROM ${selectedTable} LIMIT 100`)}>
                             {formatMessage({ id: 'appManager.db.queryTitle' })}
                           </Button>
+                          {isMobile ? null : (
+                            <Text strong ellipsis={{ tooltip: selectedTable }} style={{ maxWidth: 320 }}>
+                              {selectedTable}
+                            </Text>
+                          )}
                         </Space>
                         <Space>
                           <Text type="secondary">{formatMessage({ id: 'appManager.db.showDeleted' })}</Text>
@@ -583,10 +664,11 @@ const DataOps = createWithRemoteLoader({
                         </Space>
                       </div>
 
-                      <div className={style['grid']}>
+                      <div className={style['grid']} ref={gridRef}>
                         <TablePage
                           {...Object.assign({}, apis.appManager.dbRows)}
                           ref={tableRef}
+                          {...(isMobile ? {} : { getScrollContainer: () => gridRef.current, scrollTopInset: 0 })}
                           name={`app-db-rows-v3-${appName}-${selectedTable}-${includeDeleted ? 1 : 0}`}
                           params={{
                             name: appName,
@@ -650,7 +732,7 @@ const DataOps = createWithRemoteLoader({
                                       </span>
                                     ) : null}
                                   </span>
-                                  <span className={style['col-type']}>{String(col.type || '').toLowerCase()}</span>
+                                  {isMobile ? null : <span className={style['col-type']}>{String(col.type || '').toLowerCase()}</span>}
                                 </div>
                               ),
                               getValueOf: item => (item[col.name] == null ? '' : String(item[col.name]))
@@ -716,7 +798,7 @@ const DataOps = createWithRemoteLoader({
                     </>
                   ) : (
                     <div className={style['empty-main']}>
-                      <Empty description={formatMessage({ id: 'appManager.db.selectTable' })} />
+                      <Empty description={formatMessage({ id: isMobile ? 'appManager.db.selectTableMobile' : 'appManager.db.selectTable' })} />
                     </div>
                   )}
                 </section>
@@ -724,7 +806,7 @@ const DataOps = createWithRemoteLoader({
 
               <Drawer
                 title={formatMessage({ id: 'appManager.db.queryTitle' })}
-                width={820}
+                width={isMobile ? '100%' : 820}
                 open={queryOpen}
                 onClose={() => setQueryOpen(false)}
                 destroyOnClose={false}

@@ -1,7 +1,9 @@
-export const hasUserToken = () => {
-  try {
-    return !!localStorage.getItem('X-User-Token');
-  } catch (error) {
-    return false;
-  }
+let oidcClient = null;
+
+export const setOidcClient = client => {
+  oidcClient = client;
 };
+
+export const getUserAccessToken = () => oidcClient?.getTokenSet()?.accessToken || null;
+
+export const hasUserToken = () => !!getUserAccessToken();

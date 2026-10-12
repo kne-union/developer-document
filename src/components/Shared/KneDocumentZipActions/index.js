@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import { App, Button } from 'antd';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
-import { getToken } from '@kne/token-storage';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 
@@ -22,7 +21,7 @@ const ExportZipButton = createWithRemoteLoader({
 })(
   withLocale(({ remoteModules, type, getFilterValue, buildRequestData, children, ...props }) => {
     const [usePreset] = remoteModules;
-    const { apis, staticUrl } = usePreset();
+    const { apis, staticUrl, oidc } = usePreset();
     const { message } = App.useApp();
     const { formatMessage } = useIntl();
     const [exporting, setExporting] = useState(false);
@@ -36,9 +35,7 @@ const ExportZipButton = createWithRemoteLoader({
         const baseUrl = staticUrl || '';
         const url = `${baseUrl}${apiGroup.export.url}${buildQueryString(params)}`;
         const response = await fetch(url, {
-          headers: {
-            'X-User-Token': getToken('X-User-Token')
-          }
+          headers: await oidc.getAuthHeaders({ method: 'GET', url: new URL(url, window.location.href).toString() })
         });
         if (!response.ok) {
           throw new Error(formatMessage({ id: 'shared.kneDocumentZip.exportFailed' }));

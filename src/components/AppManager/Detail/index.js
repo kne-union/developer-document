@@ -67,7 +67,7 @@ const Detail = createWithRemoteLoader({
                         title={<DetailPageHeaderTitle baseUrl={baseUrl} title={data.label || data.name || formatMessage({ id: 'common.loading' })} />}
                         info={data.name}
                         tags={undefined}
-                        buttonOptions={<Actions data={data} onSuccess={reload} onRemoveSuccess={() => navigate(baseUrl, { replace: true })} includeLifecycle={false} />}
+                        buttonOptions={<Actions data={data} onSuccess={reload} onRemoveSuccess={() => navigate(baseUrl, { replace: true })} includeLifecycle={false} place="end" />}
                       />
                       <LifecycleBar data={data} onSuccess={reload} />
                     </div>

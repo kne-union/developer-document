@@ -1,8 +1,10 @@
 const fp = require('fastify-plugin');
+const { createDevTokenAuthenticate } = require('../utils/dev-token');
 
 module.exports = fp(async (fastify, options) => {
   const { services } = fastify[options.name];
   const { authenticate } = fastify.account;
+  const authenticateDevToken = createDevTokenAuthenticate(fastify);
 
   // 创建文档
   fastify.post(
@@ -171,7 +173,7 @@ module.exports = fp(async (fastify, options) => {
   fastify.get(
     `${options.prefix}/document/search`,
     {
-      onRequest: [authenticate.user],
+      onRequest: [authenticateDevToken],
       schema: {
         summary: '全文搜索文档',
         query: {

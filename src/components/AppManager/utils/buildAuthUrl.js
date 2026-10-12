@@ -1,4 +1,4 @@
-import { getToken } from '@kne/token-storage';
+import { getUserAccessToken } from '@components/Shared/auth';
 
 // EventSource 与浏览器原生下载都无法携带请求头，token 只能放在 query 中
 const buildAuthUrl = (baseUrl, path, params) => {
@@ -19,7 +19,7 @@ const buildAuthUrl = (baseUrl, path, params) => {
       url.searchParams.set(key, value);
     }
   });
-  const token = getToken('X-User-Token');
+  const token = getUserAccessToken();
   if (token) {
     url.searchParams.set('token', token);
   }

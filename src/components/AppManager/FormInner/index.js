@@ -7,6 +7,7 @@ const FormInner = createWithRemoteLoader({
 })(
   withLocale(({ remoteModules, isEdit }) => {
     const [FormInfo, GroupFolderField] = remoteModules;
+    const { TableList } = FormInfo;
     const { Input, TextArea, Avatar, Switch } = FormInfo.fields;
     const { formatMessage } = useIntl();
 
@@ -19,6 +20,16 @@ const FormInner = createWithRemoteLoader({
         <GroupFolderField name="category" type="app" showColor label={formatMessage({ id: 'appManager.form.category' })} groupName={formatMessage({ id: 'appManager.form.category' })} block />
         <Switch name="isPublic" label={formatMessage({ id: 'common.isPublic' })} defaultValue={true} />
         <TextArea name="description" label={formatMessage({ id: 'common.description' })} rule="LEN-0-1000" block />
+        <TableList
+          title={formatMessage({ id: 'appManager.form.entries' })}
+          name="entries"
+          defaultLength={0}
+          addText={formatMessage({ id: 'appManager.form.addEntry' })}
+          list={[
+            <Input name="label" label={formatMessage({ id: 'appManager.form.entryLabel' })} rule="REQ LEN-1-50" placeholder={formatMessage({ id: 'appManager.form.entryLabelPlaceholder' })} />,
+            <Input name="path" label={formatMessage({ id: 'appManager.form.entryPath' })} rule="REQ LEN-1-200" placeholder="/mobile" />
+          ]}
+        />
       </>
     );
   })

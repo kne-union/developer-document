@@ -2,6 +2,7 @@ const fp = require('fastify-plugin');
 const { McpServer } = require('@modelcontextprotocol/server');
 const { NodeStreamableHTTPServerTransport } = require('@modelcontextprotocol/node');
 const z = require('zod/v4');
+const { createDevTokenAuthenticate } = require('../utils/dev-token');
 
 const registerTools = (mcpServer, { services, userId }) => {
   mcpServer.registerTool(
@@ -216,15 +217,11 @@ const registerTools = (mcpServer, { services, userId }) => {
 
 module.exports = fp(async (fastify, options) => {
   const { services } = fastify[options.name];
-  const { authenticate } = fastify.account;
+  const authenticateDevToken = createDevTokenAuthenticate(fastify);
   const mcpPath = `${options.prefix}/mcp`;
 
   const authHook = async request => {
-    const authHeader = request.headers.authorization;
-    if (authHeader?.startsWith('Bearer ') && !request.headers['x-user-token']) {
-      request.headers['x-user-token'] = authHeader.slice(7);
-    }
-    await authenticate.user(request);
+    await authenticateDevToken(request);
     request.raw.authInfo = { userId: request.userInfo.id, user: request.userInfo };
   };
 

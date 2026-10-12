@@ -3,7 +3,6 @@ import { Alert, Button, Card, Descriptions, Modal, Select, Space, Steps, Tag, Ty
 import { LinkOutlined, ApiOutlined, RocketOutlined, InfoCircleOutlined, CopyOutlined, CodeOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { Link } from 'react-router-dom';
-import { getToken } from '@kne/token-storage';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import { hasUserToken } from '@components/Shared/auth';
@@ -47,7 +46,7 @@ const buildMcpConfig = ({ mcpUrl, tokenValue }) =>
         'developer-document': {
           url: mcpUrl,
           headers: {
-            'x-user-token': tokenValue
+            Authorization: `Bearer ${tokenValue}`
           }
         }
       }
@@ -82,17 +81,36 @@ const InstallParamTable = ({ syncUrl, mcpUrl, tokenValue, onCopy, formatMessage 
 );
 
 const InstallGuide = createWithRemoteLoader({
-  modules: ['components-core:Layout@Page', 'components-core:InfoPage']
+  modules: ['components-core:Layout@Page', 'components-core:InfoPage', 'components-core:Global@usePreset']
 })(
   withLocale(({ remoteModules, menu, baseUrl }) => {
-    const [Page, InfoPage] = remoteModules;
+    const [Page, InfoPage, usePreset] = remoteModules;
+    const { ajax, apis } = usePreset();
     const { formatMessage } = useIntl();
     const [tokenModalOpen, setTokenModalOpen] = useState(false);
     const [mcpTarget, setMcpTarget] = useState(MCP_TARGETS[0].value);
+    const [devToken, setDevToken] = useState(null);
+    const [issuing, setIssuing] = useState(false);
     const syncUrl = resolveSyncUrl();
     const mcpUrl = `${syncUrl}/mcp`;
-    const token = getToken('X-User-Token') || '';
+    const token = devToken?.token || '';
     const loggedIn = hasUserToken();
+
+    const issueDevToken = async () => {
+      setIssuing(true);
+      try {
+        const { data: resData } = await ajax(Object.assign({}, apis.devToken.issue));
+        if (resData.code !== 0) {
+          return;
+        }
+        setDevToken(resData.data);
+        message.success(formatMessage({ id: 'adminDevManagement.install.issueTokenSuccess' }));
+      } catch (error) {
+        message.error(formatMessage({ id: 'adminDevManagement.install.issueTokenFailed' }));
+      } finally {
+        setIssuing(false);
+      }
+    };
 
     const copyText = async text => {
       try {
@@ -164,7 +182,7 @@ const InstallGuide = createWithRemoteLoader({
               <InfoPage.Part title={formatMessage({ id: 'adminDevManagement.install.step1Title' })}>
                 <Paragraph type="secondary">{formatMessage({ id: 'adminDevManagement.install.step1Detail' })}</Paragraph>
                 <Paragraph>
-                  <Text code>POST {syncUrl}/account/login</Text>
+                  <Text code>POST {syncUrl}/dev-token/issue</Text>
                 </Paragraph>
                 <Paragraph type="secondary" style={{ marginTop: 12 }}>
                   {formatMessage({ id: 'adminDevManagement.install.step1TokenHint' })}
@@ -230,6 +248,12 @@ const InstallGuide = createWithRemoteLoader({
             ) : (
               <>
                 <Paragraph type="secondary">{formatMessage({ id: 'adminDevManagement.install.tokenModalDesc' })}</Paragraph>
+                <Space className={styles.targetRow} wrap>
+                  <Button type={devToken ? 'default' : 'primary'} loading={issuing} onClick={issueDevToken}>
+                    {formatMessage({ id: devToken ? 'adminDevManagement.install.reissueToken' : 'adminDevManagement.install.issueToken' })}
+                  </Button>
+                  {devToken && <Text type="secondary">{formatMessage({ id: 'adminDevManagement.install.tokenExpiresAt' }, { time: new Date(devToken.expiresAt).toLocaleString() })}</Text>}
+                </Space>
                 {targetSelectRow}
                 <InstallParamTable syncUrl={syncUrl} mcpUrl={mcpUrl} tokenValue={installParams.tokenValue} onCopy={copyText} formatMessage={formatMessage} />
                 <CopySection title={formatMessage({ id: 'adminDevManagement.install.initCommandTitle' })} content={installParams.initCommand} onCopy={copyText} copyLabel={formatMessage({ id: 'adminDevManagement.install.copy' })} />

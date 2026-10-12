@@ -1,10 +1,12 @@
 const fp = require('fastify-plugin');
 const { readZipUploadBuffer, sendZipDownload } = require('../utils/kne-document-io');
+const { createDevTokenAuthenticate } = require('../utils/dev-token');
 
 module.exports = fp(async (fastify, options) => {
   const { services } = fastify[options.name];
   const { authenticate } = fastify.account;
   const adminAuth = [authenticate.user, authenticate.admin];
+  const authenticateDevToken = createDevTokenAuthenticate(fastify);
 
   fastify.get(
     `${options.prefix}/worklog/manage/list`,
@@ -147,7 +149,7 @@ module.exports = fp(async (fastify, options) => {
   fastify.get(
     `${options.prefix}/worklog/exists`,
     {
-      onRequest: [authenticate.user],
+      onRequest: [authenticateDevToken],
       schema: {
         summary: '检查工作日志是否已存在（按 relativePath）',
         query: {
@@ -163,7 +165,7 @@ module.exports = fp(async (fastify, options) => {
   fastify.post(
     `${options.prefix}/worklog/upload`,
     {
-      onRequest: [authenticate.user],
+      onRequest: [authenticateDevToken],
       schema: {
         summary: '上传工作日志',
         body: {

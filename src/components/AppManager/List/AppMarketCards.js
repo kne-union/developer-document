@@ -2,6 +2,7 @@ import classnames from 'classnames';
 import { Flex, Typography } from 'antd';
 import { ExportOutlined } from '@ant-design/icons';
 import DefaultAppIcon from '@components/Shared/DefaultAppIcon';
+import { OpenAppLink } from '@components/Shared/AppEntry';
 import StatusTag from '../StatusTag';
 import style from './style.module.scss';
 
@@ -83,9 +84,9 @@ const createRenderAppMarketCards =
                   </Flex>
                   <Flex className={style['card-footer']} justify="space-between" align="center" gap={8} onClick={e => e.stopPropagation()}>
                     {item.pathUrl ? (
-                      <a className={style['open-link']} href={item.pathUrl} target="_blank" rel="noreferrer">
+                      <OpenAppLink app={item} className={style['open-link']}>
                         <ExportOutlined /> {formatMessage({ id: 'appManager.list.openApp' })}
-                      </a>
+                      </OpenAppLink>
                     ) : (
                       <span />
                     )}

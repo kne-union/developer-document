@@ -3,66 +3,23 @@ import { preset as fetchPreset } from '@kne/react-fetch';
 import { Spin, Empty, message } from 'antd';
 import { preset as remoteLoaderPreset, loadModule } from '@kne/remote-loader';
 import createAjax from '@kne/axios-fetch';
-import { getToken } from '@kne/token-storage';
 import transform from 'lodash/transform';
 import { getApis } from '@components/Apis';
 import { getApis as getAppManagerApis } from '@components/AppManager/Apis';
+import { setOidcClient } from '@components/Shared/auth';
 import ensureSlash from '@kne/ensure-slash';
 
 window.PUBLIC_URL = window.runtimePublicUrl || process.env.PUBLIC_URL;
 
 const baseApiUrl = window.runtimeApiUrl || '';
 
-export const globalInit = async () => {
-  const ajax = createAjax({
-    baseURL: baseApiUrl,
-    errorHandler: error => message.error(error),
-    getDefaultHeaders: () => {
-      return {
-        'X-User-Token': getToken('X-User-Token')
-      };
-    },
-    registerInterceptors: interceptors => {
-      interceptors.response.use(response => {
-        if (response.status === 401 || response.data.code === 401) {
-          response.config.showError = false;
-        }
-        if (response.config.ignoreRedirect !== true && (response.status === 401 || response.data.code === 401)) {
-          const searchParams = new URLSearchParams(window.location.search);
-          const referer = encodeURIComponent(window.location.pathname + window.location.search);
-          searchParams.append('referer', referer);
-          window.location.href = '/account/login?' + searchParams.toString();
-        }
-        return response;
-      });
-    }
-  });
+const loadOidcConfig = async () => {
+  const response = await fetch(`${baseApiUrl}/api/oidc/config`);
+  const body = await response.json();
+  return body && Object.prototype.hasOwnProperty.call(body, 'code') && Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body;
+};
 
-  fetchPreset({
-    ajax,
-    loading: (
-      <Spin
-        delay={500}
-        style={{
-          position: 'absolute',
-          left: '50%',
-          padding: '10px',
-          transform: 'translateX(-50%)'
-        }}
-      />
-    ),
-    error: null,
-    empty: <Empty />,
-    transformResponse: response => {
-      const { data } = response;
-      response.data = {
-        code: data.code === 0 ? 200 : data.code,
-        msg: data.msg,
-        results: data.data
-      };
-      return response;
-    }
-  });
+export const globalInit = async () => {
   const registry = {
     url: 'https://cdn.leapin-ai.com',
     tpl: '{{url}}/components/@kne-components/{{remote}}/{{version}}/build'
@@ -89,10 +46,8 @@ export const globalInit = async () => {
       },
       'components-admin': {
         ...registry,
-        //url: 'http://localhost:3016',
-        //tpl: '{{url}}',
         remote: 'components-admin',
-        defaultVersion: '1.1.114'
+        defaultVersion: '1.1.117'
       },
       'components-thirdparty': {
         ...registry,
@@ -113,6 +68,48 @@ export const globalInit = async () => {
               tpl: '{{url}}',
               defaultVersion: process.env.DEFAULT_VERSION
             }
+    }
+  });
+
+  let oidc;
+  try {
+    const [{ default: createOidcClient }, oidcConfig] = await Promise.all([loadModule('components-admin:Oidc@createOidcClient'), loadOidcConfig()]);
+    oidc = createOidcClient({ issuer: oidcConfig.issuer, clientId: oidcConfig.clientId, resource: oidcConfig.audience });
+    setOidcClient(oidc);
+  } catch (e) {
+    console.error(e);
+    return { error: true };
+  }
+
+  const ajax = createAjax({
+    baseURL: baseApiUrl,
+    errorHandler: error => message.error(error),
+    registerInterceptors: interceptors => oidc.registerInterceptors(interceptors)
+  });
+
+  fetchPreset({
+    ajax,
+    loading: (
+      <Spin
+        delay={500}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          padding: '10px',
+          transform: 'translateX(-50%)'
+        }}
+      />
+    ),
+    error: null,
+    empty: <Empty />,
+    transformResponse: response => {
+      const { data } = response;
+      response.data = {
+        code: data.code === 0 ? 200 : data.code,
+        msg: data.msg,
+        results: data.data
+      };
+      return response;
     }
   });
 
@@ -204,6 +201,7 @@ export const globalInit = async () => {
 
   return {
     ajax,
+    oidc,
     setting,
     staticUrl: baseApiUrl,
     enums,
