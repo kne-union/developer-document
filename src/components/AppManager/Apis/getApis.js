@@ -14,6 +14,11 @@ const getApis = options => {
       url: `${prefix}/app/save-env`,
       method: 'POST'
     },
+    envSchema: {
+      url: `${prefix}/app/env/schema`,
+      method: 'GET',
+      paramsType: 'params'
+    },
     uploadVersion: {
       url: `${prefix}/app/version/upload`,
       method: 'POST'

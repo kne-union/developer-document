@@ -117,7 +117,7 @@ curl -X POST http://localhost:8061/api/v1/open-api/sync/remote-component \
 
 ### HTTP MCP（长期令牌）
 
-1. 登录后台，在「开发管理 → 安装说明 → 获取安装信息」签发长期令牌（`POST /api/v1/dev-token/issue`：OIDC token exchange 签发，audience 为 `${ORIGIN}/api/dev-token`，有效期 `DEV_TOKEN_TTL`，默认 180 天；只能访问 MCP 与 worklog / experience 同步接口）
+1. 登录后台，在「开发管理 → 安装说明 → 获取安装信息」签发长期令牌（`POST /api/v1/dev-token/issue`：OIDC token exchange 签发，audience 为 `${ORIGIN}/api/dev-token`，有效期 `DEV_TOKEN_TTL`，默认 180 天；只能访问 MCP、worklog / experience 同步接口与应用部署包上传接口）
 2. 运行初始化命令（写入 `~/.kne_document/config.json` 并安装 MCP）：
 
 ```bash
@@ -146,6 +146,21 @@ MCP 服务配置示例：
 ```
 
 可用 tools：`check_worklog_exists`、`check_experience_exists`、`upload_experience`、`upload_worklog`（支持 `skipIfExists` 用于迁移）、`search_experience`、`search_document_index`、`search_document`。
+
+#### 应用中心工具（管理员）
+
+启用应用中心（配置 `APPS_DB_DATABASE`）且令牌所属用户为超级管理员时，额外注册：
+
+| 用途 | tools |
+|---|---|
+| 应用 | `list_apps`、`get_app`、`create_app`、`update_app` |
+| 环境变量 | `get_app_env`（按版本 `server/env.schema.json` 列出声明变量与问题，不含应用中心注入变量）、`save_app_env` |
+| 版本与部署 | `list_app_versions`、`upload_app_version`、`list_app_migrations`、`deploy_app`（默认等待各阶段结果）、`start_app`、`stop_app`、`restart_app` |
+| 排错 | `get_app_logs`（尾部行 + 关键字过滤 + 归档文件） |
+| 数据调试（只读） | `list_app_tables`、`list_app_rows`、`query_app_sql` |
+| 负载 | `get_app_load`（当前样本 + 最近 N 分钟汇总） |
+
+上传新版本：在应用仓库执行 `npx @kne/npm-tools packApp --upload --name <应用 name>`，命令先检查包结构再打 zip，并以长期令牌调用 `POST /api/v1/app-package/upload`（multipart：`name`、`version`、`file`）存入文件管理「应用中心/{name}」，输出 `fileId`；再调用 MCP `upload_app_version` 登记版本、`deploy_app` 部署。
 
 ### 本地与服务端双写同步
 
