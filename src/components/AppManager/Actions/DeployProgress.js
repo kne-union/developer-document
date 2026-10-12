@@ -5,7 +5,7 @@ import buildAuthUrl from '../utils/buildAuthUrl';
 
 const { Text } = Typography;
 
-const STEPS = ['package', 'migrate', 'start', 'ready'];
+const STEPS = ['package', 'env', 'migrate', 'start', 'ready'];
 
 const STEP_STATUS = { running: 'process', done: 'finish', skipped: 'finish', error: 'error' };
 

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { App } from 'antd';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, App } from 'antd';
 import { UploadOutlined, SnippetsOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '@root/withLocale';
@@ -9,14 +9,13 @@ import createAdminListCards from '@components/Shared/createAdminListCards';
 const SECRET_MASK = '********';
 const renderAdminListCards = createAdminListCards();
 
-const toRows = (env, secretEnvKeys) => {
-  const secretSet = new Set(secretEnvKeys || []);
-  return Object.entries(env || {}).map(([key, value]) => ({
-    key,
-    value: value == null ? '' : String(value),
-    secret: secretSet.has(key)
-  }));
-};
+/** 声明的变量在前（schema 顺序），其后为已配置但未声明的变量；均不含应用中心注入的变量 */
+const toRows = declaration => [
+  ...(declaration?.declared || []).map(item => Object.assign({}, item, { source: 'declared', value: item.value == null ? '' : String(item.value) })),
+  ...(declaration?.others || []).map(item => Object.assign({}, item, { source: 'other', configured: true, value: item.value == null ? '' : String(item.value) }))
+];
+
+const formatDefault = value => (value == null ? '' : typeof value === 'string' ? value : JSON.stringify(value));
 
 /** 解析 .env 文本为 { KEY: value }；忽略空行与 # 注释，支持 export 前缀与引号包裹 */
 const parseEnvText = text => {
@@ -76,6 +75,7 @@ const EnvEditor = createWithRemoteLoader({
     const tableRef = useRef(null);
     const dataRef = useRef(data);
     dataRef.current = data;
+    const [declaration, setDeclaration] = useState(null);
 
     const saveEnv = useCallback(
       async (env, nextSecretKeys) => {
@@ -99,7 +99,7 @@ const EnvEditor = createWithRemoteLoader({
 
     useEffect(() => {
       tableRef.current?.reload?.();
-    }, [data?.env, data?.secretEnvKeys]);
+    }, [data?.env, data?.secretEnvKeys, data?.currentVersionId]);
 
     const confirmImportEnv = (env, sourceLabel) => {
       const keys = Object.keys(env);
@@ -316,6 +316,36 @@ const EnvEditor = createWithRemoteLoader({
           renderType: 'main'
         },
         {
+          name: 'source',
+          title: formatMessage({ id: 'appManager.env.source' }),
+          width: 110,
+          renderType: 'tag',
+          getValueOf: item => {
+            if (item.source === 'other') {
+              return { type: 'default', text: formatMessage({ id: 'appManager.env.sourceOther' }) };
+            }
+            return item.required ? { type: 'warning', text: formatMessage({ id: 'appManager.env.sourceRequired' }) } : { type: 'info', text: formatMessage({ id: 'appManager.env.sourceDeclared' }) };
+          }
+        },
+        {
+          name: 'status',
+          title: formatMessage({ id: 'appManager.env.status' }),
+          width: 140,
+          renderType: 'tag',
+          getValueOf: item => {
+            if (item.error) {
+              return { type: 'danger', text: item.error };
+            }
+            if (item.configured) {
+              return { type: 'success', text: formatMessage({ id: 'appManager.env.statusConfigured' }) };
+            }
+            if (item.default != null) {
+              return { type: 'default', text: formatMessage({ id: 'appManager.env.statusDefault' }) };
+            }
+            return { type: 'default', text: formatMessage({ id: 'appManager.env.statusEmpty' }) };
+          }
+        },
+        {
           name: 'secret',
           title: formatMessage({ id: 'appManager.env.type' }),
           width: 100,
@@ -326,7 +356,18 @@ const EnvEditor = createWithRemoteLoader({
           name: 'value',
           title: formatMessage({ id: 'appManager.env.value' }),
           renderType: 'description',
-          getValueOf: item => (item.secret && item.value ? SECRET_MASK : item.value || '')
+          getValueOf: item => {
+            if (item.configured) {
+              return item.secret && item.value ? SECRET_MASK : item.value || '';
+            }
+            return item.default != null ? formatMessage({ id: 'appManager.env.defaultValue' }, { value: formatDefault(item.default) }) : '';
+          }
+        },
+        {
+          name: 'description',
+          title: formatMessage({ id: 'appManager.env.description' }),
+          renderType: 'description',
+          getValueOf: item => item.description || ''
         },
         {
           name: 'options',
@@ -341,6 +382,9 @@ const EnvEditor = createWithRemoteLoader({
                 onClick: () => openEditModal(item)
               }
             ];
+            if (!item.configured) {
+              return list;
+            }
             if (!item.secret) {
               list.push({
                 children: formatMessage({ id: 'appManager.env.markSecret' }),
@@ -377,9 +421,28 @@ const EnvEditor = createWithRemoteLoader({
       [formatMessage, handleSuccess, message, openEditModal, saveEnv]
     );
 
+    const renderSummary = () => {
+      if (!declaration) {
+        return null;
+      }
+      const alertProps = { showIcon: true, style: { marginBottom: 16 } };
+      if (!declaration.versionId) {
+        return <Alert {...alertProps} type="info" message={formatMessage({ id: 'appManager.env.noVersion' })} />;
+      }
+      if (!declaration.hasSchema) {
+        return <Alert {...alertProps} type="warning" message={formatMessage({ id: 'appManager.env.noSchema' }, { version: declaration.version })} />;
+      }
+      if (!declaration.valid) {
+        const count = (declaration.declared || []).filter(item => item.error).length;
+        return <Alert {...alertProps} type="error" message={formatMessage({ id: 'appManager.env.invalid' }, { version: declaration.version, count })} />;
+      }
+      return <Alert {...alertProps} type="success" message={formatMessage({ id: 'appManager.env.valid' }, { version: declaration.version })} />;
+    };
+
     return (
       <>
         <input ref={fileInputRef} type="file" accept=".env,text/plain" style={{ display: 'none' }} onChange={handleUploadEnvFile} />
+        {renderSummary()}
         <TablePage
           ref={tableRef}
           name="app-manager-env"
@@ -415,16 +478,18 @@ const EnvEditor = createWithRemoteLoader({
             ]
           }}
           loader={async ({ data: requestData } = {}) => {
-            const current = dataRef.current || {};
-            let list = toRows(current.env, current.secretEnvKeys || []);
+            const { data: resData } = await ajax(Object.assign({}, apis.appManager.envSchema, { params: { name: dataRef.current?.name } }));
+            const nextDeclaration = resData.code === 0 ? resData.data : null;
+            setDeclaration(nextDeclaration);
+            let list = toRows(nextDeclaration);
             const keyword = resolveKeyword(requestData);
             if (keyword) {
-              list = list.filter(
-                row =>
-                  row.key.toLowerCase().includes(keyword) ||
-                  String(row.value || '')
+              list = list.filter(row =>
+                [row.key, row.value, row.description].some(text =>
+                  String(text || '')
                     .toLowerCase()
                     .includes(keyword)
+                )
               );
             }
             return {
