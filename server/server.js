@@ -46,7 +46,7 @@ const createServer = () => {
         PORT: { type: 'number', default: 8061 },
         IS_TEST: { type: 'boolean', default: false },
 
-        ORIGIN: { type: 'string', default: '' },
+        ORIGIN: { type: 'string', default: 'https://develop.leapin-ai.com' },
         TASK_CRON: { type: 'string', default: '' },
 
         OIDC_KEY_SECRET: { type: 'string', default: '' },
@@ -68,7 +68,6 @@ const createServer = () => {
         DOCUMENT_INDEX_DIR: { type: 'string', default: '' },
 
         ZHIHU_ACCESS_SECRET: { type: 'string', default: '' },
-
         APPS_ROOT: { type: 'string', default: '' }
       }
     }
