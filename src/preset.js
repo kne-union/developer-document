@@ -11,7 +11,8 @@ import ensureSlash from '@kne/ensure-slash';
 
 window.PUBLIC_URL = window.runtimePublicUrl || process.env.PUBLIC_URL;
 
-const baseApiUrl = window.runtimeApiUrl || '';
+// runtimeApiUrl 为 '/' 时直接拼接会得到 '//api/...'，浏览器会把它当成协议相对地址
+const baseApiUrl = ensureSlash(window.runtimeApiUrl || '');
 
 const loadOidcConfig = async () => {
   const response = await fetch(`${baseApiUrl}/api/oidc/config`);
