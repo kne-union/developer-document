@@ -59,7 +59,7 @@ const createRenderAppMarketCards =
                             {item.name}
                           </Text>
                         </div>
-                        <StatusTag status={item.status} />
+                        <StatusTag status={item.status} deployment={item.deployment} />
                       </Flex>
                       {item.description ? (
                         <Paragraph type="secondary" className={style['desc']} ellipsis={{ rows: 2 }}>

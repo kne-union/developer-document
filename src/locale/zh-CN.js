@@ -769,6 +769,7 @@ export default {
   'appManager.version.sqlCount': '{count} 个 SQL',
   'appManager.version.actions': '操作',
   'appManager.version.current': '当前部署',
+  'appManager.version.deploying': '部署中 · {step}',
   'appManager.version.download': '下载',
   'appManager.env.key': '变量名',
   'appManager.env.value': '变量值',

@@ -53,7 +53,7 @@ const Overview = createWithRemoteLoader({
                     {data.name}
                   </Text>
                 </div>
-                <StatusTag status={data.status} />
+                <StatusTag status={data.status} deployment={data.deployment} />
               </Flex>
               <Paragraph type="secondary" className={style['hero-desc']} ellipsis={{ rows: 2 }}>
                 {data.description || formatMessage({ id: 'appManager.list.noDescription' })}
@@ -92,7 +92,7 @@ const Overview = createWithRemoteLoader({
             </div>
           </div>
 
-          {data.status === 'deploying' ? (
+          {data.status === 'deploying' || data.deployment ? (
             <Text type="secondary" className={style['deploying-hint']}>
               {formatMessage({ id: 'appManager.detail.deployingHint' })}
             </Text>

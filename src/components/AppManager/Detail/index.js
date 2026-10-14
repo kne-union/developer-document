@@ -55,7 +55,7 @@ const Detail = createWithRemoteLoader({
 
           return (
             <div className={style['detail-page']}>
-              <DeployingStatusPoller status={data?.status} reload={reload} />
+              <DeployingStatusPoller active={data?.status === 'deploying' || !!data?.deployment} reload={reload} />
               <StateBarPage
                 {...props}
                 name="admin-app-manager-detail"
