@@ -70,16 +70,42 @@ const registerTools = (mcpServer, { services, userId }) => {
   mcpServer.registerTool(
     'search_experience',
     {
-      description: '关键词搜索可复用经验（仅 active）',
+      description: [
+        '关键词搜索可复用经验（仅 active），同时搜索「Prompts」类型 npm 包内的提示词（每个包取最新同步版本）。',
+        '返回 { experiences, prompts }；prompts 只含命中片段，需要全文时用 get_prompt(packageName, fileName)。',
+        'category=prompts 只搜提示词；category=business|library|process 只搜经验。'
+      ].join('\n'),
       inputSchema: z.object({
-        query: z.string().optional().describe('搜索关键词'),
-        category: z.string().optional().describe('business | library | process'),
-        limit: z.number().optional().describe('返回条数，默认 3')
+        query: z.string().optional().describe('搜索关键词（提示词按空格分词，需全部命中）'),
+        category: z.string().optional().describe('business | library | process | prompts'),
+        limit: z.number().optional().describe('经验与提示词各自返回条数，默认 3')
       })
     },
     async ({ query, category, limit }) => {
-      const results = await services.experience.search({ query, category, limit, userId, source: 'mcp' });
-      return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
+      const experiences = category === 'prompts' ? [] : await services.experience.search({ query, category, limit, userId, source: 'mcp' });
+      const prompts = category && category !== 'prompts' ? [] : await services.promptDocument.search({ query, limit });
+      return { content: [{ type: 'text', text: JSON.stringify({ experiences, prompts }, null, 2) }] };
+    }
+  );
+
+  mcpServer.registerTool(
+    'get_prompt',
+    {
+      description: ['读取「Prompts」类型 npm 包内的提示词（最新同步版本）。', '- 不传参数：列出全部提示词包及文件', '- 只传 packageName：列出该包的提示词文件', '- 传 packageName + fileName：返回该提示词 markdown 全文'].join('\n'),
+      inputSchema: z.object({
+        packageName: z.string().optional().describe('包名，如 @kne/prompts-frontend-libs（可省略 @kne/）'),
+        fileName: z.string().optional().describe('相对包内 prompts/ 的文件名，如 组件示例编写.md（可省略 .md）')
+      })
+    },
+    async ({ packageName, fileName }) => {
+      const result = await services.promptDocument.get({ packageName, fileName });
+      if (!result) {
+        return { content: [{ type: 'text', text: `未找到提示词：${packageName}${fileName ? ` / ${fileName}` : ''}` }], isError: true };
+      }
+      if (result.content !== undefined) {
+        return { content: [{ type: 'text', text: `<!-- ${result.packageName}@${result.version} prompts/${result.fileName} -->\n${result.content}` }] };
+      }
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     }
   );
 

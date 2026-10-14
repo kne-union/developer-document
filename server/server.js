@@ -423,6 +423,11 @@ module.exports = {
         }
       }
       console.log('示例代码部署完成');
+      try {
+        await fastify[options.name].services.promptDocument.syncAll();
+      } catch (e) {
+        console.error(e);
+      }
     });
   }
 };

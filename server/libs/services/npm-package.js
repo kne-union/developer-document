@@ -56,6 +56,7 @@ module.exports = fp(async (fastify, options) => {
     try {
       await fs.remove(path.resolve(outputPath, pkg.packageName));
     } catch (e) {}
+    await fastify[options.name].services.promptDocument.remove({ packageName: pkg.packageName });
     return pkg.destroy();
   };
 
