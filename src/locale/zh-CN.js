@@ -299,6 +299,7 @@ export default {
   'shared.catalogPage.currentFilter': '当前筛选',
   'shared.catalogPage.noDescription': '暂无描述',
   'shared.catalogPage.detailAction': '详情',
+  'shared.catalogPage.more': '更多',
   'shared.catalogPage.variantNpmLabel': 'NPM 生态',
   'shared.catalogPage.variantRemoteLabel': '远程模块',
   'shared.catalogPage.variantDefaultLabel': '资源目录',

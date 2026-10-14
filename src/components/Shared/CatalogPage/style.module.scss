@@ -266,6 +266,12 @@
   margin-bottom: 10px;
 }
 
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
 .groupTitle {
   margin: 0 !important;
 }
