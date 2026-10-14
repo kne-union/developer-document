@@ -145,7 +145,9 @@ MCP 服务配置示例：
 }
 ```
 
-可用 tools：`check_worklog_exists`、`check_experience_exists`、`upload_experience`、`upload_worklog`（支持 `skipIfExists` 用于迁移）、`search_experience`、`search_document_index`、`search_document`。
+可用 tools：`check_worklog_exists`、`check_experience_exists`、`upload_experience`、`upload_worklog`（支持 `skipIfExists` 用于迁移）、`search_experience`、`get_prompt`、`search_document_index`、`search_document`。
+
+`search_experience` 同时搜索经验卡与「Prompts」类型 npm 包内的提示词（`prompts/**/*.md`），返回 `{ experiences, prompts }`；提示词只给命中片段，全文用 `get_prompt`。提示词随 npm 包同步任务更新：发版触发同步后，以该版本 tarball 内容整体替换此包的提示词（版本未变则跳过）；服务启动时也会补齐版本落后的包。
 
 #### 博客工具（管理员）
 

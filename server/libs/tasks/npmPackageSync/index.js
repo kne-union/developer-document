@@ -61,12 +61,30 @@ const runner = async (fastify, options, { task, polling, updateProgress, log }) 
         log({ data: { packageName: pkg.packageName }, message: '无 README，跳过文档索引' });
       }
 
+      let promptsOk = null;
+      if (pkg.type === 'prompts') {
+        try {
+          const promptsResult = await withRetry(() => services.promptDocument.sync({ packageName: pkg.packageName, version: indexVersion }), {
+            retries: 3,
+            delays: [2000, 5000, 10000]
+          });
+          promptsOk = true;
+          log({ data: promptsResult, message: `提示词同步${promptsResult.action === 'skipped' ? '跳过（版本未变）' : '成功'}` });
+        } catch (promptsError) {
+          promptsOk = false;
+          log({ data: { error: promptsError.message }, message: `提示词同步失败: ${pkg.packageName}` });
+        }
+      } else {
+        await services.promptDocument.remove({ packageName: pkg.packageName });
+      }
+
       results.push({
         packageName: pkg.packageName,
         success: true,
         latestVersion,
         indexVersion,
-        indexOk
+        indexOk,
+        promptsOk
       });
 
       log({ data: { packageName: pkg.packageName, latestVersion, indexOk }, message: '同步成功' });
