@@ -4,6 +4,7 @@ const { NodeStreamableHTTPServerTransport } = require('@modelcontextprotocol/nod
 const z = require('zod/v4');
 const { createDevTokenAuthenticate } = require('../utils/dev-token');
 const registerAppManagerTools = require('./app-manager-tools');
+const registerBlogTools = require('./blog-tools');
 
 const registerTools = (mcpServer, { services, userId }) => {
   mcpServer.registerTool(
@@ -239,8 +240,11 @@ module.exports = fp(async (fastify, options) => {
       const userId = request.userInfo.id;
       const mcpServer = new McpServer({ name: 'developer-document', version: '1.0.0' });
       registerTools(mcpServer, { services, userId });
-      if (fastify.appManager && (await fastify.account.services.admin.checkIsSuperAdmin({ id: userId }).catch(() => false))) {
-        registerAppManagerTools(mcpServer, { fastify });
+      if (await fastify.account.services.admin.checkIsSuperAdmin({ id: userId }).catch(() => false)) {
+        registerBlogTools(mcpServer, { fastify, services, userId });
+        if (fastify.appManager) {
+          registerAppManagerTools(mcpServer, { fastify });
+        }
       }
 
       const transport = new NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined });

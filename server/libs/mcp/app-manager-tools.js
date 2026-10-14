@@ -53,7 +53,7 @@ const summarizeLoad = (pageData, minutes) => {
 
 /**
  * 应用中心（@kne/fastify-app-manager）管理工具：调用方须在注册前确认当前用户为管理员（MCP server 按请求创建）。
- * 数据调试仅提供只读能力。
+ * 数据调试仅提供只读能力；写库只通过迁移脚本（run_app_migration）。
  */
 const registerAppManagerTools = (mcpServer, { fastify }) => {
   const getServices = () => fastify.appManager.services;
@@ -190,8 +190,40 @@ const registerAppManagerTools = (mcpServer, { fastify }) => {
     }
   );
 
-  register('list_app_migrations', '列出某版本的 SQL 迁移脚本及是否已执行，部署前用于决定 deploy_app 的 migrations', { name: appName, versionId: z.string() }, async ({ name, versionId }, services) =>
-    services.migration.list({ name, versionId })
+  const resolveVersionId = async (services, { name, versionId }) => {
+    if (versionId) {
+      return versionId;
+    }
+    const app = await services.app.detail({ name });
+    if (!app?.currentVersionId) {
+      throw new Error(`应用 ${name} 还没有部署版本，请传 versionId`);
+    }
+    return String(app.currentVersionId);
+  };
+
+  const versionIdArg = z.string().optional().describe('不传则为当前部署版本');
+  const sqlFileArg = z.string().describe('脚本文件名，[A-Za-z0-9_-.] 且以 .sql 结尾，按文件名排序执行');
+
+  register('list_app_migrations', '列出某版本（默认当前部署版本）的 SQL 迁移脚本及是否已执行，部署前用于决定 deploy_app 的 migrations', { name: appName, versionId: versionIdArg }, async ({ name, versionId }, services) =>
+    services.migration.list({ name, versionId: await resolveVersionId(services, { name, versionId }) })
+  );
+
+  register(
+    'save_app_migration',
+    ['向某版本（默认当前部署版本）新增或覆盖 SQL 迁移脚本，无需重新打包上传版本。', '保存后用 run_app_migration 单独执行，或重新 deploy_app 该版本时按未执行脚本自动执行。'].join('\n'),
+    { name: appName, versionId: versionIdArg, file: sqlFileArg, content: z.string().describe('SQL 内容') },
+    async ({ name, versionId, file, content }, services) => {
+      const id = await resolveVersionId(services, { name, versionId });
+      await services.migration.save({ name, versionId: id, file, content });
+      return services.migration.list({ name, versionId: id });
+    }
+  );
+
+  register(
+    'run_app_migration',
+    ['对应用数据库执行某版本（默认当前部署版本）的一个迁移脚本并记录为已执行；不会重启应用。', 'action=mark 只记录为已执行不跑 SQL，unmark 撤销执行记录（不回滚数据）。'].join('\n'),
+    { name: appName, versionId: versionIdArg, file: sqlFileArg, action: z.enum(['execute', 'mark', 'unmark']).optional().describe('默认 execute') },
+    async ({ name, versionId, file, action = 'execute' }, services) => services.migration.action({ action, name, versionId: await resolveVersionId(services, { name, versionId }), file })
   );
 
   register(
