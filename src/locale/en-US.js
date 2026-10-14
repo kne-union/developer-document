@@ -770,6 +770,7 @@ export default {
   'appManager.version.sqlCount': '{count} SQL files',
   'appManager.version.actions': 'Actions',
   'appManager.version.current': 'Current',
+  'appManager.version.deploying': 'Deploying · {step}',
   'appManager.version.download': 'Download',
   'appManager.env.key': 'Key',
   'appManager.env.value': 'Value',

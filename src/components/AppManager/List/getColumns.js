@@ -36,7 +36,7 @@ const getColumns = ({ navigate, formatMessage, Image }) => {
     {
       name: 'status',
       title: formatMessage({ id: 'common.status' }),
-      render: (_, { dataSource }) => <StatusTag status={dataSource.status} />
+      render: (_, { dataSource }) => <StatusTag status={dataSource.status} deployment={dataSource.deployment} />
     },
     {
       name: 'isPublic',

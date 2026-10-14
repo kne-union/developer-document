@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { Tag, Tooltip } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
@@ -40,6 +41,7 @@ const VersionPanel = createWithRemoteLoader({
     }, [onSuccess]);
 
     const currentVersionId = data?.currentVersionId != null ? String(data.currentVersionId) : null;
+    const deployment = data?.deployment || null;
 
     const columns = useCallback(
       () => [
@@ -52,8 +54,23 @@ const VersionPanel = createWithRemoteLoader({
         {
           name: 'current',
           title: formatMessage({ id: 'common.status' }),
-          renderType: 'tag',
-          getValueOf: item => (currentVersionId && String(item.id) === currentVersionId ? { type: 'success', text: formatMessage({ id: 'appManager.version.current' }) } : null)
+          render: (_, { dataSource }) => {
+            if (deployment && String(dataSource.id) === String(deployment.versionId)) {
+              const step = deployment.step ? formatMessage({ id: `appManager.deploy.step.${deployment.step}` }) : '';
+              const detail = deployment.detail ? formatMessage({ id: `appManager.deploy.detail.${deployment.detail}` }) : '';
+              return (
+                <Tooltip title={detail || null}>
+                  <Tag color="processing" icon={<LoadingOutlined />}>
+                    {formatMessage({ id: 'appManager.version.deploying' }, { step })}
+                  </Tag>
+                </Tooltip>
+              );
+            }
+            if (currentVersionId && String(dataSource.id) === currentVersionId) {
+              return <Tag color="success">{formatMessage({ id: 'appManager.version.current' })}</Tag>;
+            }
+            return null;
+          }
         },
         {
           name: 'label',
@@ -111,7 +128,7 @@ const VersionPanel = createWithRemoteLoader({
           ]
         }
       ],
-      [currentVersionId, data, download, formatMessage, handleReload]
+      [currentVersionId, data, deployment, download, formatMessage, handleReload]
     );
 
     return (

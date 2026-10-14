@@ -10,9 +10,9 @@ const STATUS_COLOR = {
   error: 'error'
 };
 
-const StatusTag = withLocale(({ status }) => {
+const StatusTag = withLocale(({ status, deployment }) => {
   const { formatMessage } = useIntl();
-  const key = status || 'idle';
+  const key = deployment ? 'deploying' : status || 'idle';
   const color = STATUS_COLOR[key] || 'default';
   const labelId = `appManager.status.${key}`;
 

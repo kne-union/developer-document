@@ -1,15 +1,15 @@
 import { useEffect, useRef } from 'react';
 
-const POLL_INTERVAL_MS = 1500;
-const POLL_MAX_MS = 90000;
+const POLL_INTERVAL_MS = 3000;
+const POLL_MAX_MS = 10 * 60 * 1000;
 
-/** status === deploying 时轮询 reload，直到变为终态或超时 */
-const DeployingStatusPoller = ({ status, reload }) => {
+/** 部署进行中时轮询 reload（准备部署包阶段 status 仍是旧值，需同时看 deployment），直到结束或超时 */
+const DeployingStatusPoller = ({ active, reload }) => {
   const reloadRef = useRef(reload);
   reloadRef.current = reload;
 
   useEffect(() => {
-    if (status !== 'deploying' || typeof reloadRef.current !== 'function') {
+    if (!active || typeof reloadRef.current !== 'function') {
       return undefined;
     }
     const startedAt = Date.now();
@@ -26,7 +26,7 @@ const DeployingStatusPoller = ({ status, reload }) => {
       clearInterval(timer);
       clearTimeout(first);
     };
-  }, [status]);
+  }, [active]);
 
   return null;
 };
