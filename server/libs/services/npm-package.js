@@ -188,9 +188,10 @@ module.exports = fp(async (fastify, options) => {
       where[Op.or] = ['packageName', 'name', 'description', 'readme', 'registry'].map(field => ({ [field]: { [Op.like]: `%${keyword}%` } }));
     }
 
-    // 查询所有符合条件的数据，然后在应用层过滤
     const { rows, count } = await models.npmPackage.findAndCountAll({
       where,
+      limit: perPage,
+      offset: (currentPage - 1) * perPage,
       order: [['createdAt', 'DESC']]
     });
 

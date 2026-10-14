@@ -300,6 +300,7 @@ export default {
   'shared.catalogPage.currentFilter': 'Current Filter',
   'shared.catalogPage.noDescription': 'No description',
   'shared.catalogPage.detailAction': 'Details',
+  'shared.catalogPage.more': 'More',
   'shared.catalogPage.variantNpmLabel': 'NPM Ecosystem',
   'shared.catalogPage.variantRemoteLabel': 'Remote Modules',
   'shared.catalogPage.variantDefaultLabel': 'Resource Directory',

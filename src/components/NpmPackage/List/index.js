@@ -22,9 +22,7 @@ const List = withLocale(() => {
       filterLabel={formatMessage({ id: 'npmPackage.list.filterLabel' })}
       filterParam="type"
       groupOptions={localizedTypeOptions}
-      groupFallback="other"
       getApi={(apis, isLoggedIn) => (isLoggedIn ? apis.npmPackage.list : apis.npmPackage.publicList)}
-      getGroupKey={item => item.type || 'other'}
       getItemTitle={item => item.name || item.packageName}
       getItemDescription={item => item.description}
       getItemIdentifier={item => item.packageName}

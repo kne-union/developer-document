@@ -22,9 +22,7 @@ const List = withLocale(() => {
       filterLabel={formatMessage({ id: 'remoteComponent.list.filterLabel' })}
       filterParam="group"
       groupOptions={localizedGroupOptions}
-      groupFallback="common"
       getApi={(apis, isLoggedIn) => (isLoggedIn ? apis.remoteComponent.list : apis.remoteComponent.publicList)}
-      getGroupKey={item => item.group || 'common'}
       getItemTitle={item => item.name || item.remote}
       getItemDescription={item => item.description}
       getItemIdentifier={item => item.remote}

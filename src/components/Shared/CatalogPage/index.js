@@ -1,8 +1,8 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import classNames from 'classnames';
-import { Button, Empty, Input, Skeleton, Space, Tag, Typography } from 'antd';
-import { ApiOutlined, AppstoreOutlined, CloudServerOutlined } from '@ant-design/icons';
+import { Button, Empty, Input, Pagination, Skeleton, Space, Tag, Typography } from 'antd';
+import { ApiOutlined, AppstoreOutlined, CloudServerOutlined, RightOutlined } from '@ant-design/icons';
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import withLocale from '@root/withLocale';
@@ -12,6 +12,9 @@ import styles from './style.module.scss';
 
 const { Search } = Input;
 const { Title, Paragraph, Text } = Typography;
+
+const PREVIEW_SIZE = 8;
+const PAGE_SIZE = 24;
 
 const CatalogSkeleton = () => {
   return (
@@ -49,15 +52,7 @@ const CatalogPage = createWithRemoteLoader({
       filterLabel,
       filterParam = 'type',
       groupOptions = [],
-      groupFallback,
       getApi,
-      buildRequestData = ({ keyword, selectedFilter, filterParam }) => ({
-        keyword,
-        [filterParam]: selectedFilter || undefined,
-        perPage: 20,
-        currentPage: 1
-      }),
-      getGroupKey,
       getItemTitle,
       getItemDescription,
       getItemIdentifier,
@@ -66,13 +61,14 @@ const CatalogPage = createWithRemoteLoader({
       isPublic = item => item.isPublic !== false
     }) => {
       const [Page, usePreset] = remoteModules;
-      const { apis } = usePreset();
+      const { apis, ajax } = usePreset();
       const { formatMessage } = useIntl();
       const navigate = useNavigate();
       const location = useLocation();
       const [searchParams] = useSearchParams();
       const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
       const [selectedFilter, setSelectedFilter] = useState(searchParams.get(filterParam) || '');
+      const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1);
 
       const isLoggedIn = useMemo(() => hasUserToken(), []);
 
@@ -83,8 +79,15 @@ const CatalogPage = createWithRemoteLoader({
         }, {});
       }, [groupOptions]);
 
-      const syncParams = ({ nextKeyword = keyword, nextFilter = selectedFilter }) => {
+      const syncParams = ({ nextKeyword = keyword, nextFilter = selectedFilter, nextPage = 1 }) => {
         const nextSearchParams = new URLSearchParams(searchParams);
+        setCurrentPage(nextPage);
+
+        if (nextPage > 1) {
+          nextSearchParams.set('page', nextPage);
+        } else {
+          nextSearchParams.delete('page');
+        }
 
         if (nextKeyword) {
           nextSearchParams.set('keyword', nextKeyword);
@@ -113,6 +116,27 @@ const CatalogPage = createWithRemoteLoader({
         syncParams({ nextFilter: value });
       };
 
+      const api = getApi(apis, isLoggedIn);
+
+      const requestList = async params => {
+        const { data: resData } = await ajax(Object.assign({}, api, { params }));
+        if (resData.code !== 0) {
+          throw new Error(resData.msg);
+        }
+        return resData.data;
+      };
+
+      const loadAllGroups = async ({ params }) => {
+        const [total, ...groupResults] = await Promise.all([
+          requestList({ keyword: params.keyword, perPage: 1, currentPage: 1 }),
+          ...groupOptions.map(item => requestList({ keyword: params.keyword, [filterParam]: item.value, perPage: PREVIEW_SIZE, currentPage: 1 }))
+        ]);
+        return {
+          totalCount: total.totalCount,
+          groups: groupOptions.map((item, index) => Object.assign({ group: item.value }, groupResults[index])).filter(item => item.totalCount > 0)
+        };
+      };
+
       const variantMetaMap = {
         npm: { label: formatMessage({ id: 'shared.catalogPage.variantNpmLabel' }) },
         remote: { label: formatMessage({ id: 'shared.catalogPage.variantRemoteLabel' }) },
@@ -124,6 +148,100 @@ const CatalogPage = createWithRemoteLoader({
       const contentClassName = classNames(styles.content, headerVariant === 'npm' && styles['themeNpm'], headerVariant === 'remote' && styles['themeRemote'], headerVariant !== 'npm' && headerVariant !== 'remote' && styles['themeDefault']);
 
       const headerPanelClassName = classNames(styles.headerPanel, headerVariant === 'npm' && styles['headerPanelNpm'], headerVariant === 'remote' && styles['headerPanelRemote']);
+
+      const renderCatalog = ({ totalCount = 0, groups = [] } = {}) => {
+        if (totalCount === 0) {
+          return (
+            <div className={styles.emptyState}>
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={keyword || selectedFilter ? emptyDescription || formatMessage({ id: 'shared.catalogPage.emptyNoContent' }) : formatMessage({ id: 'shared.catalogPage.emptyNoContent' })}
+              />
+            </div>
+          );
+        }
+
+        const activeMeta = selectedFilter ? optionMap[selectedFilter] : null;
+        const activeText = activeMeta?.label || (keyword ? `${formatMessage({ id: 'shared.catalogPage.searchPrefix' })}${keyword}` : formatMessage({ id: 'shared.catalogPage.allFilter' }));
+
+        return (
+          <>
+            <div className={styles.summaryBar}>
+              <SummaryItem label={formatMessage({ id: 'shared.catalogPage.categoryCount' }, { filterLabel: filterLabel || formatMessage({ id: 'common.category' }) })} value={groups.length} />
+              <SummaryItem label={formatMessage({ id: 'shared.catalogPage.resourceCount' })} value={totalCount} />
+              <SummaryItem label={formatMessage({ id: 'shared.catalogPage.currentFilter' })} value={activeText} />
+            </div>
+
+            {groups.map(({ group, totalCount: groupTotal, pageData: items }) => {
+              const currentMeta = optionMap[group] || { label: group, color: 'default' };
+
+              return (
+                <section className={styles.groupSection} key={group}>
+                  <div className={styles.groupHeader}>
+                    <Space size={8} align="center">
+                      <Title level={4} className={styles.groupTitle}>
+                        {currentMeta.label}
+                      </Title>
+                      <Tag className={styles['groupCountTag']}>{groupTotal}</Tag>
+                    </Space>
+                    {!selectedFilter && groupTotal > items.length && (
+                      <Button type="link" size="small" onClick={() => handleFilterChange(group)}>
+                        {formatMessage({ id: 'shared.catalogPage.more' })}
+                        <RightOutlined />
+                      </Button>
+                    )}
+                  </div>
+                  <div className={styles.cardGrid}>
+                    {items.map(item => (
+                      <button
+                        type="button"
+                        key={item.id}
+                        className={classNames(styles.card, styles.clickable)}
+                        onClick={() => {
+                          navigate(getNavigateTo({ pathname: location.pathname, item }));
+                        }}
+                      >
+                        <div className={styles.cardHeader}>
+                          <div className={styles.cardTitleBlock}>
+                            <Title level={4} className={styles.cardTitle} ellipsis={{ rows: 1 }}>
+                              {getItemTitle(item)}
+                            </Title>
+                            <Text className={styles.cardIdentifier} ellipsis>
+                              {getItemIdentifier(item)}
+                            </Text>
+                          </div>
+                          <Tag className={classNames(styles.versionTag, styles['semanticTagStrong'])}>{getItemVersion(item)}</Tag>
+                        </div>
+                        <Paragraph ellipsis={{ rows: 2 }} className={styles.cardDescriptionText}>
+                          {getItemDescription(item) || formatMessage({ id: 'shared.catalogPage.noDescription' })}
+                        </Paragraph>
+                        <div className={styles.cardMeta}>
+                          <Space size={[6, 6]} wrap>
+                            <Tag bordered={false} className={styles['semanticTagSoft']}>
+                              {currentMeta.label}
+                            </Tag>
+                            {isPublic(item) && (
+                              <Tag bordered={false} className={styles['semanticTagMuted']}>
+                                {formatMessage({ id: 'common.public' })}
+                              </Tag>
+                            )}
+                          </Space>
+                          <Text className={styles.cardAction}>{formatMessage({ id: 'shared.catalogPage.detailAction' })}</Text>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  {selectedFilter && groupTotal > PAGE_SIZE && (
+                    <div className={styles.pagination}>
+                      <Pagination current={currentPage} pageSize={PAGE_SIZE} total={groupTotal} showSizeChanger={false} onChange={page => syncParams({ nextPage: page })} />
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </>
+        );
+      };
 
       return (
         <Page name={pageName} noMargin>
@@ -174,118 +292,17 @@ const CatalogPage = createWithRemoteLoader({
                 </div>
               </section>
 
-              <Fetch
-                {...Object.assign({}, getApi(apis, isLoggedIn), {
-                  params: buildRequestData({ keyword, selectedFilter, filterParam })
-                })}
-                render={({ data, loading }) => {
-                  const list = data?.pageData || [];
-                  const groupedData = list.reduce((result, item) => {
-                    const currentGroup = getGroupKey(item) || groupFallback;
-                    if (!result[currentGroup]) {
-                      result[currentGroup] = [];
-                    }
-                    result[currentGroup].push(item);
-                    return result;
-                  }, {});
-
-                  const entries = (selectedFilter ? [[selectedFilter, groupedData[selectedFilter] || []]] : Object.entries(groupedData))
-                    .filter(([, items]) => items.length > 0)
-                    .sort((a, b) => {
-                      const indexA = groupOptions.findIndex(item => item.value === a[0]);
-                      const indexB = groupOptions.findIndex(item => item.value === b[0]);
-                      if (indexA === -1 && indexB === -1) return a[0].localeCompare(b[0]);
-                      if (indexA === -1) return 1;
-                      if (indexB === -1) return -1;
-                      return indexA - indexB;
-                    });
-
-                  if (loading) {
-                    return <CatalogSkeleton />;
-                  }
-
-                  if (entries.length === 0) {
-                    return (
-                      <div className={styles.emptyState}>
-                        <Empty
-                          image={Empty.PRESENTED_IMAGE_SIMPLE}
-                          description={keyword || selectedFilter ? emptyDescription || formatMessage({ id: 'shared.catalogPage.emptyNoContent' }) : formatMessage({ id: 'shared.catalogPage.emptyNoContent' })}
-                        />
-                      </div>
-                    );
-                  }
-
-                  const activeMeta = selectedFilter ? optionMap[selectedFilter] : null;
-                  const activeText = activeMeta?.label || (keyword ? `${formatMessage({ id: 'shared.catalogPage.searchPrefix' })}${keyword}` : formatMessage({ id: 'shared.catalogPage.allFilter' }));
-
-                  return (
-                    <>
-                      <div className={styles.summaryBar}>
-                        <SummaryItem label={formatMessage({ id: 'shared.catalogPage.categoryCount' }, { filterLabel: filterLabel || formatMessage({ id: 'common.category' }) })} value={Object.keys(groupedData).length} />
-                        <SummaryItem label={formatMessage({ id: 'shared.catalogPage.resourceCount' })} value={list.length} />
-                        <SummaryItem label={formatMessage({ id: 'shared.catalogPage.currentFilter' })} value={activeText} />
-                      </div>
-
-                      {entries.map(([group, items]) => {
-                        const currentMeta = optionMap[group] || { label: group, color: 'default' };
-
-                        return (
-                          <section className={styles.groupSection} key={group}>
-                            <div className={styles.groupHeader}>
-                              <Space size={8} align="center">
-                                <Title level={4} className={styles.groupTitle}>
-                                  {currentMeta.label}
-                                </Title>
-                                <Tag className={styles['groupCountTag']}>{items.length}</Tag>
-                              </Space>
-                            </div>
-                            <div className={styles.cardGrid}>
-                              {items.map(item => (
-                                <button
-                                  type="button"
-                                  key={item.id}
-                                  className={classNames(styles.card, styles.clickable)}
-                                  onClick={() => {
-                                    navigate(getNavigateTo({ pathname: location.pathname, item }));
-                                  }}
-                                >
-                                  <div className={styles.cardHeader}>
-                                    <div className={styles.cardTitleBlock}>
-                                      <Title level={4} className={styles.cardTitle} ellipsis={{ rows: 1 }}>
-                                        {getItemTitle(item)}
-                                      </Title>
-                                      <Text className={styles.cardIdentifier} ellipsis>
-                                        {getItemIdentifier(item)}
-                                      </Text>
-                                    </div>
-                                    <Tag className={classNames(styles.versionTag, styles['semanticTagStrong'])}>{getItemVersion(item)}</Tag>
-                                  </div>
-                                  <Paragraph ellipsis={{ rows: 2 }} className={styles.cardDescriptionText}>
-                                    {getItemDescription(item) || formatMessage({ id: 'shared.catalogPage.noDescription' })}
-                                  </Paragraph>
-                                  <div className={styles.cardMeta}>
-                                    <Space size={[6, 6]} wrap>
-                                      <Tag bordered={false} className={styles['semanticTagSoft']}>
-                                        {currentMeta.label}
-                                      </Tag>
-                                      {isPublic(item) && (
-                                        <Tag bordered={false} className={styles['semanticTagMuted']}>
-                                          {formatMessage({ id: 'common.public' })}
-                                        </Tag>
-                                      )}
-                                    </Space>
-                                    <Text className={styles.cardAction}>{formatMessage({ id: 'shared.catalogPage.detailAction' })}</Text>
-                                  </div>
-                                </button>
-                              ))}
-                            </div>
-                          </section>
-                        );
-                      })}
-                    </>
-                  );
-                }}
-              />
+              {selectedFilter ? (
+                <Fetch
+                  key={`filter-${selectedFilter}`}
+                  {...api}
+                  params={{ keyword, [filterParam]: selectedFilter, perPage: PAGE_SIZE, currentPage }}
+                  loading={<CatalogSkeleton />}
+                  render={({ data }) => renderCatalog({ totalCount: data?.totalCount || 0, groups: [{ group: selectedFilter, totalCount: data?.totalCount || 0, pageData: data?.pageData || [] }] })}
+                />
+              ) : (
+                <Fetch key="all" params={{ keyword }} loader={loadAllGroups} loading={<CatalogSkeleton />} render={({ data }) => renderCatalog(data)} />
+              )}
             </div>
           </div>
         </Page>
