@@ -24,6 +24,22 @@ const pickApp = app =>
     entries: app.entries
   };
 
+const pickSteps = events => (events || []).map(({ step, status, detail, message }) => ({ step, status, detail, message }));
+
+const pickDeploy = record =>
+  record && {
+    progressId: record.progressId,
+    versionId: record.versionId,
+    version: record.version,
+    source: record.source,
+    status: record.status,
+    step: record.step,
+    message: record.message || null,
+    startedAt: record.startedAt,
+    finishedAt: record.finishedAt,
+    ...(record.events ? { steps: pickSteps(record.events) } : {})
+  };
+
 const summarizeLoad = (pageData, minutes) => {
   const since = Date.now() - minutes * 60 * 1000;
   const samples = (pageData || []).filter(item => item.ts >= since);
@@ -86,10 +102,10 @@ const registerAppManagerTools = (mcpServer, { fastify }) => {
     }
   );
 
-  register('get_app', '应用详情：状态与原因、当前版本、环境变量缺失摘要、最近一次部署进度', { name: appName }, async ({ name }, services) => {
+  register('get_app', '应用详情：状态与原因、当前版本、环境变量缺失摘要、进行中的部署与最近一次部署结果（日志用 get_app_deploy）', { name: appName }, async ({ name }, services) => {
     const app = await services.app.detail({ name });
     const declaration = await services.app.getEnvDeclaration({ name }).catch(e => ({ error: e.message }));
-    const progress = services.app.getDeployProgress().snapshot(name);
+    const lastDeploy = await services.app.deployDetail({ name, logLines: 1 }).catch(() => null);
     return {
       app: pickApp(app),
       env: declaration.error
@@ -100,7 +116,8 @@ const registerAppManagerTools = (mcpServer, { fastify }) => {
             valid: declaration.valid,
             problems: (declaration.declared || []).filter(item => item.error).map(item => ({ key: item.key, error: item.error }))
           },
-      lastDeploy: progress
+      deploying: app.deployment || null,
+      lastDeploy: pickDeploy(lastDeploy)
     };
   });
 
@@ -228,9 +245,12 @@ const registerAppManagerTools = (mcpServer, { fastify }) => {
 
   register(
     'deploy_app',
-    ['部署指定版本：准备部署包 → 校验环境变量 → SQL 迁移 → 启动 → 健康检查。', '环境变量不符合 env.schema.json 时停在 env 阶段并列出问题，可先 get_app_env / save_app_env 修正。', 'wait=true（默认）时等待部署结束再返回各阶段结果。'].join(
-      '\n'
-    ),
+    [
+      '部署指定版本：准备部署包 → 校验环境变量 → SQL 迁移 → 启动 → 健康检查。',
+      '环境变量不符合 env.schema.json 时停在 env 阶段并列出问题，可先 get_app_env / save_app_env 修正。',
+      'wait=true（默认）时最多等待 timeoutMs 再返回各阶段结果；失败附带部署日志末尾。',
+      '超时（如安装依赖较慢）部署仍在后台继续，用返回的 progressId 调 get_app_deploy 查看进度与日志。'
+    ].join('\n'),
     {
       name: appName,
       versionId: z.string().optional().describe('与 version 二选一'),
@@ -241,34 +261,79 @@ const registerAppManagerTools = (mcpServer, { fastify }) => {
         .optional()
         .describe('逐个指定待执行脚本的处理方式；未列出的按 execute'),
       wait: z.boolean().optional().describe('默认 true'),
-      timeoutMs: z.number().optional().describe('等待超时，默认 180000')
+      timeoutMs: z.number().optional().describe('等待超时，默认 50000（避免超过 MCP 调用超时）')
     },
-    async ({ name, versionId, version, runMigration = true, migrations, wait = true, timeoutMs = 180000 }, services) => {
+    async ({ name, versionId, version, runMigration = true, migrations, wait = true, timeoutMs = 50000 }, services) => {
       if (!versionId && !version) {
         throw new Error('versionId 或 version 至少提供一个');
       }
+      const running = services.app.getDeployProgress().active(name);
+      if (running) {
+        return { ok: null, progressId: running.progressId, message: `应用正在部署版本 ${running.version}，请用 get_app_deploy 查看进度，结束后再部署`, deploying: running };
+      }
       const progressId = crypto.randomUUID();
-      const steps = () => {
-        const snapshot = services.app.getDeployProgress().snapshot(name);
-        return snapshot && snapshot.progressId === progressId ? snapshot.events.map(({ step, status, detail, message }) => ({ step, status, detail, message })) : [];
-      };
-      try {
-        await services.app.deploy({ name, versionId, version, runMigration, migrations, progressId });
-      } catch (e) {
-        return { ok: false, message: e.message, steps: steps() };
+      // deploy 会一直等到进程拉起（含安装依赖），放到后台，按进度等待
+      const deploying = services.app.deploy({ name, versionId, version, runMigration, migrations, progressId }).then(
+        () => null,
+        e => e
+      );
+      const settled = wait ? services.app.waitDeployProgress({ name, progressId, timeoutMs }) : new Promise(resolve => setTimeout(() => resolve({ timedOut: true }), 1000));
+      // 未进入部署阶段就失败（应用或版本不存在）时不会有进度事件
+      const early = await Promise.race([settled.then(() => null), deploying.then(err => err || new Promise(() => {}))]);
+      const record = await services.app.deployDetail({ name, progressId, logLines: 80 }).catch(() => null);
+      if (early && !record) {
+        return { ok: false, message: early.message };
       }
-      if (!wait) {
-        return { ok: null, progressId, message: '已开始部署，可用 get_app 查看进度', steps: steps() };
-      }
-      const result = await services.app.waitDeployProgress({ name, progressId, timeoutMs });
-      const app = await services.app.detail({ name });
-      return {
-        ok: result.ok,
-        timedOut: result.timedOut,
-        status: app.status,
-        message: app.message || null,
-        steps: result.events.map(({ step, status, detail, message }) => ({ step, status, detail, message }))
+      const status = record?.status;
+      const app = await services.app.detail({ name }).catch(() => null);
+      const result = {
+        ok: status === 'success' ? true : status === 'failed' ? false : null,
+        progressId,
+        status: status || 'running',
+        appStatus: app?.status || null,
+        message: record?.message || app?.message || null,
+        steps: pickSteps(record?.events)
       };
+      if (status === 'failed') {
+        result.log = record.log;
+        result.hint = '完整日志用 get_app_deploy；进程启动后的输出用 get_app_logs';
+      } else if (status !== 'success') {
+        result.hint = `部署仍在后台进行，用 get_app_deploy（progressId=${progressId}）查看进度与日志`;
+      }
+      return result;
+    }
+  );
+
+  register(
+    'list_app_deploys',
+    '列出应用最近的部署记录（含启动时自动补回部署目录 source=restore）：版本、状态 running/success/failed、失败阶段与原因、起止时间',
+    {
+      name: appName,
+      perPage: z.number().optional().describe('默认 10'),
+      currentPage: z.number().optional()
+    },
+    async ({ name, perPage = 10, currentPage = 1 }, services) => {
+      const { pageData, totalCount } = await services.app.deployList({ name, perPage, currentPage });
+      return { totalCount, pageData: pageData.map(pickDeploy) };
+    }
+  );
+
+  register(
+    'get_app_deploy',
+    ['查看某次部署（默认最近一次）的状态、各阶段结果与部署日志，用于跟踪进行中的部署或排查部署失败。', '日志包含各阶段结果、依赖安装（npm install）输出，就绪失败时附带应用 err.log 末尾。'].join('\n'),
+    {
+      name: appName,
+      progressId: z.string().optional().describe('部署标识（deploy_app / list_app_deploys 返回），不传取最近一次'),
+      logLines: z.number().optional().describe(`返回日志末尾行数，默认 200，上限 ${MAX_LOG_LINES}`),
+      keyword: z.string().optional().describe('只返回包含关键字的日志行（不区分大小写）')
+    },
+    async ({ name, progressId, logLines = 200, keyword }, services) => {
+      const record = await services.app.deployDetail({ name, progressId });
+      const needle = keyword ? keyword.toLowerCase() : null;
+      const all = record.log ? record.log.split('\n') : [];
+      const matched = needle ? all.filter(line => line.toLowerCase().includes(needle)) : all;
+      const lines = matched.slice(-Math.min(Math.max(1, logLines), MAX_LOG_LINES));
+      return [JSON.stringify(pickDeploy(record), null, 2), '', `部署日志：共 ${all.length} 行${needle ? `，包含「${keyword}」的 ${matched.length} 行` : ''}，显示最后 ${lines.length} 行`, lines.join('\n') || '（无内容）'].join('\n');
     }
   );
 

@@ -117,6 +117,24 @@ const Deploy = createWithRemoteLoader({
         )
       });
 
+    const openRunningProgress = deployment =>
+      modal({
+        title: formatMessage({ id: 'appManager.deploy.runningTitle' }, { version: deployment.version || '' }),
+        size: 'small',
+        footer: null,
+        children: <DeployProgress ajax={ajax} apis={apis} staticUrl={staticUrl} name={data.name} progressId={deployment.progressId} formatMessage={formatMessage} onFinish={() => onSuccess && onSuccess()} />
+      });
+
+    // 列表数据可能已过期（如经 MCP 发起的部署），以最新详情为准
+    const loadDeployment = async () => {
+      try {
+        const { data: resData } = await ajax(Object.assign({}, apis.appManager.detail, { params: { name: data.name } }));
+        return resData.code === 0 ? resData.data?.deployment || null : data.deployment || null;
+      } catch (e) {
+        return data.deployment || null;
+      }
+    };
+
     const loadMigrations = async () => {
       if (!versionId) {
         return null;
@@ -133,6 +151,11 @@ const Deploy = createWithRemoteLoader({
       setLoading(true);
       let listData = null;
       try {
+        const deployment = await loadDeployment();
+        if (deployment?.progressId) {
+          openRunningProgress(deployment);
+          return;
+        }
         listData = await loadMigrations();
       } finally {
         setLoading(false);
