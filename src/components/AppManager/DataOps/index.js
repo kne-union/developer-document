@@ -8,9 +8,10 @@ import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import Fetch from '@kne/react-fetch';
 import style from './style.module.scss';
-import { createColumnField, estimateColumnWidth, isColumnRequired, normalizeFormPayload, prepareFormRecord, buildColumnFilterList, mapDbRowsFilterValue } from './dbColumnForm';
+import KneDocumentJsonView from '@components/Shared/KneDocumentJsonView';
+import { createColumnField, estimateColumnWidth, isColumnRequired, normalizeFormPayload, prepareFormRecord, buildColumnFilterList, mapDbRowsFilterValue, formatCellValue, parseJsonCell } from './dbColumnForm';
 
-const { Text } = Typography;
+const { Text, Link } = Typography;
 const SECRET_MASK = '********';
 
 const DB_DIALECT_OPTIONS = [
@@ -83,14 +84,29 @@ const DbConfigForm = ({ FormInfo, formatMessage, initialDialect }) => {
 };
 
 const DataOps = createWithRemoteLoader({
-  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:TablePage', 'components-core:TablePage@Table', 'components-core:Filter', 'components-thirdparty:CodeEditor']
+  modules: ['components-core:Global@usePreset', 'components-core:FormInfo', 'components-core:TablePage', 'components-core:TablePage@Table', 'components-core:Filter', 'components-thirdparty:CodeEditor', 'components-core:Modal@useModal']
 })(
   withLocale(({ remoteModules, data, onSuccess }) => {
-    const [usePreset, FormInfo, TablePage, Table, Filter, CodeEditor] = remoteModules;
+    const [usePreset, FormInfo, TablePage, Table, Filter, CodeEditor, useModal] = remoteModules;
     const { ajax, apis } = usePreset();
     const { useFormModal } = FormInfo;
     const formModal = useFormModal();
     const { message, modal } = App.useApp();
+    const jsonModal = useModal();
+    const renderJsonCell = (text, json, title) =>
+      json === undefined ? (
+        text
+      ) : (
+        <Link
+          ellipsis
+          onClick={e => {
+            e.stopPropagation();
+            jsonModal({ title, size: 'large', footer: null, children: <KneDocumentJsonView data={json} theme="light" /> });
+          }}
+        >
+          {text}
+        </Link>
+      );
     const { formatMessage } = useIntl();
     const isMobile = useIsMobile();
     const getPopupContainer = usePopupContainer();
@@ -735,7 +751,8 @@ const DataOps = createWithRemoteLoader({
                                   {isMobile ? null : <span className={style['col-type']}>{String(col.type || '').toLowerCase()}</span>}
                                 </div>
                               ),
-                              getValueOf: item => (item[col.name] == null ? '' : String(item[col.name]))
+                              getValueOf: item => formatCellValue(item[col.name]),
+                              render: (text, { dataSource }) => renderJsonCell(text, parseJsonCell(dataSource[col.name], col.type), col.name)
                             })),
                             {
                               name: 'options',
@@ -875,7 +892,8 @@ const DataOps = createWithRemoteLoader({
                       columns={(queryResult.columns || []).map(col => ({
                         name: col,
                         title: col,
-                        getValueOf: item => (item[col] == null ? '' : String(item[col]))
+                        getValueOf: item => formatCellValue(item[col]),
+                        render: (text, { dataSource }) => renderJsonCell(text, parseJsonCell(dataSource[col]), col)
                       }))}
                     />
                   </div>

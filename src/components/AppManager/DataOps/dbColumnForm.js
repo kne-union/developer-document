@@ -1,6 +1,28 @@
 import React from 'react';
 import dayjs from 'dayjs';
 
+/** 单元格显示文本：对象 / 数组转成 JSON 字符串，避免显示 [object Object] */
+export const formatCellValue = value => (value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value));
+
+/**
+ * 单元格里的 JSON 值：对象 / 数组，或 json 列中能解析为对象 / 数组的字符串（sqlite 等以文本存储）。
+ * 不是 JSON 时返回 undefined。
+ */
+export const parseJsonCell = (value, type) => {
+  if (value !== null && typeof value === 'object') {
+    return value;
+  }
+  if (typeof value === 'string' && classifySqlType(type) === 'json') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed !== null && typeof parsed === 'object' ? parsed : undefined;
+    } catch (e) {
+      return undefined;
+    }
+  }
+  return undefined;
+};
+
 /**
  * Map SQL / Sequelize describeTable type string to a form field kind.
  * @param {string} type
