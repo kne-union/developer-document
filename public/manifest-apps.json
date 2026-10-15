@@ -1,0 +1,38 @@
+{
+  "id": "/apps",
+  "short_name": "应用中心",
+  "name": "KneUnion 应用中心",
+  "description": "KneUnion 应用中心：浏览并打开已上线的应用",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "pwa/apps-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "pwa/apps-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "pwa/apps-maskable-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "pwa/apps-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "/apps",
+  "scope": "/apps",
+  "display": "standalone",
+  "theme_color": "#702280",
+  "background_color": "#ffffff"
+}
