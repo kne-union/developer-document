@@ -111,6 +111,7 @@ const Deploy = createWithRemoteLoader({
             staticUrl={staticUrl}
             payload={{ name: data.name, versionId: versionId || undefined, version: version || undefined, runMigration, migrations }}
             formatMessage={formatMessage}
+            onStarted={() => onSuccess && onSuccess()}
             onDeployed={result => onSuccess && onSuccess(result)}
             onFinish={() => onSuccess && onSuccess()}
           />
