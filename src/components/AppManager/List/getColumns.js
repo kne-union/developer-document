@@ -14,6 +14,7 @@ const getColumns = ({ navigate, formatMessage, Image }) => {
       name: 'icon',
       title: formatMessage({ id: 'common.icon' }),
       width: 72,
+      getValueOf: item => item.name,
       render: (_, { dataSource }) => (dataSource.icon ? <Image.Avatar id={dataSource.icon} alt={dataSource.label || dataSource.name} size={36} shape="square" /> : <DefaultAppIcon size={36} rounded />)
     },
     {
