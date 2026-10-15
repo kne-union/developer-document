@@ -171,6 +171,7 @@ const MigrationManager = createWithRemoteLoader({
                   {
                     name: 'status',
                     title: formatMessage({ id: 'appManager.migration.status' }),
+                    getValueOf: item => item.name,
                     render: (_, { dataSource }) => <MigrationStatus item={dataSource} formatMessage={formatMessage} />
                   },
                   {

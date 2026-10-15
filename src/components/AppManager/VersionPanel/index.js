@@ -56,6 +56,8 @@ const VersionPanel = createWithRemoteLoader({
         {
           name: 'current',
           title: formatMessage({ id: 'common.status' }),
+          // 列值为空时 Table 直接显示占位符、不调用 render，所以用版本 id 占位
+          getValueOf: item => item.id,
           render: (_, { dataSource }) => {
             if (deployment && String(dataSource.id) === String(deployment.versionId)) {
               const step = deployment.step ? formatMessage({ id: `appManager.deploy.step.${deployment.step}` }) : '';
@@ -77,7 +79,7 @@ const VersionPanel = createWithRemoteLoader({
                 </>
               );
             }
-            return failed;
+            return failed || '-';
           }
         },
         {
