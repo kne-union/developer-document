@@ -57,7 +57,7 @@ const DeployLog = ({ lines, formatMessage, defaultOpen }) => {
  * 不传 progressId：新建进度标识，先订阅 SSE 再发起部署（payload 为部署参数）。
  * 传 progressId：只订阅该次部署（进行中或已结束），不发起新部署。
  */
-const DeployProgress = ({ ajax, apis, staticUrl, name, payload, progressId: watchProgressId, formatMessage, onDeployed, onFinish }) => {
+const DeployProgress = ({ ajax, apis, staticUrl, name, payload, progressId: watchProgressId, formatMessage, onStarted, onDeployed, onFinish }) => {
   const [events, setEvents] = useState({});
   const [result, setResult] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -67,14 +67,15 @@ const DeployProgress = ({ ajax, apis, staticUrl, name, payload, progressId: watc
     progressIdRef.current = createProgressId();
   }
   const appName = name || payload?.name;
-  const callbacksRef = useRef({ onDeployed, onFinish, formatMessage });
-  callbacksRef.current = { onDeployed, onFinish, formatMessage };
+  const callbacksRef = useRef({ onStarted, onDeployed, onFinish, formatMessage });
+  callbacksRef.current = { onStarted, onDeployed, onFinish, formatMessage };
 
   useEffect(() => {
     const progressId = progressIdRef.current;
     const watching = !!watchProgressId;
     const source = new EventSource(buildAuthUrl(staticUrl, apis.appManager.deployStream.url, { name: appName, progressId }));
     let finished = false;
+    let startNotified = watching;
 
     const appendLogs = lines => setLogs(prev => prev.concat(lines).slice(-MAX_LOG_LINES));
 
@@ -111,6 +112,12 @@ const DeployProgress = ({ ajax, apis, staticUrl, name, payload, progressId: watc
       setEvents(prev => Object.assign({}, prev, { [event.step]: event }));
       if (isFinal(event)) {
         finish(event.status === 'error' ? { ok: false, message: event.message } : { ok: true });
+        return;
+      }
+      // 部署请求要到结束才返回，首个进度事件时服务端已登记本次部署，此时通知外部刷新状态
+      if (!startNotified) {
+        startNotified = true;
+        callbacksRef.current.onStarted && callbacksRef.current.onStarted();
       }
     };
 
