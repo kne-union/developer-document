@@ -115,6 +115,8 @@ const VersionPanel = createWithRemoteLoader({
             {
               type: 'link',
               buttonComponent: Deploy,
+              // 同时只能部署一个版本；正在部署的版本仍可点开查看进度
+              disabled: !!deployment && String(item.id) !== String(deployment.versionId),
               data,
               versionId: item.id,
               version: item.version,
