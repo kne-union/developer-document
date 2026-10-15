@@ -443,7 +443,7 @@
 
 @include resp.mobile-container {
   .content {
-    padding: 16px 16px 32px;
+    padding: 12px 0 24px;
   }
 
   .headerTop {
@@ -483,7 +483,7 @@
 
 @media (max-width: 640px) {
   .content {
-    padding: 16px 16px 32px;
+    padding: 12px 0 24px;
   }
 
   .headerPanel,

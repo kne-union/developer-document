@@ -6,12 +6,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#702280" />
   <meta name="description" content="Powered By KneUnion Fastify App" />
-  <link rel="apple-touch-icon" href="%PUBLIC_URL%/favicon.svg" />
+  <link id="pwa-apple-touch-icon" rel="apple-touch-icon" href="%PUBLIC_URL%/pwa/home-apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta id="pwa-apple-title" name="apple-mobile-web-app-title" content="开发者文档" />
   <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
     -->
-  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+  <link id="pwa-manifest" rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+  <script>
+    (function () {
+      // 首页与应用中心分别安装为独立 PWA；须在浏览器读取 manifest 前按路径切换，SPA 跳转后同步
+      var publicUrl = '%PUBLIC_URL%';
+      var entries = {
+        home: { manifest: '/manifest.json', icon: '/pwa/home-apple-touch-icon.png', title: '开发者文档' },
+        apps: { manifest: '/manifest-apps.json', icon: '/pwa/apps-apple-touch-icon.png', title: '应用中心' }
+      };
+      var setAttr = function (id, name, value) {
+        var el = document.getElementById(id);
+        if (el && el.getAttribute(name) !== value) {
+          el.setAttribute(name, value);
+        }
+      };
+      var sync = function () {
+        var entry = /^\/apps(\/|$)/.test(window.location.pathname) ? entries.apps : entries.home;
+        setAttr('pwa-manifest', 'href', publicUrl + entry.manifest);
+        setAttr('pwa-apple-touch-icon', 'href', publicUrl + entry.icon);
+        setAttr('pwa-apple-title', 'content', entry.title);
+      };
+      ['pushState', 'replaceState'].forEach(function (method) {
+        var original = window.history[method];
+        window.history[method] = function () {
+          var result = original.apply(this, arguments);
+          sync();
+          return result;
+        };
+      });
+      window.addEventListener('popstate', sync);
+      sync();
+    })();
+  </script>
   <!--
       Notice the use of %PUBLIC_URL% in the tags above.
       It will be replaced with the URL of the `public` folder during the build.

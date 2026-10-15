@@ -29,7 +29,7 @@ export const globalInit = async () => {
   const componentsCoreRemote = {
     ...registry,
     remote: 'components-core',
-    defaultVersion: '0.6.13'
+    defaultVersion: '0.6.15'
   };
   remoteLoaderPreset({
     remotes: {
