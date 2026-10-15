@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Space, Steps, Typography } from 'antd';
+import { Alert, Collapse, Space, Steps, Typography } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import buildAuthUrl from '../utils/buildAuthUrl';
 
@@ -9,25 +9,86 @@ const STEPS = ['package', 'env', 'migrate', 'start', 'ready'];
 
 const STEP_STATUS = { running: 'process', done: 'finish', skipped: 'finish', error: 'error' };
 
+const MAX_LOG_LINES = 2000;
+
 const createProgressId = () => (window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
-const isFinal = event => event.status === 'error' || (event.step === 'ready' && event.status === 'done');
+const isFinal = event => event.status === 'error' || (event.step === 'ready' && event.status !== 'running');
 
-const DeployProgress = ({ ajax, apis, staticUrl, payload, formatMessage, onDeployed, onFinish }) => {
+const splitLog = text => (text ? text.split('\n').filter(Boolean) : []);
+
+const DeployLog = ({ lines, formatMessage, defaultOpen }) => {
+  const preRef = useRef(null);
+  const [activeKey, setActiveKey] = useState(defaultOpen ? ['log'] : []);
+
+  useEffect(() => {
+    if (defaultOpen) {
+      setActiveKey(['log']);
+    }
+  }, [defaultOpen]);
+
+  useEffect(() => {
+    if (preRef.current) {
+      preRef.current.scrollTop = preRef.current.scrollHeight;
+    }
+  }, [lines, activeKey]);
+
+  return (
+    <Collapse
+      size="small"
+      activeKey={activeKey}
+      onChange={setActiveKey}
+      items={[
+        {
+          key: 'log',
+          label: formatMessage({ id: 'appManager.deploy.log' }, { count: lines.length }),
+          children: (
+            <pre ref={preRef} style={{ margin: 0, maxHeight: 320, overflow: 'auto', fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+              {lines.length ? lines.join('\n') : formatMessage({ id: 'appManager.deploy.logEmpty' })}
+            </pre>
+          )
+        }
+      ]}
+    />
+  );
+};
+
+/**
+ * 不传 progressId：新建进度标识，先订阅 SSE 再发起部署（payload 为部署参数）。
+ * 传 progressId：只订阅该次部署（进行中或已结束），不发起新部署。
+ */
+const DeployProgress = ({ ajax, apis, staticUrl, name, payload, progressId: watchProgressId, formatMessage, onDeployed, onFinish }) => {
   const [events, setEvents] = useState({});
   const [result, setResult] = useState(null);
+  const [logs, setLogs] = useState([]);
   const startedRef = useRef(false);
-  const progressIdRef = useRef(null);
+  const progressIdRef = useRef(watchProgressId || null);
   if (!progressIdRef.current) {
     progressIdRef.current = createProgressId();
   }
-  const callbacksRef = useRef({ onDeployed, onFinish });
-  callbacksRef.current = { onDeployed, onFinish };
+  const appName = name || payload?.name;
+  const callbacksRef = useRef({ onDeployed, onFinish, formatMessage });
+  callbacksRef.current = { onDeployed, onFinish, formatMessage };
 
   useEffect(() => {
     const progressId = progressIdRef.current;
-    const source = new EventSource(buildAuthUrl(staticUrl, apis.appManager.deployStream.url, { name: payload.name, progressId }));
+    const watching = !!watchProgressId;
+    const source = new EventSource(buildAuthUrl(staticUrl, apis.appManager.deployStream.url, { name: appName, progressId }));
     let finished = false;
+
+    const appendLogs = lines => setLogs(prev => prev.concat(lines).slice(-MAX_LOG_LINES));
+
+    // SSE 只回放最近日志，失败后取完整日志
+    const loadFullLog = async () => {
+      try {
+        const { data: resData } = await ajax(Object.assign({}, apis.appManager.deployDetail, { params: { name: appName, progressId } }));
+        if (resData.code === 0) {
+          setLogs(splitLog(resData.data.log).slice(-MAX_LOG_LINES));
+        }
+      } catch (e) {
+        // keep streamed lines
+      }
+    };
 
     const finish = next => {
       if (finished) {
@@ -40,6 +101,7 @@ const DeployProgress = ({ ajax, apis, staticUrl, payload, formatMessage, onDeplo
           const step = STEPS.find(name => prev[name]?.status === 'running') || STEPS.find(name => !prev[name]);
           return step ? Object.assign({}, prev, { [step]: { step, status: 'error', message: next.message } }) : prev;
         });
+        loadFullLog();
       }
       setResult(next);
       callbacksRef.current.onFinish && callbacksRef.current.onFinish(next);
@@ -53,7 +115,7 @@ const DeployProgress = ({ ajax, apis, staticUrl, payload, formatMessage, onDeplo
     };
 
     const deploy = async () => {
-      if (startedRef.current) {
+      if (watching || startedRef.current) {
         return;
       }
       startedRef.current = true;
@@ -70,16 +132,32 @@ const DeployProgress = ({ ajax, apis, staticUrl, payload, formatMessage, onDeplo
     };
 
     source.addEventListener('snapshot', event => {
+      let snapshot = null;
       try {
-        (JSON.parse(event.data).events || []).forEach(handle);
+        snapshot = JSON.parse(event.data);
       } catch (e) {
         // ignore malformed
+      }
+      if (snapshot?.deploy?.log) {
+        setLogs(splitLog(snapshot.deploy.log));
+      }
+      (snapshot?.events || []).forEach(handle);
+      if (watching && !finished && !snapshot?.deploy && !(snapshot?.events || []).length) {
+        finish({ ok: false, message: callbacksRef.current.formatMessage({ id: 'appManager.deploy.notFound' }) });
+        return;
       }
       deploy();
     });
     source.addEventListener('progress', event => {
       try {
         handle(JSON.parse(event.data));
+      } catch (e) {
+        // ignore malformed
+      }
+    });
+    source.addEventListener('log', event => {
+      try {
+        appendLogs([JSON.parse(event.data).line]);
       } catch (e) {
         // ignore malformed
       }
@@ -93,7 +171,7 @@ const DeployProgress = ({ ajax, apis, staticUrl, payload, formatMessage, onDeplo
       finished = true;
       source.close();
     };
-  }, [ajax, apis, staticUrl, payload]);
+  }, [ajax, apis, staticUrl, appName, payload, watchProgressId]);
 
   const items = STEPS.map(step => {
     const event = events[step];
@@ -114,6 +192,8 @@ const DeployProgress = ({ ajax, apis, staticUrl, payload, formatMessage, onDeplo
     };
   });
 
+  const failed = result && !result.ok;
+
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <Steps direction="vertical" size="small" items={items} />
@@ -122,6 +202,7 @@ const DeployProgress = ({ ajax, apis, staticUrl, payload, formatMessage, onDeplo
       ) : (
         <Text type="secondary">{formatMessage({ id: 'appManager.deploy.background' })}</Text>
       )}
+      <DeployLog lines={logs} formatMessage={formatMessage} defaultOpen={!!failed} />
     </Space>
   );
 };

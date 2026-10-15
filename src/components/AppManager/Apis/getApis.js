@@ -137,6 +137,11 @@ const getApis = options => {
       method: 'GET',
       paramsType: 'params'
     },
+    deployDetail: {
+      url: `${prefix}/app/deploy/detail`,
+      method: 'GET',
+      paramsType: 'params'
+    },
     dbTables: {
       url: `${prefix}/app/db/tables`,
       method: 'GET',

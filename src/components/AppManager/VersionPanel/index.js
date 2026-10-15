@@ -6,6 +6,7 @@ import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import UploadVersion from '../Actions/UploadVersion';
 import Deploy from '../Actions/Deploy';
+import DeployRecord from '../Actions/DeployRecord';
 import MigrationManager from '../Actions/MigrationManager';
 import createAdminListCards from '@components/Shared/createAdminListCards';
 import buildAuthUrl from '../utils/buildAuthUrl';
@@ -42,6 +43,7 @@ const VersionPanel = createWithRemoteLoader({
 
     const currentVersionId = data?.currentVersionId != null ? String(data.currentVersionId) : null;
     const deployment = data?.deployment || null;
+    const lastDeployment = data?.lastDeployment || null;
 
     const columns = useCallback(
       () => [
@@ -66,10 +68,16 @@ const VersionPanel = createWithRemoteLoader({
                 </Tooltip>
               );
             }
+            const failed = lastDeployment?.status === 'failed' && String(dataSource.id) === String(lastDeployment.versionId) ? <DeployRecord name={data.name} record={lastDeployment} /> : null;
             if (currentVersionId && String(dataSource.id) === currentVersionId) {
-              return <Tag color="success">{formatMessage({ id: 'appManager.version.current' })}</Tag>;
+              return (
+                <>
+                  <Tag color="success">{formatMessage({ id: 'appManager.version.current' })}</Tag>
+                  {failed}
+                </>
+              );
             }
-            return null;
+            return failed;
           }
         },
         {
@@ -128,7 +136,7 @@ const VersionPanel = createWithRemoteLoader({
           ]
         }
       ],
-      [currentVersionId, data, deployment, download, formatMessage, handleReload]
+      [currentVersionId, data, deployment, lastDeployment, download, formatMessage, handleReload]
     );
 
     return (
