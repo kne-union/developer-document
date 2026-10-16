@@ -6,8 +6,12 @@ const path = require('node:path');
 const fs = require('fs-extra');
 const isEqual = require('lodash/isEqual');
 const { decrypt, randomSecret } = require('@kne/fastify-oidc/libs/utils/crypto');
+const createServiceClient = require('@kne/fastify-oidc/libs/resource/service-client');
 
 const OIDC_PACKAGE = '@kne/fastify-oidc';
+// 子应用 @kne/fastify-app-runtime 的 /open-api.json 放行带此 scope 的 client 令牌
+const OPEN_API_SCOPE = 'open-api:read';
+const DOCS_CLIENT_ID = 'app-center-docs';
 
 const SYSTEM_ENV_KEYS = ['AUTH_MODE', 'OIDC_ISSUER', 'OIDC_AUDIENCE', 'OIDC_CLIENT_ID', 'OIDC_SERVICE_CLIENT_ID', 'OIDC_SERVICE_CLIENT_SECRET'];
 
@@ -52,9 +56,17 @@ const createAppOidc = (fastify, { pathPrefix = '/app' } = {}) => {
   });
 
   const ensureResourceServer = async ({ identifier, name }) => {
-    const { models, services } = oidc();
-    if (!(await models.resourceServer.findOne({ where: { identifier } }))) {
-      await services.resourceServer.create({ identifier, name, description: '应用中心子应用自动登记' });
+    const { models, services, options } = oidc();
+    const existing = await models.resourceServer.findOne({ where: { identifier } });
+    if (!existing) {
+      await services.resourceServer.create({ identifier, name, scope: `${options.defaultResourceScope} ${OPEN_API_SCOPE}`, description: '应用中心子应用自动登记' });
+      return;
+    }
+    const scopes = String(existing.scope || options.defaultResourceScope)
+      .split(' ')
+      .filter(Boolean);
+    if (!scopes.includes(OPEN_API_SCOPE)) {
+      await existing.update({ scope: [...scopes, OPEN_API_SCOPE].join(' ') });
     }
   };
 
@@ -88,6 +100,49 @@ const createAppOidc = (fastify, { pathPrefix = '/app' } = {}) => {
     }
     // 以认证管理中的实际 secret 为准（管理员可能重置过）
     return decrypt(options.keyEncryptionSecret, existing.clientSecret);
+  };
+
+  /** 本系统读取子应用文档用的 client：allowedResources 随需要读取的子应用 audience 增加 */
+  const ensureDocsClient = async audience => {
+    const { models, services, options } = oidc();
+    const existing = await models.client.findOne({ where: { clientId: DOCS_CLIENT_ID } });
+    if (!existing) {
+      const clientSecret = randomSecret(32);
+      await services.client.create({
+        clientId: DOCS_CLIENT_ID,
+        clientName: '应用中心文档读取',
+        clientSecret,
+        metadata: { grant_types: ['client_credentials'], response_types: [], token_endpoint_auth_method: 'client_secret_basic' },
+        allowedResources: [audience],
+        description: '应用中心 MCP 读取子应用 OpenAPI 文档'
+      });
+      return clientSecret;
+    }
+    const allowedResources = existing.allowedResources || [];
+    if (!allowedResources.includes(audience)) {
+      await services.client.save({ id: existing.id, allowedResources: [...allowedResources, audience] });
+    }
+    return decrypt(options.keyEncryptionSecret, existing.clientSecret);
+  };
+
+  let docsServiceClient = null;
+
+  /** 签发访问子应用 /open-api.json 的服务令牌（audience 为子应用 OIDC_AUDIENCE，scope 为 open-api:read） */
+  const getOpenApiToken = async app => {
+    const audience = app.env?.OIDC_AUDIENCE;
+    if (!audience) {
+      throw new Error(`应用 ${app.name} 未接入 OIDC（server 未依赖 ${OIDC_PACKAGE} 或尚未部署），无法签发读取文档的令牌`);
+    }
+    await oidc().whenReady();
+    await ensureResourceServer({ identifier: audience, name: app.label || app.name });
+    const clientSecret = await ensureDocsClient(audience);
+    if (!docsServiceClient || docsServiceClient.clientSecret !== clientSecret) {
+      docsServiceClient = {
+        clientSecret,
+        client: createServiceClient({ options: { runtime: oidc().options.runtime, serviceClient: { clientId: DOCS_CLIENT_ID, clientSecret }, serviceScopes: [] } })
+      };
+    }
+    return docsServiceClient.client.getServiceToken({ resource: audience, scope: OPEN_API_SCOPE });
   };
 
   const resolveSystemEnv = async ({ app, serverDir }) => {
@@ -132,6 +187,10 @@ const createAppOidc = (fastify, { pathPrefix = '/app' } = {}) => {
       }
     }
     if (app.env.OIDC_AUDIENCE) {
+      const docsClient = await models.client.findOne({ where: { clientId: DOCS_CLIENT_ID } });
+      if (docsClient && (docsClient.allowedResources || []).includes(app.env.OIDC_AUDIENCE)) {
+        await services.client.save({ id: docsClient.id, allowedResources: docsClient.allowedResources.filter(item => item !== app.env.OIDC_AUDIENCE) });
+      }
       const item = await models.resourceServer.findOne({ where: { identifier: app.env.OIDC_AUDIENCE } });
       if (item) {
         await services.resourceServer.remove({ id: item.id });
@@ -139,7 +198,7 @@ const createAppOidc = (fastify, { pathPrefix = '/app' } = {}) => {
     }
   };
 
-  return { systemEnvKeys: SYSTEM_ENV_KEYS, resolveSystemEnv, onAppRemoved };
+  return { systemEnvKeys: SYSTEM_ENV_KEYS, resolveSystemEnv, onAppRemoved, getOpenApiToken };
 };
 
 module.exports = createAppOidc;
