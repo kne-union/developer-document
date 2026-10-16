@@ -790,11 +790,6 @@
 }
 
 @media (max-width: 960px) {
-  .page,
-  .detailPage {
-    padding: 20px 16px 32px;
-  }
-
   .headerTop {
     flex-direction: column;
   }
@@ -822,6 +817,11 @@
 }
 
 @media (max-width: 640px) {
+  .page,
+  .detailPage {
+    padding: 12px 0 24px;
+  }
+
   .headerPanel,
   .summaryBar,
   .card,
