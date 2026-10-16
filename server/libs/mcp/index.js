@@ -266,6 +266,9 @@ module.exports = fp(async (fastify, options) => {
       const userId = request.userInfo.id;
       const mcpServer = new McpServer({ name: 'developer-document', version: '1.0.0' });
       registerTools(mcpServer, { services, userId });
+      if (fastify.appManager && fastify.appOidc) {
+        registerAppManagerTools.registerAppApiTools(mcpServer, { fastify, userId });
+      }
       if (await fastify.account.services.admin.checkIsSuperAdmin({ id: userId }).catch(() => false)) {
         registerBlogTools(mcpServer, { fastify, services, userId });
         if (fastify.appManager) {

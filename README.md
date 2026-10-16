@@ -161,6 +161,19 @@ MCP 服务配置示例：
 
 正文为 HTML（与后台富文本编辑器一致）；`groups` 传分组 code。前台公开列表只展示已发布且公开的博客。
 
+#### 应用接口（登录用户）
+
+启用应用中心（配置 `APPS_DB_DATABASE`）且请求已登录时注册，不要求超级管理员：
+
+| 用途 | tools |
+|---|---|
+| 接口文档 | `get_app_open_api`（默认接口目录，按 `path` / `tag` / `keyword` / `method` 筛选，`detail=true` 返回完整定义） |
+| 调用接口 | `call_app_api`（以当前登录用户身份调用运行中子应用的 HTTP 接口） |
+
+`get_app_open_api` 以 OIDC client_credentials 令牌（client `app-center-docs`、scope `open-api:read`、audience 为应用的 `OIDC_AUDIENCE`）请求应用的 `/open-api.json`，令牌按需签发，client 与 scope 首次调用时自动登记。应用侧需：server 依赖 `@kne/fastify-oidc` 并已部署（central 模式）、`@kne/fastify-app-runtime >= 0.1.2`、在其它插件之前注册 `@fastify/swagger`。
+
+`call_app_api` 参数为 `name`、`method`、`path`、可选 `query` / `body` / `tenantId`。请求发到该应用本机端口上的 `path`，`Authorization` 为 IdP 签发给当前用户、audience 为该应用的访问令牌，因此邮箱、会议等权限与用户在页面上操作一致。先用 `get_app_open_api` 确认路径和请求体。只传 JSON；文件先走上传接口拿 `fileId`。
+
 #### 应用中心工具（管理员）
 
 启用应用中心（配置 `APPS_DB_DATABASE`）且令牌所属用户为超级管理员时，额外注册：
@@ -174,9 +187,6 @@ MCP 服务配置示例：
 | 排错 | `get_app_logs`（尾部行 + 关键字过滤 + 归档文件） |
 | 数据调试（只读） | `list_app_tables`、`list_app_rows`、`query_app_sql` |
 | 负载 | `get_app_load`（当前样本 + 最近 N 分钟汇总） |
-| 接口文档 | `get_app_open_api`（默认接口目录，按 `path` / `tag` / `keyword` / `method` 筛选，`detail=true` 返回完整定义） |
-
-`get_app_open_api` 以 OIDC client_credentials 令牌（client `app-center-docs`、scope `open-api:read`、audience 为应用的 `OIDC_AUDIENCE`）请求应用的 `/open-api.json`，令牌按需签发，client 与 scope 首次调用时自动登记。应用侧需：server 依赖 `@kne/fastify-oidc` 并已部署（central 模式）、`@kne/fastify-app-runtime >= 0.1.2`、在其它插件之前注册 `@fastify/swagger`。
 
 上传新版本：在应用仓库执行 `npx @kne/npm-tools packApp --upload --name <应用 name>`，命令先检查包结构再打 zip，并以长期令牌调用 `POST /api/v1/app-package/upload`（multipart：`name`、`version`、`file`）存入文件管理「应用中心/{name}」，输出 `fileId`；再调用 MCP `upload_app_version` 登记版本、`deploy_app` 部署。
 

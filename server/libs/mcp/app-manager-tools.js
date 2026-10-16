@@ -473,16 +473,55 @@ const registerAppManagerTools = (mcpServer, { fastify }) => {
       return { intervalMs, current, summary: summarizeLoad(pageData, minutes) };
     }
   );
+};
+
+const CALL_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+const CALL_TIMEOUT_MS = 30000;
+
+const assertAppPath = value => {
+  let path;
+  try {
+    path = decodeURIComponent(value);
+  } catch (e) {
+    throw new Error('path 无法解码');
+  }
+  if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\') || /(^|\/)\.\.(\/|$)/.test(path)) {
+    throw new Error('path 必须是应用内路径，以 / 开头，不能跳出应用');
+  }
+  return path;
+};
+
+const isBinaryContent = contentType => /^(image|audio|video|application\/(octet-stream|pdf|zip|gzip|x-))/.test(contentType);
+
+/**
+ * 登录用户即可调用的子应用接口工具（不要求超级管理员）。
+ * get_app_open_api 用服务令牌读文档；call_app_api 用当前用户的访问令牌调用业务接口。
+ */
+const registerAppApiTools = (mcpServer, { fastify, userId }) => {
+  const getServices = () => fastify.appManager.services;
+
+  const run = handler => async args => {
+    try {
+      const result = await handler(args, getServices());
+      return { content: [{ type: 'text', text: toText(result) }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: e.message || String(e) }], isError: true };
+    }
+  };
+
+  const register = (name, description, shape, handler) => mcpServer.registerTool(name, { description, inputSchema: z.object(shape) }, run(handler));
+
+  const appName = z.string().describe('应用标识 name（小写 slug）');
 
   register(
     'get_app_open_api',
     [
-      '读取运行中应用的 OpenAPI 文档（应用需 @kne/fastify-app-runtime >=0.1.2、最前面注册 @fastify/swagger 并接入 OIDC）。',
-      '默认返回接口目录（METHOD 路径 - 说明 [tags]）；detail=true 时返回匹配接口的完整定义，建议先用目录定位再配合 path / keyword 取详情。'
+      '读取运行中应用的 OpenAPI 文档（应用需 @kne/fastify-app-runtime >=0.1.2、最前面注册 @fastify/swagger 并接入 OIDC）。登录用户即可调用。',
+      '默认返回接口目录（METHOD 路径 - 说明 [tags]）；detail=true 时返回匹配接口的完整定义，建议先用目录定位再配合 path / keyword 取详情，再用 call_app_api 调用。'
     ].join('\n'),
     {
       name: appName,
-      path: z.string().optional().describe('按路径前缀过滤，如 /api/v1/ticket'),
+      path: z.string().optional().describe('按路径前缀过滤，如 /api/v1/mail-gateway/mails'),
       keyword: z.string().optional().describe('在路径、summary、description、operationId 中模糊匹配'),
       tag: z.string().optional(),
       method: z.string().optional().describe('GET / POST 等'),
@@ -512,8 +551,69 @@ const registerAppManagerTools = (mcpServer, { fastify }) => {
       return summarizeOpenApi(await response.json(), Object.assign({ name }, filters));
     }
   );
+
+  register(
+    'call_app_api',
+    [
+      '以当前登录用户的身份调用运行中子应用的 HTTP 接口（发信、安排会议等业务接口都走这里）。不要求超级管理员。',
+      '先用 get_app_open_api 确认 method、path 和请求体，再调用。path 是应用内路径，例如 /api/v1/mail-gateway/mails/send。',
+      '只传 JSON。不要传文件或二进制；响应若是文件，只返回类型和长度。未知 GET 可能回落成前端 HTML，先核对文档里的路径。'
+    ].join('\n'),
+    {
+      name: appName,
+      method: z.enum(CALL_METHODS),
+      path: z.string().describe('应用内路径，以 / 开头'),
+      query: z.record(z.string(), z.string()).optional().describe('查询参数'),
+      body: z.any().optional().describe('JSON 请求体，GET 忽略'),
+      tenantId: z.string().optional().describe('租户 ID。接口依赖租户时传入')
+    },
+    async ({ name, method, path, query, body, tenantId }, services) => {
+      const app = await services.app.detail({ name });
+      if (app.status !== 'running') {
+        throw new Error(`应用 ${name} 当前状态为 ${app.status}，运行中才能调用`);
+      }
+      const appPath = assertAppPath(path);
+      const token = await fastify.appOidc.issueUserAccessToken({ app, userId, tenantId });
+      const url = new URL(`http://127.0.0.1:${app.port}${appPath}`);
+      for (const [key, value] of Object.entries(query || {})) {
+        url.searchParams.set(key, value);
+      }
+      const sendBody = body !== undefined && method !== 'GET' && method !== 'HEAD';
+      const payload = sendBody ? JSON.stringify(body) : undefined;
+      if (payload && payload.length > 100000) {
+        throw new Error('请求体超过 100KB。文件请先走上传接口拿 fileId，不要把二进制放进 MCP');
+      }
+      const response = await fetch(url, {
+        method,
+        headers: Object.assign({ authorization: `Bearer ${token}`, accept: 'application/json, text/plain;q=0.9, */*;q=0.1' }, sendBody ? { 'content-type': 'application/json' } : {}),
+        body: payload,
+        signal: AbortSignal.timeout(CALL_TIMEOUT_MS)
+      });
+      const contentType = String(response.headers.get('content-type') || '')
+        .split(';')[0]
+        .trim()
+        .toLowerCase();
+      if (isBinaryContent(contentType)) {
+        await response.arrayBuffer();
+        return { status: response.status, contentType, bytes: Number(response.headers.get('content-length')) || null, message: '二进制响应不通过 MCP 返回' };
+      }
+      const text = await response.text();
+      const truncated = text.length > 100000;
+      let data = truncated ? `${text.slice(0, 100000)}\n...（已截断）` : text;
+      if (contentType.includes('json') && !truncated) {
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          data = text;
+        }
+      }
+      return Object.assign({ status: response.status, contentType: contentType || null, data }, contentType.includes('html') ? { note: '响应是 HTML。未知 GET 会回落到前端页面，这不代表接口存在。请用 get_app_open_api 核对路径。' } : {});
+    }
+  );
 };
 
 module.exports = registerAppManagerTools;
+module.exports.registerAppApiTools = registerAppApiTools;
+module.exports.assertAppPath = assertAppPath;
 module.exports.summarizeLoad = summarizeLoad;
 module.exports.summarizeOpenApi = summarizeOpenApi;
