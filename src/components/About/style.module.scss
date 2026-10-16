@@ -250,7 +250,7 @@
 
 @include resp.mobile-container {
   .page {
-    padding: 16px;
+    padding: 12px 0 24px;
   }
 
   .statsGrid {
@@ -259,16 +259,16 @@
 }
 
 @media (max-width: 960px) {
-  .page {
-    padding: 20px 16px;
-  }
-
   .statsGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
+  .page {
+    padding: 12px 0 24px;
+  }
+
   .hero,
   .statsGrid,
   .statCard,

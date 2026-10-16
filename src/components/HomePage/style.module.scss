@@ -463,7 +463,7 @@
 
 @include resp.mobile-container {
   .page {
-    padding: 16px;
+    padding: 12px 0 24px;
   }
 
   .hero,
@@ -479,13 +479,11 @@
   }
 }
 
-@media (max-width: 960px) {
-  .page {
-    padding: 20px 16px;
-  }
-}
-
 @media (max-width: 640px) {
+  .page {
+    padding: 12px 0 24px;
+  }
+
   .hero,
   .metricsPanel,
   .featureCard,
