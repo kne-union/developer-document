@@ -67,6 +67,57 @@ const summarizeLoad = (pageData, minutes) => {
   };
 };
 
+const OPEN_API_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'];
+
+/** OpenAPI 文档按条件筛选：默认返回接口目录文本，detail 时返回匹配接口的完整定义 */
+const summarizeOpenApi = (doc, { name, keyword, tag, method, path: pathPrefix, detail = false, limit }) => {
+  const needle = keyword ? keyword.toLowerCase() : null;
+  const all = [];
+  for (const [routePath, item] of Object.entries(doc.paths || {})) {
+    for (const [routeMethod, operation] of Object.entries(item || {})) {
+      if (OPEN_API_METHODS.includes(routeMethod)) {
+        all.push({ path: routePath, method: routeMethod, operation: operation || {} });
+      }
+    }
+  }
+  const matched = all.filter(
+    ({ path: routePath, method: routeMethod, operation }) =>
+      (!method || routeMethod === method.toLowerCase()) &&
+      (!pathPrefix || routePath.startsWith(pathPrefix)) &&
+      (!tag || (operation.tags || []).includes(tag)) &&
+      (!needle ||
+        [routePath, operation.summary, operation.description, operation.operationId].some(value =>
+          String(value || '')
+            .toLowerCase()
+            .includes(needle)
+        ))
+  );
+  const max = Math.max(1, limit || (detail ? 10 : 300));
+  const shown = matched.slice(0, max);
+  const title = `应用 ${name} OpenAPI ${doc.openapi || ''}（${doc.info?.title || ''} ${doc.info?.version || ''}）：共 ${all.length} 个接口，匹配 ${matched.length} 个，返回 ${shown.length} 个`;
+  const more = matched.length > shown.length ? '结果超过 limit，请用 path / tag / keyword / method 缩小范围' : null;
+  if (detail) {
+    return {
+      title,
+      ...(more ? { hint: more } : {}),
+      operations: shown.map(({ path: routePath, method: routeMethod, operation }) => Object.assign({ method: routeMethod.toUpperCase(), path: routePath }, operation)),
+      ...(doc.components && Object.keys(doc.components).length ? { components: doc.components } : {})
+    };
+  }
+  return [
+    title,
+    '',
+    shown
+      .map(({ path: routePath, method: routeMethod, operation }) => {
+        const tags = operation.tags?.length ? ` [${operation.tags.join(', ')}]` : '';
+        return `${routeMethod.toUpperCase()} ${routePath}${operation.summary ? ` - ${operation.summary}` : ''}${tags}`;
+      })
+      .join('\n') || '（无匹配接口）',
+    '',
+    more || '提示：传 detail=true 并配合 path / keyword / method 获取接口完整定义（参数、请求体、响应）'
+  ].join('\n');
+};
+
 /**
  * 应用中心（@kne/fastify-app-manager）管理工具：调用方须在注册前确认当前用户为管理员（MCP server 按请求创建）。
  * 数据调试仅提供只读能力；写库只通过迁移脚本（run_app_migration）。
@@ -422,7 +473,47 @@ const registerAppManagerTools = (mcpServer, { fastify }) => {
       return { intervalMs, current, summary: summarizeLoad(pageData, minutes) };
     }
   );
+
+  register(
+    'get_app_open_api',
+    [
+      '读取运行中应用的 OpenAPI 文档（应用需 @kne/fastify-app-runtime >=0.1.2、最前面注册 @fastify/swagger 并接入 OIDC）。',
+      '默认返回接口目录（METHOD 路径 - 说明 [tags]）；detail=true 时返回匹配接口的完整定义，建议先用目录定位再配合 path / keyword 取详情。'
+    ].join('\n'),
+    {
+      name: appName,
+      path: z.string().optional().describe('按路径前缀过滤，如 /api/v1/ticket'),
+      keyword: z.string().optional().describe('在路径、summary、description、operationId 中模糊匹配'),
+      tag: z.string().optional(),
+      method: z.string().optional().describe('GET / POST 等'),
+      detail: z.boolean().optional().describe('返回完整定义，默认 false'),
+      limit: z.number().optional().describe('最多返回接口数，目录默认 300，详情默认 10')
+    },
+    async ({ name, ...filters }, services) => {
+      const app = await services.app.detail({ name });
+      if (app.status !== 'running') {
+        throw new Error(`应用 ${name} 当前状态为 ${app.status}，运行中才能读取文档`);
+      }
+      const token = await fastify.appOidc.getOpenApiToken(app);
+      const response = await fetch(`http://127.0.0.1:${app.port}/open-api.json`, {
+        headers: { authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(15000)
+      });
+      const isJson = String(response.headers.get('content-type') || '').includes('application/json');
+      if (response.status === 404 || (response.ok && !isJson)) {
+        throw new Error(`应用 ${name} 未开启 /open-api.json：需 @kne/fastify-app-runtime >=0.1.1、server 最前面注册 @fastify/swagger 且注册了 account 模块`);
+      }
+      if (response.status === 401) {
+        throw new Error(`应用 ${name} 拒绝服务令牌：需将 @kne/fastify-app-runtime 升级到 >=0.1.2 后重新部署`);
+      }
+      if (!response.ok) {
+        throw new Error(`读取应用 ${name} 文档失败：HTTP ${response.status} ${(await response.text()).slice(0, 200)}`);
+      }
+      return summarizeOpenApi(await response.json(), Object.assign({ name }, filters));
+    }
+  );
 };
 
 module.exports = registerAppManagerTools;
 module.exports.summarizeLoad = summarizeLoad;
+module.exports.summarizeOpenApi = summarizeOpenApi;

@@ -174,6 +174,9 @@ MCP 服务配置示例：
 | 排错 | `get_app_logs`（尾部行 + 关键字过滤 + 归档文件） |
 | 数据调试（只读） | `list_app_tables`、`list_app_rows`、`query_app_sql` |
 | 负载 | `get_app_load`（当前样本 + 最近 N 分钟汇总） |
+| 接口文档 | `get_app_open_api`（默认接口目录，按 `path` / `tag` / `keyword` / `method` 筛选，`detail=true` 返回完整定义） |
+
+`get_app_open_api` 以 OIDC client_credentials 令牌（client `app-center-docs`、scope `open-api:read`、audience 为应用的 `OIDC_AUDIENCE`）请求应用的 `/open-api.json`，令牌按需签发，client 与 scope 首次调用时自动登记。应用侧需：server 依赖 `@kne/fastify-oidc` 并已部署（central 模式）、`@kne/fastify-app-runtime >= 0.1.2`、在其它插件之前注册 `@fastify/swagger`。
 
 上传新版本：在应用仓库执行 `npx @kne/npm-tools packApp --upload --name <应用 name>`，命令先检查包结构再打 zip，并以长期令牌调用 `POST /api/v1/app-package/upload`（multipart：`name`、`version`、`file`）存入文件管理「应用中心/{name}」，输出 `fileId`；再调用 MCP `upload_app_version` 登记版本、`deploy_app` 部署。
 

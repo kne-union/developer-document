@@ -281,6 +281,7 @@ const createServer = () => {
 
       if (fastify.config.APPS_DB_DATABASE) {
         const appOidc = createAppOidc(fastify, { pathPrefix: '/app' });
+        fastify.decorate('appOidc', appOidc);
         fastify.register(require('./libs/plugins/register-app-manager'), {
           prefix: `${options.prefix}/app-manager`,
           name: 'appManager',
