@@ -157,6 +157,46 @@ const createAppOidc = (fastify, { pathPrefix = '/app' } = {}) => {
     return data.access_token;
   };
 
+  /** 以登录用户身份签发访问子应用 API 的用户令牌（audience 为子应用 OIDC_AUDIENCE） */
+  const issueUserAccessToken = async ({ app, userId, tenantId }) => {
+    const { audience } = resolveUrls(app);
+    await oidc().whenReady();
+    const resource = await oidc().models.resourceServer.findOne({ where: { identifier: audience } });
+    if (!resource) {
+      throw new Error(`应用 ${app.name} 未接入 OIDC（server 未依赖 ${OIDC_PACKAGE} 或尚未部署），无法代登录用户调用`);
+    }
+    const provider = oidc().idp.getProvider();
+    if (!provider) {
+      throw new Error('IdP 尚未就绪，无法代登录用户调用');
+    }
+    const client = await provider.Client.find(clientIds(app.name).spa);
+    if (!client) {
+      throw new Error(`应用 ${app.name} 尚未登记登录客户端，请先完成一次部署`);
+    }
+    const scope =
+      String(resource.scope || oidc().options.defaultResourceScope)
+        .split(/\s+/)
+        .filter(item => item && item !== OPEN_API_SCOPE)
+        .join(' ') || oidc().options.defaultResourceScope;
+    const token = new provider.AccessToken({
+      client,
+      accountId: String(userId),
+      scope,
+      gty: 'mcp'
+    });
+    token.resourceServer = new provider.ResourceServer(audience, {
+      scope: resource.scope,
+      audience,
+      accessTokenTTL: resource.accessTokenTTL || oidc().options.ttl.accessToken,
+      accessTokenFormat: 'jwt',
+      jwt: { sign: { alg: 'RS256' } }
+    });
+    if (tenantId) {
+      token.kneTenantId = String(tenantId);
+    }
+    return token.save();
+  };
+
   const resolveSystemEnv = async ({ app, serverDir }) => {
     if (!(await supportsOidc(serverDir))) {
       return null;
@@ -210,7 +250,7 @@ const createAppOidc = (fastify, { pathPrefix = '/app' } = {}) => {
     }
   };
 
-  return { systemEnvKeys: SYSTEM_ENV_KEYS, resolveSystemEnv, onAppRemoved, getOpenApiToken };
+  return { systemEnvKeys: SYSTEM_ENV_KEYS, resolveSystemEnv, onAppRemoved, getOpenApiToken, issueUserAccessToken };
 };
 
 module.exports = createAppOidc;
