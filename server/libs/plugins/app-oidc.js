@@ -6,8 +6,6 @@ const path = require('node:path');
 const fs = require('fs-extra');
 const isEqual = require('lodash/isEqual');
 const { decrypt, randomSecret } = require('@kne/fastify-oidc/libs/utils/crypto');
-const createServiceClient = require('@kne/fastify-oidc/libs/resource/service-client');
-
 const OIDC_PACKAGE = '@kne/fastify-oidc';
 // 子应用 @kne/fastify-app-runtime 的 /open-api.json 放行带此 scope 的 client 令牌
 const OPEN_API_SCOPE = 'open-api:read';
@@ -125,7 +123,7 @@ const createAppOidc = (fastify, { pathPrefix = '/app' } = {}) => {
     return decrypt(options.keyEncryptionSecret, existing.clientSecret);
   };
 
-  let docsServiceClient = null;
+  const docsTokenCache = new Map();
 
   /** 签发访问子应用 /open-api.json 的服务令牌（audience 为子应用 OIDC_AUDIENCE，scope 为 open-api:read） */
   const getOpenApiToken = async app => {
@@ -136,14 +134,27 @@ const createAppOidc = (fastify, { pathPrefix = '/app' } = {}) => {
       throw new Error(`应用 ${app.name} 未接入 OIDC（server 未依赖 ${OIDC_PACKAGE} 或尚未部署），无法签发读取文档的令牌`);
     }
     await ensureResourceServer({ identifier: audience, name: app.label || app.name });
-    const clientSecret = await ensureDocsClient(audience);
-    if (!docsServiceClient || docsServiceClient.clientSecret !== clientSecret) {
-      docsServiceClient = {
-        clientSecret,
-        client: createServiceClient({ options: { runtime: oidc().options.runtime, serviceClient: { clientId: DOCS_CLIENT_ID, clientSecret }, serviceScopes: [] } })
-      };
+    const cached = docsTokenCache.get(audience);
+    if (cached && cached.expiresAt - 30 * 1000 > Date.now()) {
+      return cached.accessToken;
     }
-    return docsServiceClient.client.getServiceToken({ resource: audience, scope: OPEN_API_SCOPE });
+    const clientSecret = await ensureDocsClient(audience);
+    // IdP 挂在本进程上，直接 inject 到 token 端点，不经公网 issuer 地址绕回自身
+    const response = await fastify.inject({
+      method: 'POST',
+      url: `${new URL(issuer).pathname}/token`,
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        authorization: `Basic ${Buffer.from(`${encodeURIComponent(DOCS_CLIENT_ID)}:${encodeURIComponent(clientSecret)}`).toString('base64')}`
+      },
+      payload: new URLSearchParams({ grant_type: 'client_credentials', resource: audience, scope: OPEN_API_SCOPE }).toString()
+    });
+    const data = response.json();
+    if (response.statusCode !== 200) {
+      throw new Error(`签发读取文档的令牌失败：${data.error_description || data.error || response.statusCode}`);
+    }
+    docsTokenCache.set(audience, { accessToken: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 });
+    return data.access_token;
   };
 
   const resolveSystemEnv = async ({ app, serverDir }) => {
