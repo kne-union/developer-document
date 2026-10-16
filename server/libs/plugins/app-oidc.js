@@ -129,11 +129,12 @@ const createAppOidc = (fastify, { pathPrefix = '/app' } = {}) => {
 
   /** 签发访问子应用 /open-api.json 的服务令牌（audience 为子应用 OIDC_AUDIENCE，scope 为 open-api:read） */
   const getOpenApiToken = async app => {
-    const audience = app.env?.OIDC_AUDIENCE;
-    if (!audience) {
+    // app 详情接口会剔除系统注入的 env，audience 按部署时相同规则推导，以资源服务是否已登记判断接入
+    const { audience } = resolveUrls(app);
+    await oidc().whenReady();
+    if (!(await oidc().models.resourceServer.findOne({ where: { identifier: audience } }))) {
       throw new Error(`应用 ${app.name} 未接入 OIDC（server 未依赖 ${OIDC_PACKAGE} 或尚未部署），无法签发读取文档的令牌`);
     }
-    await oidc().whenReady();
     await ensureResourceServer({ identifier: audience, name: app.label || app.name });
     const clientSecret = await ensureDocsClient(audience);
     if (!docsServiceClient || docsServiceClient.clientSecret !== clientSecret) {
