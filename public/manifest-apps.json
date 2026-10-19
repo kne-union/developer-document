@@ -6,16 +6,19 @@
   "lang": "zh-CN",
   "icons": [
     {
+      "src": "pwa/apps-apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180"
+    },
+    {
       "src": "pwa/apps-192.png",
       "type": "image/png",
-      "sizes": "192x192",
-      "purpose": "any"
+      "sizes": "192x192"
     },
     {
       "src": "pwa/apps-512.png",
       "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "any"
+      "sizes": "512x512"
     },
     {
       "src": "pwa/apps-maskable-192.png",
@@ -31,7 +34,7 @@
     }
   ],
   "start_url": "/apps",
-  "scope": "/apps",
+  "scope": "/",
   "display": "standalone",
   "theme_color": "#702280",
   "background_color": "#ffffff"

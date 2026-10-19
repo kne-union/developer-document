@@ -6,10 +6,28 @@ import style from './style.module.scss';
 
 export const getAppEntries = app => (Array.isArray(app?.entries) ? app.entries : []);
 
-const openUrl = url => {
-  if (url) {
-    window.open(url, '_blank', 'noopener');
+const INSTALLED_DISPLAY_MODES = ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay'];
+
+export const isInstalledDisplay = () => window.navigator.standalone === true || INSTALLED_DISPLAY_MODES.some(mode => window.matchMedia(`(display-mode: ${mode})`).matches);
+
+const isSameOriginUrl = url => {
+  try {
+    return new URL(url, window.location.href).origin === window.location.origin;
+  } catch (error) {
+    return false;
   }
+};
+
+const openUrl = url => {
+  if (!url) {
+    return;
+  }
+  // 独立窗口里用新窗口打开会回到系统浏览器；同源地址留在当前应用内
+  if (isInstalledDisplay() && isSameOriginUrl(url)) {
+    window.location.assign(url);
+    return;
+  }
+  window.open(url, '_blank', 'noopener');
 };
 
 /** 无入口或只有一个入口直接打开；多个入口弹窗让用户选择 */
@@ -65,12 +83,13 @@ export const OpenAppLink = ({ app, className, children }) => {
   if (!href) {
     return null;
   }
+  const inInstalledApp = isInstalledDisplay() && isSameOriginUrl(href);
   return (
     <a
       className={className}
       href={href}
-      target="_blank"
-      rel="noreferrer"
+      target={inInstalledApp ? undefined : '_blank'}
+      rel={inInstalledApp ? undefined : 'noreferrer'}
       onClick={
         entries.length > 1
           ? e => {

@@ -6,21 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#702280" />
   <meta name="description" content="Powered By KneUnion Fastify App" />
-  <link id="pwa-apple-touch-icon" rel="apple-touch-icon" href="%PUBLIC_URL%/pwa/home-apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta id="pwa-apple-title" name="apple-mobile-web-app-title" content="开发者文档" />
-  <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-  <link id="pwa-manifest" rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <script>
     (function () {
-      // 首页与应用中心分别安装为独立 PWA；须在浏览器读取 manifest 前按路径切换，SPA 跳转后同步
+      // 解析阶段按路径写入 manifest / 图标。Safari 添加到程序坞只认这时的 link，事后改 href 不会再生效。
       var publicUrl = '%PUBLIC_URL%';
       var entries = {
         home: { manifest: '/manifest.json', icon: '/pwa/home-apple-touch-icon.png', title: '开发者文档' },
         apps: { manifest: '/manifest-apps.json', icon: '/pwa/apps-apple-touch-icon.png', title: '应用中心' }
+      };
+      var entryFor = function () {
+        return /^\/apps(\/|$)/.test(window.location.pathname) ? entries.apps : entries.home;
       };
       var setAttr = function (id, name, value) {
         var el = document.getElementById(id);
@@ -29,11 +26,27 @@
         }
       };
       var sync = function () {
-        var entry = /^\/apps(\/|$)/.test(window.location.pathname) ? entries.apps : entries.home;
+        var entry = entryFor();
         setAttr('pwa-manifest', 'href', publicUrl + entry.manifest);
         setAttr('pwa-apple-touch-icon', 'href', publicUrl + entry.icon);
         setAttr('pwa-apple-title', 'content', entry.title);
       };
+      var entry = entryFor();
+      if (!document.getElementById('pwa-manifest')) {
+        document.write(
+          '<link id="pwa-apple-touch-icon" rel="apple-touch-icon" sizes="180x180" href="' +
+            publicUrl +
+            entry.icon +
+            '">' +
+            '<meta id="pwa-apple-title" name="apple-mobile-web-app-title" content="' +
+            entry.title +
+            '">' +
+            '<link id="pwa-manifest" rel="manifest" href="' +
+            publicUrl +
+            entry.manifest +
+            '">'
+        );
+      }
       ['pushState', 'replaceState'].forEach(function (method) {
         var original = window.history[method];
         window.history[method] = function () {
@@ -43,7 +56,6 @@
         };
       });
       window.addEventListener('popstate', sync);
-      sync();
     })();
   </script>
   <!--
