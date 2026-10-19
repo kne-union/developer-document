@@ -85,7 +85,7 @@ const AppPanel = ({ list, groups, keyword, Image }) => {
           {filtered.map(item => (
             <button type="button" key={item.name} className={style['app']} title={item.description || item.label || item.name} onClick={() => openApp(item)}>
               <div className={style['icon']}>
-                <AppIcon item={item} Image={Image} size={isMobile ? 64 : 72} />
+                <AppIcon item={item} Image={Image} size={isMobile ? 52 : 72} />
               </div>
               <div className={style['label']}>{item.label || item.name}</div>
             </button>
