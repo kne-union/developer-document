@@ -278,10 +278,11 @@
   }
 
   .grid {
-    // 每行 4 个等分，图标撑满列宽：首/末图标与上方边缘对齐，且顶部、行、列间距统一
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 4vw;
-    padding: 4vw 0 0;
+    justify-items: center;
+    column-gap: 8px;
+    row-gap: 16px;
+    padding: 16px 12px 0;
   }
 
   .app {
@@ -301,10 +302,9 @@
   }
 
   .icon {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1;
-    border-radius: 16px;
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
   }
 
   .label {

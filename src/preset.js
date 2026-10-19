@@ -11,6 +11,48 @@ import ensureSlash from '@kne/ensure-slash';
 
 window.PUBLIC_URL = window.runtimePublicUrl || process.env.PUBLIC_URL;
 
+const publicBase = String(window.PUBLIC_URL || '').replace(/\/+$/, '');
+
+const ensureBootMask = () => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  if (!document.getElementById('app-boot-style')) {
+    const style = document.createElement('style');
+    style.id = 'app-boot-style';
+    style.textContent =
+      '#app-boot{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#0080FF}#app-boot img{width:72px;height:72px}#app-boot-name{font-size:16px;line-height:24px;font-weight:500;color:#fff}';
+    document.head.appendChild(style);
+  }
+  let mask = document.getElementById('app-boot');
+  if (!mask) {
+    mask = document.createElement('div');
+    mask.id = 'app-boot';
+    const img = document.createElement('img');
+    img.id = 'app-boot-logo';
+    img.alt = '';
+    img.src = `${publicBase}/pwa/home-apple-touch-icon.png`;
+    mask.appendChild(img);
+    document.body.prepend(mask);
+  }
+  let name = document.getElementById('app-boot-name');
+  if (!name) {
+    name = document.createElement('div');
+    name.id = 'app-boot-name';
+    mask.appendChild(name);
+  }
+  name.textContent = document.title;
+};
+
+ensureBootMask();
+
+const hideBootMask = () => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  document.getElementById('app-boot')?.remove();
+};
+
 // runtimeApiUrl 为 '/' 时直接拼接会得到 '//api/...'，浏览器会把它当成协议相对地址
 const baseApiUrl = ensureSlash(window.runtimeApiUrl || '');
 
@@ -20,7 +62,7 @@ const loadOidcConfig = async () => {
   return body && Object.prototype.hasOwnProperty.call(body, 'code') && Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body;
 };
 
-export const globalInit = async () => {
+const globalInit = async () => {
   const registry = {
     url: 'https://cdn.leapin-ai.com',
     tpl: '{{url}}/components/@kne-components/{{remote}}/{{version}}/build'
@@ -218,3 +260,13 @@ export const globalInit = async () => {
     }
   };
 };
+
+const globalInitWithBootMask = async () => {
+  try {
+    return await globalInit();
+  } finally {
+    hideBootMask();
+  }
+};
+
+export { globalInitWithBootMask as globalInit };

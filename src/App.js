@@ -308,140 +308,142 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
   const baseUrl = '';
 
   return (
-    <>
-      <DefaultLocaleHandler />
-      <AppChildrenRouter
-        notFoundPage
-        errorPage
-        baseUrl={baseUrl}
-        list={[
-          {
-            path: 'oidc-interaction',
-            element: <RemoteLoader module="components-admin:Oidc@Interaction" className="login-container" systemName="Developer Document" forgetUrl={`${baseUrl}/account/forget`} allowLanguageSwitch={false} />
-          },
-          {
-            path: 'oidc-callback',
-            element: <RemoteLoader module="components-admin:Oidc@Callback" systemName="Developer Document" />
-          },
-          {
-            path: 'account/login',
-            element: <OidcLoginBridge />
-          },
-          {
-            path: 'account/*',
-            element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" systemName="Developer Document" registerOpen={false} allowLanguageSwitch={false} />
-          },
-          {
-            path: 'admin/initAdmin',
-            element: (
-              <OidcAuthenticate>
-                <AppChildrenRouter
-                  errorPage
-                  notFoundPage
-                  element={<AfterUserLoginLayout />}
-                  list={[
-                    {
-                      index: true,
-                      element: <RemoteLoader module="components-admin:Admin@InitAdmin" />
-                    }
-                  ]}
-                />
-              </OidcAuthenticate>
-            )
-          },
-          {
-            path: 'admin/*',
-            element: (
-              <OidcAuthenticate>
-                <AdminApp AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} baseUrl={baseUrl} formatMessage={formatMessage} appManagerEnabled={appManagerEnabled} />
-              </OidcAuthenticate>
-            )
-          },
-          {
-            path: 'share',
-            loader: () => import('@pages/Share')
-          }
-        ]}
-      >
+    <div className="app-shell">
+      <div className="app-shell__main">
+        <DefaultLocaleHandler />
         <AppChildrenRouter
           notFoundPage
           errorPage
           baseUrl={baseUrl}
-          element={
-            <Layout
-              login={() => oidc.login()}
-              navigation={{
-                defaultTitle: 'Developer Document',
-                rightOptions: <RightOptions />,
-                list: [
-                  {
-                    key: 'npm-packages',
-                    title: formatMessage({ id: 'app.nav.npmPackages' }),
-                    path: '/npm-packages'
-                  },
-                  {
-                    key: 'remote-components',
-                    title: formatMessage({ id: 'app.nav.remoteComponents' }),
-                    path: '/remote-components'
-                  },
-                  {
-                    key: 'blog',
-                    title: formatMessage({ id: 'app.nav.blog' }),
-                    path: '/blog'
-                  },
-                  {
-                    key: 'documents',
-                    title: formatMessage({ id: 'app.nav.documents' }),
-                    path: '/documents'
-                  },
-                  appManagerEnabled && {
-                    key: 'apps',
-                    title: formatMessage({ id: 'app.nav.apps' }),
-                    path: '/apps'
-                  },
-                  {
-                    key: 'about',
-                    title: formatMessage({ id: 'app.nav.about' }),
-                    path: '/about'
-                  }
-                ].filter(Boolean)
-              }}
-            />
-          }
           list={[
             {
-              index: true,
-              loader: () => import('@pages/Home')
+              path: 'oidc-interaction',
+              element: <RemoteLoader module="components-admin:Oidc@Interaction" className="login-container" systemName="Developer Document" forgetUrl={`${baseUrl}/account/forget`} allowLanguageSwitch={false} />
             },
             {
-              path: 'about',
-              loader: () => import('@pages/About')
+              path: 'oidc-callback',
+              element: <RemoteLoader module="components-admin:Oidc@Callback" systemName="Developer Document" />
             },
             {
-              path: 'blog/*',
-              element: <Blog baseUrl={baseUrl + '/blog'} />
+              path: 'account/login',
+              element: <OidcLoginBridge />
             },
             {
-              path: 'documents/*',
-              element: <Document baseUrl={baseUrl + '/documents'} />
+              path: 'account/*',
+              element: <RemoteLoader module="components-admin:Account" baseUrl={baseUrl + '/account'} className="login-container" systemName="Developer Document" registerOpen={false} allowLanguageSwitch={false} />
             },
             {
-              path: 'remote-components/*',
-              element: <RemoteComponent baseUrl={baseUrl + '/remote-components'} />
+              path: 'admin/initAdmin',
+              element: (
+                <OidcAuthenticate>
+                  <AppChildrenRouter
+                    errorPage
+                    notFoundPage
+                    element={<AfterUserLoginLayout />}
+                    list={[
+                      {
+                        index: true,
+                        element: <RemoteLoader module="components-admin:Admin@InitAdmin" />
+                      }
+                    ]}
+                  />
+                </OidcAuthenticate>
+              )
             },
             {
-              path: 'npm-packages/*',
-              element: <NpmPackage baseUrl={baseUrl + '/npm-packages'} />
+              path: 'admin/*',
+              element: (
+                <OidcAuthenticate>
+                  <AdminApp AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} baseUrl={baseUrl} formatMessage={formatMessage} appManagerEnabled={appManagerEnabled} />
+                </OidcAuthenticate>
+              )
             },
-            appManagerEnabled && {
-              path: 'apps',
-              loader: () => import('@components/AppCenter')
+            {
+              path: 'share',
+              loader: () => import('@pages/Share')
             }
-          ].filter(Boolean)}
-        />
-      </AppChildrenRouter>
+          ]}
+        >
+          <AppChildrenRouter
+            notFoundPage
+            errorPage
+            baseUrl={baseUrl}
+            element={
+              <Layout
+                login={() => oidc.login()}
+                navigation={{
+                  defaultTitle: 'Developer Document',
+                  rightOptions: <RightOptions />,
+                  list: [
+                    {
+                      key: 'npm-packages',
+                      title: formatMessage({ id: 'app.nav.npmPackages' }),
+                      path: '/npm-packages'
+                    },
+                    {
+                      key: 'remote-components',
+                      title: formatMessage({ id: 'app.nav.remoteComponents' }),
+                      path: '/remote-components'
+                    },
+                    {
+                      key: 'blog',
+                      title: formatMessage({ id: 'app.nav.blog' }),
+                      path: '/blog'
+                    },
+                    {
+                      key: 'documents',
+                      title: formatMessage({ id: 'app.nav.documents' }),
+                      path: '/documents'
+                    },
+                    appManagerEnabled && {
+                      key: 'apps',
+                      title: formatMessage({ id: 'app.nav.apps' }),
+                      path: '/apps'
+                    },
+                    {
+                      key: 'about',
+                      title: formatMessage({ id: 'app.nav.about' }),
+                      path: '/about'
+                    }
+                  ].filter(Boolean)
+                }}
+              />
+            }
+            list={[
+              {
+                index: true,
+                loader: () => import('@pages/Home')
+              },
+              {
+                path: 'about',
+                loader: () => import('@pages/About')
+              },
+              {
+                path: 'blog/*',
+                element: <Blog baseUrl={baseUrl + '/blog'} />
+              },
+              {
+                path: 'documents/*',
+                element: <Document baseUrl={baseUrl + '/documents'} />
+              },
+              {
+                path: 'remote-components/*',
+                element: <RemoteComponent baseUrl={baseUrl + '/remote-components'} />
+              },
+              {
+                path: 'npm-packages/*',
+                element: <NpmPackage baseUrl={baseUrl + '/npm-packages'} />
+              },
+              appManagerEnabled && {
+                path: 'apps',
+                loader: () => import('@components/AppCenter')
+              }
+            ].filter(Boolean)}
+          />
+        </AppChildrenRouter>
+      </div>
       <AdminFooter />
-    </>
+    </div>
   );
 });
 
