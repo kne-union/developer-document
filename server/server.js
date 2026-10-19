@@ -6,7 +6,9 @@ const fastify = require('fastify')({
 const fastifyEnv = require('@fastify/env');
 const packageJson = require('./package.json');
 const path = require('node:path');
+const fs = require('node:fs');
 const resolveOidcOptions = require('./libs/utils/oidc-options');
+const { applyAppsPwaDocument, isAppsPath } = require('./libs/utils/pwa-document');
 const createAppOidc = require('./libs/plugins/app-oidc');
 
 // 日志 SSE、原生导航下载无法带请求头，token 放在 query 中
@@ -368,18 +370,32 @@ const createServer = () => {
 
         return 'index.html';
       };
+      const buildRoot = path.join(__dirname, './build');
       fastify.register(require('@fastify/static'), {
-        root: path.join(__dirname, './build'), // 静态文件目录
+        root: buildRoot, // 静态文件目录
         prefix: '/',
         decorateReply: false,
-        index: getEntry()
+        index: getEntry(),
+        setHeaders: (res, filePath) => {
+          const base = path.basename(filePath);
+          if (base === 'manifest.json' || base === 'manifest-apps.json') {
+            res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+          }
+        }
       });
       fastify.setNotFoundHandler((req, reply) => {
-        if (req.method === 'GET') {
-          reply.sendFile(getEntry(), { root: path.join(__dirname, './build') });
-        } else {
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
           reply.code(404).send({ error: 'Not Found' });
+          return;
         }
+        const fileName = getEntry();
+        const urlPath = (req.url || '/').split('?')[0];
+        if (!isAppsPath(urlPath)) {
+          reply.sendFile(fileName, { root: buildRoot });
+          return;
+        }
+        const html = fs.readFileSync(path.join(buildRoot, fileName), 'utf8');
+        reply.type('text/html; charset=utf-8').send(applyAppsPwaDocument(html));
       });
     })
   );
