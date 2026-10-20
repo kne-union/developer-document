@@ -74,6 +74,9 @@ export default {
   'appCenter.searchPlaceholder': '搜索应用',
   'appCenter.empty': '暂无可用应用',
   'appCenter.noMatch': '没有匹配的应用',
+  'appCenter.installMcp': '安装 MCP',
+  'appCenter.installMcpDesc':
+    '登录用户即可安装，无需管理员权限。安装后可在 Cursor / WorkBuddy 中获取应用列表、读取应用接口文档、以你的开发平台身份调用应用接口，并检索组件文档、经验与工作日志。先签发长期令牌，再执行初始化命令或手动粘贴 MCP 配置。',
   'appEntry.selectTitle': '选择「{name}」的入口',
   'app.footer.desc': '组件与工程实践沉淀',
 
@@ -498,6 +501,10 @@ export default {
   'adminDevManagement.install.copyFailed': '复制失败，请手动选择复制',
   'adminDevManagement.install.mcpTargetLabel': 'MCP 安装目标',
   'adminDevManagement.install.mcpTarget.cursor': 'Cursor',
+  'adminDevManagement.install.mcpTarget.workbuddy': 'WorkBuddy',
+  'adminDevManagement.install.mcpTargetHint.cursor': '配置合并到 ~/.cursor/mcp.json，可在 Cursor 设置的 MCP 列表中确认 developer-document 已启用。',
+  'adminDevManagement.install.mcpTargetHint.workbuddy':
+    '配置合并到 ~/.workbuddy/mcp.json（用户级，所有项目复用）；也可在 WorkBuddy「连接器 → 自定义连接器 → 配置 MCP」中粘贴上方 JSON。保存后需在自定义连接器中点击「信任」并「启用」，状态变绿即连接成功。',
   'adminDevManagement.install.syncUrlLabel': 'sync-url（REST 同步）',
   'adminDevManagement.install.mcpUrlLabel': 'mcp-url（HTTP MCP）',
   'adminDevManagement.install.tokenLabel': 'token（Authorization: Bearer）',

@@ -72,7 +72,7 @@ module.exports = fp(async (fastify, options) => {
       }
     }
 
-    const task = await services.task.createNpmPackageSyncTask({ targetId: pkg.id, version });
+    const task = await services.task.createNpmPackageSyncTask({ targetId: pkg.id, version, source: 'ci' });
     return {
       success: true,
       created,
@@ -134,7 +134,7 @@ module.exports = fp(async (fastify, options) => {
       }
     }
 
-    const task = await services.task.createRemoteComponentDeployTask({ targetId: component.id, version });
+    const task = await services.task.createRemoteComponentDeployTask({ targetId: component.id, version, source: 'ci' });
     return {
       success: true,
       created,

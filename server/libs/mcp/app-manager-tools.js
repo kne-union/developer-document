@@ -557,6 +557,28 @@ const registerAppApiTools = (mcpServer, { fastify, userId }) => {
   const appName = z.string().describe('应用标识 name（小写 slug）');
 
   register(
+    'list_running_apps',
+    '应用中心里运行中的应用列表（name、label、description、category、入口地址）。登录用户即可调用；拿到 name 后用 get_app_open_api 查接口、call_app_api 调用。',
+    { keyword: z.string().optional().describe('按 name / label / description 模糊过滤') },
+    async ({ keyword }, services) => {
+      const { pageData } = await services.app.centerList();
+      const kw = String(keyword || '')
+        .trim()
+        .toLowerCase();
+      const list = kw
+        ? pageData.filter(app =>
+            [app.name, app.label, app.description].some(text =>
+              String(text || '')
+                .toLowerCase()
+                .includes(kw)
+            )
+          )
+        : pageData;
+      return list.map(({ name, label, description, category, pathUrl, entries }) => ({ name, label, description, category, pathUrl, entries }));
+    }
+  );
+
+  register(
     'get_app_open_api',
     [
       '读取运行中应用的 OpenAPI 文档（应用需 @kne/fastify-app-runtime >=0.1.2、最前面注册 @fastify/swagger 并接入 OIDC）。登录用户即可调用。',
