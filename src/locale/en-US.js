@@ -78,6 +78,9 @@ export default {
   'appCenter.installMcpDesc':
     'Available to any signed-in user; no admin permission required. In Cursor / WorkBuddy you can list apps, read app API docs, call app APIs as your dev platform identity, and search component docs, experience and worklogs. Issue a long-lived token first, then run the init command or paste the MCP config.',
   'appEntry.selectTitle': 'Choose an entry for {name}',
+  'appEntry.unavailable.deploying': '{name} is deploying, please try again later',
+  'appEntry.unavailable.restoring': '{name} is being restored, please try again later',
+  'appEntry.unavailable.notRunning': '{name} is not running and cannot be opened',
   'app.footer.desc': 'Component and Engineering Practice Accumulation',
 
   // RightOptions
@@ -669,6 +672,7 @@ export default {
   // AppManager
   'appManager.status.idle': 'Idle',
   'appManager.status.deploying': 'Deploying',
+  'appManager.status.restoring': 'Restoring',
   'appManager.status.running': 'Running',
   'appManager.status.stopped': 'Stopped',
   'appManager.status.error': 'Error',

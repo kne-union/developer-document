@@ -104,15 +104,7 @@ const Overview = createWithRemoteLoader({
         <section className={style['detail-card']}>
           <div className={style['detail-card-title']}>{formatMessage({ id: 'appManager.detail.sectionMore' })}</div>
           <div className={style['field-list']}>
-            <FieldRow label={formatMessage({ id: 'appManager.columns.pathUrl' })}>
-              {data.pathUrl ? (
-                <a href={data.pathUrl} target="_blank" rel="noreferrer">
-                  {data.pathUrl}
-                </a>
-              ) : (
-                '-'
-              )}
-            </FieldRow>
+            <FieldRow label={formatMessage({ id: 'appManager.columns.pathUrl' })}>{data.pathUrl ? <OpenAppLink app={data}>{data.pathUrl}</OpenAppLink> : '-'}</FieldRow>
             <FieldRow label={formatMessage({ id: 'appManager.columns.domain' })}>{display(data.domain)}</FieldRow>
             <FieldRow label={formatMessage({ id: 'appManager.columns.message' })}>{display(data.message)}</FieldRow>
           </div>
