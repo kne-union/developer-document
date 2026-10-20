@@ -104,6 +104,31 @@ module.exports = fp(
       const { services } = fastify[options.name];
       await services.bootstrap.onClose();
     });
+
+    const pwaDocument = require('../../../src/components/AppCenter/pwaDocument');
+    fastify.get(`${options.prefix}/app/center/webmanifest`, async (request, reply) => {
+      const name = String(request.query?.name || '').trim();
+      if (!name) {
+        reply.code(400).type('application/json; charset=utf-8');
+        return { message: 'name is required' };
+      }
+      const listed = await fastify[options.name].services.app.centerList({ publicOnly: true });
+      const app = (listed.pageData || []).find(item => item.name === name);
+      if (!app) {
+        reply.code(404).type('application/json; charset=utf-8');
+        return { message: 'app not found' };
+      }
+      const wanted = String(request.query?.path || '');
+      const surfaces = [{ path: app.pathUrl, title: app.label || app.name }].concat((app.entries || []).filter(entry => entry && entry.url).map(entry => ({ path: entry.url, title: entry.label || app.label || app.name })));
+      const surface = surfaces.find(item => pwaDocument.normalizePath(item.path) === pwaDocument.normalizePath(wanted)) || surfaces[0];
+      const manifest = pwaDocument.buildWebManifest(app, {
+        path: surface.path,
+        title: surface.title,
+        icon: pwaDocument.iconUrlFor(app.icon, { staticPrefix: '/api/v1/static/file-id' })
+      });
+      reply.type('application/manifest+json; charset=utf-8').send(manifest);
+      return reply;
+    });
   },
   {
     name: 'fastify-app-manager-host',

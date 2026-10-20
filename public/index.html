@@ -9,55 +9,20 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <script>
-    (function () {
-      // 解析阶段按路径写入 manifest / 图标。Safari 添加到程序坞只认这时的 link，事后改 href 不会再生效。
-      var publicUrl = '%PUBLIC_URL%';
-      var entries = {
-        home: { manifest: '/manifest.json', icon: '/pwa/home-apple-touch-icon.png', title: '开发者文档' },
-        apps: { manifest: '/manifest-apps.json', icon: '/pwa/apps-apple-touch-icon.png', title: '应用中心' }
-      };
-      var entryFor = function () {
-        return /^\/apps(\/|$)/.test(window.location.pathname) ? entries.apps : entries.home;
-      };
-      var setAttr = function (id, name, value) {
-        var el = document.getElementById(id);
-        if (el && el.getAttribute(name) !== value) {
-          el.setAttribute(name, value);
-        }
-      };
-      var sync = function () {
-        var entry = entryFor();
-        setAttr('pwa-manifest', 'href', publicUrl + entry.manifest);
-        setAttr('pwa-apple-touch-icon', 'href', publicUrl + entry.icon);
-        setAttr('pwa-apple-title', 'content', entry.title);
-      };
-      var entry = entryFor();
-      if (!document.getElementById('pwa-manifest')) {
-        document.write(
-          '<link id="pwa-apple-touch-icon" rel="apple-touch-icon" sizes="180x180" href="' +
-            publicUrl +
-            entry.icon +
-            '">' +
-            '<meta id="pwa-apple-title" name="apple-mobile-web-app-title" content="' +
-            entry.title +
-            '">' +
-            '<link id="pwa-manifest" rel="manifest" href="' +
-            publicUrl +
-            entry.manifest +
-            '">'
-        );
-      }
-      ['pushState', 'replaceState'].forEach(function (method) {
-        var original = window.history[method];
-        window.history[method] = function () {
-          var result = original.apply(this, arguments);
-          sync();
-          return result;
-        };
-      });
-      window.addEventListener('popstate', sync);
-    })();
+    // 本站外壳。已发布应用的匹配在 app-center-pwa.js，其他系统改这份配置后引入同一脚本即可。
+    window.__APP_CENTER_PWA__ = {
+      publicUrl: '%PUBLIC_URL%',
+      apiUrl: '%PUBLIC_URL%/api/v1/app-manager/app/center/public-list',
+      manifestPrefix: '%PUBLIC_URL%/api/v1/app-manager',
+      staticPrefix: '%PUBLIC_URL%/api/v1/static/file-id',
+      defaultIcon: '%PUBLIC_URL%/pwa/apps-apple-touch-icon.png',
+      shellEntries: [
+        { path: '/apps', manifest: '/manifest-apps.json', icon: '/pwa/apps-apple-touch-icon.png', title: '应用中心' },
+        { path: '/', manifest: '/manifest.json', icon: '/pwa/home-apple-touch-icon.png', title: '开发者文档' }
+      ]
+    };
   </script>
+  <script src="%PUBLIC_URL%/app-center-pwa.js"></script>
   <!--
       Notice the use of %PUBLIC_URL% in the tags above.
       It will be replaced with the URL of the `public` folder during the build.
@@ -78,19 +43,21 @@
       align-items: center;
       justify-content: center;
       gap: 16px;
-      background: #0080FF;
+      background: #f6f7f9;
     }
 
     #app-boot img {
       width: 72px;
       height: 72px;
+      border-radius: 22%;
+      overflow: hidden;
     }
 
     #app-boot-name {
       font-size: 16px;
       line-height: 24px;
       font-weight: 500;
-      color: #fff;
+      color: rgba(0, 0, 0, 0.88);
     }
   </style>
 </head>
@@ -110,9 +77,13 @@
           img.src = base + src;
         }
       }
+      var active = window.__PWA_ACTIVE__;
+      if (active && active.icon && img) {
+        img.src = active.icon;
+      }
       var name = document.getElementById('app-boot-name');
       if (name) {
-        name.textContent = document.title;
+        name.textContent = (active && active.title) || document.title;
       }
     })();
   </script>

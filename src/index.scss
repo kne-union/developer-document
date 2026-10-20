@@ -75,9 +75,10 @@ body {
 }
 
 .ant-layout-header {
-  background: #0080ff !important;
-  border-bottom: none;
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.86) !important;
+  border-bottom: 1px solid #e7edf5;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
+  backdrop-filter: blur(8px);
 
   .ant-menu-item .ant-menu-title-content,
   .ant-menu-submenu-title .ant-space-item,
@@ -85,20 +86,20 @@ body {
   .right-options-login,
   .navigation-mobile-title,
   .navigation-mobile-menu-trigger {
-    color: #fff !important;
+    color: #000 !important;
   }
 
   .ant-menu-item.ant-menu-item-selected .ant-menu-title-content {
-    color: #fff !important;
+    color: var(--primary-color) !important;
   }
 
   &:after {
-    background: transparent !important;
+    background: #000 !important;
   }
 }
 
 .navigation-logo img {
-  filter: brightness(0) invert(1);
+  filter: invert(1) brightness(0);
 }
 
 .ant-layout-header > .ant-row.ant-row-no-wrap {
@@ -218,10 +219,6 @@ body {
 .navigation-main-menu.ant-menu-horizontal {
   justify-content: center;
   background: transparent;
-}
-
-.ant-layout-header .language .language-icon {
-  color: #fff !important;
 }
 
 .language {

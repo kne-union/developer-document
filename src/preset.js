@@ -21,7 +21,7 @@ const ensureBootMask = () => {
     const style = document.createElement('style');
     style.id = 'app-boot-style';
     style.textContent =
-      '#app-boot{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#0080FF}#app-boot img{width:72px;height:72px}#app-boot-name{font-size:16px;line-height:24px;font-weight:500;color:#fff}';
+      '#app-boot{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#f6f7f9}#app-boot img{width:72px;height:72px;border-radius:22%;overflow:hidden}#app-boot-name{font-size:16px;line-height:24px;font-weight:500;color:rgba(0,0,0,.88)}';
     document.head.appendChild(style);
   }
   let mask = document.getElementById('app-boot');
@@ -127,7 +127,22 @@ const globalInit = async () => {
   const ajax = createAjax({
     baseURL: baseApiUrl,
     errorHandler: error => message.error(error),
-    registerInterceptors: interceptors => oidc.registerInterceptors(interceptors)
+    registerInterceptors: interceptors =>
+      oidc.registerInterceptors(interceptors, {
+        onUnauthorized: response => {
+          if (response.config) {
+            response.config.showError = false;
+          }
+          const headers = response.config?.headers;
+          const authorization = typeof headers?.get === 'function' ? headers.get('Authorization') || headers.get('authorization') : headers?.Authorization || headers?.authorization;
+          // 未登录可以浏览公开页面。没有令牌时接口返回 401，不要提示「缺少访问令牌」，也不要跳转登录。
+          if (!authorization) {
+            return false;
+          }
+          oidc.login();
+          return true;
+        }
+      })
   });
 
   fetchPreset({

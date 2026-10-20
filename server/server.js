@@ -8,7 +8,7 @@ const packageJson = require('./package.json');
 const path = require('node:path');
 const fs = require('node:fs');
 const resolveOidcOptions = require('./libs/utils/oidc-options');
-const { applyAppsPwaDocument, isAppsPath } = require('./libs/utils/pwa-document');
+const { applyPwaDocument, resolveDocumentEntry } = require('./libs/utils/pwa-document');
 const createAppOidc = require('./libs/plugins/app-oidc');
 
 // 日志 SSE、原生导航下载无法带请求头，token 放在 query 中
@@ -383,19 +383,29 @@ const createServer = () => {
           }
         }
       });
-      fastify.setNotFoundHandler((req, reply) => {
+      fastify.setNotFoundHandler(async (req, reply) => {
         if (req.method !== 'GET' && req.method !== 'HEAD') {
           reply.code(404).send({ error: 'Not Found' });
           return;
         }
         const fileName = getEntry();
         const urlPath = (req.url || '/').split('?')[0];
-        if (!isAppsPath(urlPath)) {
+        let apps = [];
+        if (fastify.appManager?.services?.app?.centerList) {
+          try {
+            const listed = await fastify.appManager.services.app.centerList({ publicOnly: true });
+            apps = listed.pageData || [];
+          } catch (error) {
+            apps = [];
+          }
+        }
+        const entry = resolveDocumentEntry(urlPath, apps);
+        if (!entry || entry.path === '/') {
           reply.sendFile(fileName, { root: buildRoot });
           return;
         }
         const html = fs.readFileSync(path.join(buildRoot, fileName), 'utf8');
-        reply.type('text/html; charset=utf-8').send(applyAppsPwaDocument(html));
+        reply.type('text/html; charset=utf-8').send(applyPwaDocument(html, entry));
       });
     })
   );
