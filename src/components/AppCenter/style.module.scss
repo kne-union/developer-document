@@ -238,6 +238,10 @@
 
   .header {
     padding: 16px;
+    border-radius: 0;
+    margin-top: calc(-12px - var(--padding-width, 12px));
+    margin-left: calc(var(--padding-width, 12px) * -1);
+    margin-right: calc(var(--padding-width, 12px) * -1);
   }
 
   .header-top {
@@ -251,6 +255,11 @@
 
   .panel {
     min-height: 0;
+    box-sizing: border-box;
+    width: calc(100% + 2 * var(--padding-width, 12px));
+    margin-left: calc(var(--padding-width, 12px) * -1);
+    margin-right: calc(var(--padding-width, 12px) * -1);
+    padding-inline: 16px;
     border: none;
     border-radius: 0;
     background: none;
@@ -278,14 +287,16 @@
   }
 
   .grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    justify-items: center;
-    column-gap: 8px;
-    row-gap: 16px;
-    padding: 16px 12px 0;
+    --app-icon: clamp(60px, 16cqi, 68px);
+    width: 100%;
+    grid-template-columns: repeat(4, var(--app-icon));
+    justify-content: space-between;
+    row-gap: clamp(16px, 4cqi, 24px);
+    padding: clamp(16px, 4cqi, 24px) 0 0;
   }
 
   .app {
+    width: 100%;
     padding: 0;
     gap: 6px;
     border-radius: 0;
@@ -302,9 +313,9 @@
   }
 
   .icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
+    width: var(--app-icon);
+    height: var(--app-icon);
+    border-radius: 22%;
   }
 
   .label {

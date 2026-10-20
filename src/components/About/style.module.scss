@@ -253,6 +253,13 @@
     padding: 12px 0 24px;
   }
 
+  .hero {
+    border-radius: 0;
+    margin-top: calc(-12px - var(--padding-width, 12px));
+    margin-left: calc(var(--padding-width, 12px) * -1);
+    margin-right: calc(var(--padding-width, 12px) * -1);
+  }
+
   .statsGrid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -269,7 +276,6 @@
     padding: 12px 0 24px;
   }
 
-  .hero,
   .statsGrid,
   .statCard,
   .valueCard,
@@ -277,6 +283,10 @@
   .teamCard,
   .cultureCard {
     border-radius: 16px;
+  }
+
+  .hero {
+    border-radius: 0;
   }
 
   .hero,
@@ -289,6 +299,5 @@
 
   .statsGrid {
     grid-template-columns: minmax(0, 1fr);
-    padding: 12px;
   }
 }

@@ -18,11 +18,39 @@ const pickApp = app =>
     port: app.port,
     pathUrl: app.pathUrl,
     domain: app.domain || null,
+    icon: app.icon || null,
     currentVersionId: app.currentVersionId || null,
     description: app.description || null,
     isPublic: app.isPublic,
     entries: app.entries
   };
+
+const iconFileId = z.string().optional().describe('文件管理里的图标文件 id，格式与后台一致（id 或 id?filename=）');
+const iconUrl = z.string().optional().describe('图标图片的 http(s) 地址。未传 icon 时由服务端下载到文件管理后再写入应用');
+
+const resolveAppIcon = async (fastify, { icon, iconUrl }) => {
+  if (icon) {
+    return icon;
+  }
+  if (!iconUrl) {
+    return undefined;
+  }
+  let parsed;
+  try {
+    parsed = new URL(iconUrl);
+  } catch (error) {
+    throw new Error('iconUrl 不是合法的 URL');
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('iconUrl 只支持 http 或 https');
+  }
+  const record = await fastify.fileManager.services.fileRecord.uploadFromUrl({ url: iconUrl });
+  const id = record.id || record.uuid;
+  if (!id) {
+    throw new Error('图标上传失败');
+  }
+  return record.filename ? `${id}?filename=${record.filename}` : id;
+};
 
 const pickSteps = events => (events || []).map(({ step, status, detail, message }) => ({ step, status, detail, message }));
 
@@ -174,28 +202,43 @@ const registerAppManagerTools = (mcpServer, { fastify }) => {
 
   register(
     'create_app',
-    '创建应用（分配端口与访问路径）；创建后用 upload_app_version 上传版本，再 deploy_app',
+    '创建应用（分配端口与访问路径）；创建后用 upload_app_version 上传版本，再 deploy_app。图标用 icon（已上传的文件 id）或 iconUrl（图片地址）',
     {
       name: appName,
       label: z.string().describe('显示名称'),
       description: z.string().optional(),
       domain: z.string().optional().describe('绑定域名（可选）'),
+      icon: iconFileId,
+      iconUrl,
       isPublic: z.boolean().optional().describe('是否在应用中心公开，默认公开')
     },
-    async (args, services) => pickApp(await services.app.create(args))
+    async (args, services) => {
+      const icon = await resolveAppIcon(fastify, args);
+      return pickApp(await services.app.create(Object.assign({}, args, icon === undefined ? {} : { icon })));
+    }
   );
 
   register(
     'update_app',
-    '更新应用元信息（名称、描述、域名、是否公开）；环境变量请用 save_app_env',
+    '更新应用元信息（名称、描述、域名、图标、是否公开）；环境变量请用 save_app_env',
     {
       name: appName,
       label: z.string().optional(),
       description: z.string().optional(),
       domain: z.string().optional(),
+      icon: iconFileId,
+      iconUrl,
       isPublic: z.boolean().optional()
     },
-    async (args, services) => pickApp(await services.app.save(args))
+    async (args, services) => {
+      const icon = await resolveAppIcon(fastify, args);
+      const payload = Object.assign({}, args);
+      delete payload.iconUrl;
+      if (icon !== undefined) {
+        payload.icon = icon;
+      }
+      return pickApp(await services.app.save(payload));
+    }
   );
 
   register(

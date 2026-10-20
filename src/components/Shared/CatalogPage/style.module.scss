@@ -446,6 +446,13 @@
     padding: 12px 0 24px;
   }
 
+  .headerPanel {
+    border-radius: 0;
+    margin-top: calc(-12px - var(--padding-width, 12px));
+    margin-left: calc(var(--padding-width, 12px) * -1);
+    margin-right: calc(var(--padding-width, 12px) * -1);
+  }
+
   .headerTop {
     flex-direction: column;
   }
@@ -486,12 +493,15 @@
     padding: 12px 0 24px;
   }
 
-  .headerPanel,
   .summaryBar,
   .emptyState,
   .card,
   .cardSkeleton {
     border-radius: 14px;
+  }
+
+  .headerPanel {
+    border-radius: 0;
   }
 
   .headerPanel {

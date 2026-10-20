@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import classnames from 'classnames';
@@ -10,11 +10,19 @@ import { useIntl } from '@kne/react-intl';
 import { hasUserToken } from '@components/Shared/auth';
 import DefaultAppIcon from '@components/Shared/DefaultAppIcon';
 import { useOpenApp } from '@components/Shared/AppEntry';
+import pwaDocument from './pwaDocument';
 import style from './style.module.scss';
 
 const { Title, Paragraph, Text } = Typography;
 
 const UNCATEGORIZED = '__uncategorized__';
+
+const PwaSync = ({ apps }) => {
+  useEffect(() => {
+    pwaDocument.syncPwaDocument(apps, window.__APP_CENTER_PWA__);
+  }, [apps]);
+  return null;
+};
 
 const getCategoryCode = item => (typeof item.category === 'string' ? item.category : item.category?.code) || UNCATEGORIZED;
 
@@ -143,7 +151,16 @@ const AppCenter = createWithRemoteLoader({
                 ) : (
                   <Fetch
                     {...(isLoggedIn ? apis.appManager.centerList : apis.appManager.centerPublicList)}
-                    render={({ data, loading }) => (loading ? loadingView : <AppPanel list={data?.pageData || []} groups={Array.isArray(groups) ? groups : []} keyword={keyword} Image={Image} />)}
+                    render={({ data, loading }) =>
+                      loading ? (
+                        loadingView
+                      ) : (
+                        <>
+                          <PwaSync apps={data?.pageData || []} />
+                          <AppPanel list={data?.pageData || []} groups={Array.isArray(groups) ? groups : []} keyword={keyword} Image={Image} />
+                        </>
+                      )
+                    }
                   />
                 )
               }
