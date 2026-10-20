@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <script>
-    // 本站外壳。已发布应用的匹配在 app-center-pwa.js，其他系统改这份配置后引入同一脚本即可。
+    // 本站外壳。已发布应用的匹配在 @kne/pwa-document，其他系统改这份配置后引入同一脚本即可。
     window.__APP_CENTER_PWA__ = {
       publicUrl: '%PUBLIC_URL%',
       apiUrl: '%PUBLIC_URL%/api/v1/app-manager/app/center/public-list',
@@ -22,7 +22,7 @@
       ]
     };
   </script>
-  <script src="%PUBLIC_URL%/app-center-pwa.js"></script>
+  <script src="https://cdn.leapin-ai.com/components/@kne/pwa-document/0.1.0/index.js"></script>
   <!--
       Notice the use of %PUBLIC_URL% in the tags above.
       It will be replaced with the URL of the `public` folder during the build.

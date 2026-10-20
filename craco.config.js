@@ -1,9 +1,5 @@
-const fs = require("fs");
-const path = require("path");
 const {CracoRemoteComponentsPlugin} = require("@kne/modules-dev");
 const aliasConfig = require("./webstorm.webpack.config");
-
-fs.copyFileSync(require.resolve("@kne/pwa-document"), path.join(__dirname, "public/app-center-pwa.js"));
 
 process.env.CI = false;
 
