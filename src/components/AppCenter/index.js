@@ -10,7 +10,7 @@ import { useIntl } from '@kne/react-intl';
 import { hasUserToken } from '@components/Shared/auth';
 import DefaultAppIcon from '@components/Shared/DefaultAppIcon';
 import { useOpenApp } from '@components/Shared/AppEntry';
-import pwaDocument from './pwaDocument';
+import pwaDocument from '@kne/pwa-document';
 import style from './style.module.scss';
 
 const { Title, Paragraph, Text } = Typography;

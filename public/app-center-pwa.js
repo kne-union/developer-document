@@ -1,7 +1,7 @@
 /**
- * 按已发布应用切换 PWA。
- * 其他系统在页面解析阶段引入本文件，并在此之前设置 window.__APP_CENTER_PWA__。
- * 应用中心组件拉到列表后调用 installPwaDocument({ apps })，登录用户能看到的非公开应用也会参与匹配。
+ * 按已发布应用切换 PWA 的 manifest、图标与标题。
+ * 以普通 script 在页面解析阶段引入时，读取 window.__APP_CENTER_PWA__ 自动安装（Safari 只在解析 HTML 时读取 manifest）。
+ * 以 CommonJS 引入时只导出方法，不会自动安装，Node 端用同一份规则改写 HTML、生成 manifest。
  */
 (function (root, factory) {
   var api = factory();
@@ -19,7 +19,9 @@
   };
 
   var normalizePath = function (value) {
-    var path = String(value || '/').split('?')[0].split('#')[0];
+    var path = String(value || '/')
+      .split('?')[0]
+      .split('#')[0];
     if (path.length > 1 && path.charAt(path.length - 1) === '/') {
       path = path.slice(0, -1);
     }
@@ -57,6 +59,16 @@
     return prefix.replace(/\/+$/, '') + '/app/center/webmanifest?' + params.join('&');
   };
 
+  var appSurfaces = function (app) {
+    var surfaces = [{ path: app.pathUrl, title: app.label || app.name }];
+    (app.entries || []).forEach(function (entry) {
+      if (entry && entry.url) {
+        surfaces.push({ path: entry.url, title: entry.label || app.label || app.name });
+      }
+    });
+    return surfaces;
+  };
+
   var entriesFromApps = function (apps, options) {
     var entries = [];
     (apps || []).forEach(function (app) {
@@ -64,13 +76,7 @@
         return;
       }
       var icon = iconUrlFor(app.icon, options) || (options && options.defaultIcon) || '';
-      var surfaces = [{ path: app.pathUrl, title: app.label || app.name }];
-      (app.entries || []).forEach(function (entry) {
-        if (entry && entry.url) {
-          surfaces.push({ path: entry.url, title: entry.label || app.label || app.name });
-        }
-      });
-      surfaces.forEach(function (surface) {
+      appSurfaces(app).forEach(function (surface) {
         entries.push({
           path: surface.path,
           title: surface.title,
@@ -111,6 +117,17 @@
     return matchPwaEntry(pathname, published.concat(shell));
   };
 
+  var headTagsFor = function (entry, publicUrl) {
+    var icon = withPublicUrl(entry.icon, publicUrl);
+    var manifest = withPublicUrl(entry.manifest, publicUrl);
+    var title = entry.title || '';
+    return (
+      (icon ? '<link id="pwa-apple-touch-icon" rel="apple-touch-icon" sizes="180x180" href="' + icon + '">' : '') +
+      (title ? '<meta id="pwa-apple-title" name="apple-mobile-web-app-title" content="' + title + '">' : '') +
+      (manifest ? '<link id="pwa-manifest" rel="manifest" href="' + manifest + '">' : '')
+    );
+  };
+
   var setAttr = function (id, name, value) {
     if (typeof document === 'undefined' || !value) {
       return;
@@ -119,18 +136,6 @@
     if (el && el.getAttribute(name) !== value) {
       el.setAttribute(name, value);
     }
-  };
-
-  var writeHeadTags = function (entry, options) {
-    var publicUrl = (options && options.publicUrl) || '';
-    var icon = withPublicUrl(entry.icon, publicUrl);
-    var manifest = withPublicUrl(entry.manifest, publicUrl);
-    var title = entry.title || '';
-    document.write(
-      (icon ? '<link id="pwa-apple-touch-icon" rel="apple-touch-icon" sizes="180x180" href="' + icon + '">' : '') +
-        (title ? '<meta id="pwa-apple-title" name="apple-mobile-web-app-title" content="' + title + '">' : '') +
-        (manifest ? '<link id="pwa-manifest" rel="manifest" href="' + manifest + '">' : '')
-    );
   };
 
   var applyPwaEntry = function (entry, options) {
@@ -147,7 +152,7 @@
       document.title = entry.title;
     }
     if (document.readyState === 'loading' && !document.getElementById('pwa-manifest')) {
-      writeHeadTags(entry, options);
+      document.write(headTagsFor(entry, publicUrl));
       return entry;
     }
     setAttr('pwa-manifest', 'href', manifest);
@@ -251,12 +256,82 @@
     return manifest;
   };
 
+  var SCRIPT_RE = /(<script\b[^>]*>[\s\S]*?<\/script>)/gi;
+
+  var isScript = function (part) {
+    return /^<script\b/i.test(part);
+  };
+
+  var replaceAttr = function (attrs, attr, value) {
+    var attrRe = new RegExp('\\s' + attr + '="[^"]*"');
+    if (attrRe.test(attrs)) {
+      return attrs.replace(attrRe, ' ' + attr + '="' + value + '"');
+    }
+    return attrs + ' ' + attr + '="' + value + '"';
+  };
+
+  var replaceTagById = function (html, id, attr, value) {
+    return html.replace(new RegExp('<([a-zA-Z0-9:-]+)([^>]*\\bid="' + id + '"[^>]*)>', 'g'), function (full, name, attrs) {
+      return '<' + name + replaceAttr(attrs, attr, value) + '>';
+    });
+  };
+
+  var hasTagId = function (html, id) {
+    return new RegExp('<[a-zA-Z0-9:-]+[^>]*\\bid="' + id + '"[^>]*>').test(html);
+  };
+
+  var rewriteTags = function (html, entry) {
+    var next = html;
+    if (entry.manifest && hasTagId(next, 'pwa-manifest')) {
+      next = replaceTagById(next, 'pwa-manifest', 'href', entry.manifest);
+    }
+    if (entry.icon && hasTagId(next, 'pwa-apple-touch-icon')) {
+      next = replaceTagById(next, 'pwa-apple-touch-icon', 'href', entry.icon);
+    }
+    if (entry.title) {
+      next = replaceTagById(next, 'pwa-apple-title', 'content', entry.title);
+    }
+    return next;
+  };
+
+  /**
+   * 服务端返回 HTML 前写好 manifest / 图标 / 标题。
+   * 只改 script 之外的标签，不改脚本正文。
+   */
+  var applyPwaHtml = function (html, entry, options) {
+    if (!entry) {
+      return html;
+    }
+    var rewritten = String(html)
+      .split(SCRIPT_RE)
+      .map(function (part) {
+        return isScript(part) ? part : rewriteTags(part, entry);
+      })
+      .join('');
+    var outside = rewritten
+      .split(SCRIPT_RE)
+      .filter(function (part) {
+        return !isScript(part);
+      })
+      .join('');
+    if (hasTagId(outside, 'pwa-manifest')) {
+      return rewritten;
+    }
+    var tags = headTagsFor(entry, options && options.publicUrl);
+    if (/<meta\s+charset=/i.test(rewritten)) {
+      return rewritten.replace(/(<meta\s+charset="[^"]*"\s*\/?>)/i, '$1' + tags);
+    }
+    return rewritten.replace(/<head([^>]*)>/i, '<head$1>' + tags);
+  };
+
   return {
     normalizePath: normalizePath,
+    appSurfaces: appSurfaces,
     entriesFromApps: entriesFromApps,
     matchPwaEntry: matchPwaEntry,
     resolveEntry: resolveEntry,
     applyPwaEntry: applyPwaEntry,
+    applyPwaHtml: applyPwaHtml,
     installPwaDocument: installPwaDocument,
     syncPwaDocument: syncPwaDocument,
     buildWebManifest: buildWebManifest,
