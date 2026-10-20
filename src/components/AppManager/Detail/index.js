@@ -11,6 +11,7 @@ import EnvEditor from '../EnvEditor';
 import LogViewer from '../LogViewer';
 import DataOps from '../DataOps';
 import Overview from './Overview';
+import Settings from './Settings';
 import DeployingStatusPoller from './DeployingStatusPoller';
 import DetailPageHeaderTitle from '@components/Shared/DetailPageHeaderTitle';
 import style from './style.module.scss';
@@ -48,6 +49,8 @@ const Detail = createWithRemoteLoader({
               content = <DataOps data={data} onSuccess={reload} />;
             } else if (activeKey === 'logs') {
               content = <LogViewer data={data} />;
+            } else if (activeKey === 'settings') {
+              content = <Settings data={data} onSuccess={reload} />;
             } else {
               content = <Overview data={data} />;
             }
@@ -87,7 +90,8 @@ const Detail = createWithRemoteLoader({
                     { tab: formatMessage({ id: 'appManager.tabs.versions' }), key: 'versions' },
                     { tab: formatMessage({ id: 'appManager.tabs.env' }), key: 'env' },
                     { tab: formatMessage({ id: 'appManager.tabs.data' }), key: 'data' },
-                    { tab: formatMessage({ id: 'appManager.tabs.logs' }), key: 'logs' }
+                    { tab: formatMessage({ id: 'appManager.tabs.logs' }), key: 'logs' },
+                    { tab: formatMessage({ id: 'appManager.tabs.settings' }), key: 'settings' }
                   ]
                 }}
               >

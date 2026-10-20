@@ -6,17 +6,8 @@ const fastify = require('fastify')({
 const fastifyEnv = require('@fastify/env');
 const packageJson = require('./package.json');
 const path = require('node:path');
-const fs = require('node:fs');
 const resolveOidcOptions = require('./libs/utils/oidc-options');
-const { applyPwaDocument, resolveDocumentEntry } = require('./libs/utils/pwa-document');
-const createAppOidc = require('./libs/plugins/app-oidc');
-
-// 日志 SSE、原生导航下载无法带请求头，token 放在 query 中
-const queryTokenToAuthorization = async request => {
-  if (!request.headers.authorization && typeof request.query?.token === 'string' && request.query.token) {
-    request.headers.authorization = `Bearer ${request.query.token}`;
-  }
-};
+const createAppOidc = require('@kne/fastify-app-manager/oidc');
 
 const version = `v${packageJson.version.split('.')[0]}`;
 
@@ -145,8 +136,8 @@ const createServer = () => {
         keyEncryptionSecret: oidcOptions.keySecret,
         cookieSecret: fastify.config.OIDC_COOKIE_SECRET || undefined,
         legacyToken: false,
-        // 应用中心子应用的 back-channel logout 直连 127.0.0.1:{port}
-        allowPrivateFetch: url => fastify.config.ENV === 'local' || url.hostname === '127.0.0.1',
+        // 应用中心子应用的 back-channel logout 直连子应用进程
+        allowPrivateFetch: url => fastify.config.ENV === 'local' || (!!fastify.appManager && url.hostname === fastify.appManager.options.upstreamHost),
         selfClient: { clientName: 'Developer Document' },
         resourceServers: [
           {
@@ -282,9 +273,10 @@ const createServer = () => {
       });
 
       if (fastify.config.APPS_DB_DATABASE) {
-        const appOidc = createAppOidc(fastify, { pathPrefix: '/app' });
+        const { origin, issuer, serviceAudience } = fastify.oidcOptions;
+        const appOidc = createAppOidc(fastify, { origin, issuer, serviceAudience, pathPrefix: '/app' });
         fastify.decorate('appOidc', appOidc);
-        fastify.register(require('./libs/plugins/register-app-manager'), {
+        fastify.register(require('@kne/fastify-app-manager'), {
           prefix: `${options.prefix}/app-manager`,
           name: 'appManager',
           appsRoot: path.resolve(fastify.config.APPS_ROOT || './managed-apps'),
@@ -305,13 +297,7 @@ const createServer = () => {
           resolveVersionFile: async ({ fileId }) => {
             const { buffer } = await fastify.fileManager.services.fileRecord.getFileBlob({ id: fileId });
             return buffer;
-          },
-          createAuthenticate: () => {
-            const { authenticate } = fastify.account;
-            // admin 依赖 user 先写入 request.userInfo，不可只挂 authenticate.admin
-            return [queryTokenToAuthorization, authenticate.user, authenticate.admin];
-          },
-          createUserAuthenticate: () => [queryTokenToAuthorization, fastify.account.authenticate.user]
+          }
         });
       }
 
@@ -337,76 +323,20 @@ const createServer = () => {
 
       fastify.register(require('./libs/mcp'), options);
 
-      /*fastify.register(require('@kne/fastify-aliyun'), {
-    prefix: `${options.prefix}/aliyun`,
-    oss: {
-      baseDir: 'video-conference',
-      region: fastify.config.OSS_REGION,
-      accessKeyId: fastify.config.OSS_ACCESS_KEY_ID,
-      accessKeySecret: fastify.config.OSS_ACCESS_KEY_SECRET,
-      bucket: fastify.config.OSS_BUCKET
-    }
-  });*/
+      fastify.register(require('@kne/fastify-app-runtime'), {
+        root: path.join(__dirname, './build'),
+        packageJson,
+        static: { manifestFiles: ['manifest.json', 'manifest-apps.json'] },
+        pwa: {
+          entries: [{ path: '/apps', manifest: '/manifest-apps.json', icon: '/pwa/apps-apple-touch-icon.png', title: '应用中心' }]
+        }
+      });
     })
   );
 
   fastify.register(
     require('fastify-plugin')(async fastify => {
       await fastify.sequelize.sync();
-    })
-  );
-
-  fastify.register(
-    require('fastify-plugin')(async fastify => {
-      const getEntry = () => {
-        const env = fastify.config.ENV;
-        if (env === 'staging') {
-          return 'entry.html';
-        }
-
-        if (env === 'prod') {
-          return 'entry-prod.html';
-        }
-
-        return 'index.html';
-      };
-      const buildRoot = path.join(__dirname, './build');
-      fastify.register(require('@fastify/static'), {
-        root: buildRoot, // 静态文件目录
-        prefix: '/',
-        decorateReply: false,
-        index: getEntry(),
-        setHeaders: (res, filePath) => {
-          const base = path.basename(filePath);
-          if (base === 'manifest.json' || base === 'manifest-apps.json') {
-            res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
-          }
-        }
-      });
-      fastify.setNotFoundHandler(async (req, reply) => {
-        if (req.method !== 'GET' && req.method !== 'HEAD') {
-          reply.code(404).send({ error: 'Not Found' });
-          return;
-        }
-        const fileName = getEntry();
-        const urlPath = (req.url || '/').split('?')[0];
-        let apps = [];
-        if (fastify.appManager?.services?.app?.centerList) {
-          try {
-            const listed = await fastify.appManager.services.app.centerList({ publicOnly: true });
-            apps = listed.pageData || [];
-          } catch (error) {
-            apps = [];
-          }
-        }
-        const entry = resolveDocumentEntry(urlPath, apps);
-        if (!entry || entry.path === '/') {
-          reply.sendFile(fileName, { root: buildRoot });
-          return;
-        }
-        const html = fs.readFileSync(path.join(buildRoot, fileName), 'utf8');
-        reply.type('text/html; charset=utf-8').send(applyPwaDocument(html, entry));
-      });
     })
   );
 
