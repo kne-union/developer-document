@@ -5,14 +5,23 @@ import { useIntl } from '@kne/react-intl';
 const STATUS_COLOR = {
   idle: 'default',
   deploying: 'processing',
+  restoring: 'processing',
   running: 'success',
   stopped: 'warning',
   error: 'error'
 };
 
+/** 部署/恢复进行中时 DB status 仍是旧值（如 running），以 deployment 为准 */
+const getDisplayStatus = ({ status, deployment } = {}) => {
+  if (deployment) {
+    return deployment.source === 'restore' ? 'restoring' : 'deploying';
+  }
+  return status || 'idle';
+};
+
 const StatusTag = withLocale(({ status, deployment }) => {
   const { formatMessage } = useIntl();
-  const key = deployment ? 'deploying' : status || 'idle';
+  const key = getDisplayStatus({ status, deployment });
   const color = STATUS_COLOR[key] || 'default';
   const labelId = `appManager.status.${key}`;
 
@@ -20,4 +29,4 @@ const StatusTag = withLocale(({ status, deployment }) => {
 });
 
 export default StatusTag;
-export { STATUS_COLOR };
+export { STATUS_COLOR, getDisplayStatus };

@@ -78,6 +78,9 @@ export default {
   'appCenter.installMcpDesc':
     '登录用户即可安装，无需管理员权限。安装后可在 Cursor / WorkBuddy 中获取应用列表、读取应用接口文档、以你的开发平台身份调用应用接口，并检索组件文档、经验与工作日志。先签发长期令牌，再执行初始化命令或手动粘贴 MCP 配置。',
   'appEntry.selectTitle': '选择「{name}」的入口',
+  'appEntry.unavailable.deploying': '「{name}」正在部署中，请稍后再进入',
+  'appEntry.unavailable.restoring': '「{name}」正在恢复中，请稍后再进入',
+  'appEntry.unavailable.notRunning': '「{name}」未在运行中，无法进入',
   'app.footer.desc': '组件与工程实践沉淀',
 
   // RightOptions
@@ -668,6 +671,7 @@ export default {
   // AppManager
   'appManager.status.idle': '空闲',
   'appManager.status.deploying': '部署中',
+  'appManager.status.restoring': '恢复中',
   'appManager.status.running': '运行中',
   'appManager.status.stopped': '已停止',
   'appManager.status.error': '错误',
