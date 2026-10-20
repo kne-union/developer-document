@@ -190,6 +190,18 @@
   color: #0f172a;
 }
 
+.detail-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  .detail-card-title {
+    margin-bottom: 0;
+  }
+}
+
 .field-list {
   display: flex;
   flex-direction: column;
