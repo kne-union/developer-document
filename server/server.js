@@ -401,8 +401,7 @@ const createServer = () => {
         }
         const entry = resolveDocumentEntry(urlPath, apps);
         if (!entry || entry.path === '/') {
-          reply.sendFile(fileName, { root: buildRoot });
-          return;
+          return reply.sendFile(fileName, { root: buildRoot });
         }
         const html = fs.readFileSync(path.join(buildRoot, fileName), 'utf8');
         reply.type('text/html; charset=utf-8').send(applyPwaDocument(html, entry));
