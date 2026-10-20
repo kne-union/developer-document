@@ -15,20 +15,6 @@
   border: 1px solid var(--ant-color-border-secondary, #f0f0f0);
 }
 
-.codeBlock {
-  margin: 12px 0 0;
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: #1e293b;
-  color: #e2e8f0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
 .inlinePath {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
@@ -63,34 +49,4 @@
 
 .infoSections {
   margin-top: 24px;
-}
-
-.copySection {
-  margin-top: 20px;
-}
-
-.copySectionHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 4px;
-}
-
-.paramTable {
-  margin-top: 16px;
-}
-
-.targetRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 12px 0 4px;
-  flex-wrap: wrap;
-}
-
-.tokenValue {
-  word-break: break-all;
-  white-space: normal;
-  max-width: 520px;
 }

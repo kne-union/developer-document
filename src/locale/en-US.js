@@ -74,6 +74,9 @@ export default {
   'appCenter.searchPlaceholder': 'Search apps',
   'appCenter.empty': 'No apps available',
   'appCenter.noMatch': 'No matching apps',
+  'appCenter.installMcp': 'Install MCP',
+  'appCenter.installMcpDesc':
+    'Available to any signed-in user; no admin permission required. In Cursor / WorkBuddy you can list apps, read app API docs, call app APIs as your dev platform identity, and search component docs, experience and worklogs. Issue a long-lived token first, then run the init command or paste the MCP config.',
   'appEntry.selectTitle': 'Choose an entry for {name}',
   'app.footer.desc': 'Component and Engineering Practice Accumulation',
 
@@ -499,6 +502,10 @@ export default {
   'adminDevManagement.install.copyFailed': 'Copy failed — please select and copy manually',
   'adminDevManagement.install.mcpTargetLabel': 'MCP install target',
   'adminDevManagement.install.mcpTarget.cursor': 'Cursor',
+  'adminDevManagement.install.mcpTarget.workbuddy': 'WorkBuddy',
+  'adminDevManagement.install.mcpTargetHint.cursor': 'Merged into ~/.cursor/mcp.json; confirm developer-document is enabled in the MCP list of Cursor settings.',
+  'adminDevManagement.install.mcpTargetHint.workbuddy':
+    'Merged into ~/.workbuddy/mcp.json (user level, shared by all projects); you can also paste the JSON above in WorkBuddy via Connectors → Custom connectors → Configure MCP. After saving, click "Trust" and "Enable" in Custom connectors; a green status means it is connected.',
   'adminDevManagement.install.syncUrlLabel': 'sync-url (REST sync)',
   'adminDevManagement.install.mcpUrlLabel': 'mcp-url (HTTP MCP)',
   'adminDevManagement.install.tokenLabel': 'token (Authorization: Bearer)',

@@ -1,7 +1,7 @@
 const fp = require('fastify-plugin');
 
 module.exports = fp(async (fastify, options) => {
-  const { services } = fastify[options.name];
+  const { models, services } = fastify[options.name];
 
   const createBlogSearchTask = async () => {
     const task = await fastify.task.services.create({
@@ -22,11 +22,17 @@ module.exports = fp(async (fastify, options) => {
     return result;
   };
 
-  const createNpmPackageSyncTask = async ({ targetId = 'all', version } = {}) => {
+  const buildTaskName = ({ title, target, version, source }) => {
+    const targetLabel = target ? `${target}${version ? `@${version}` : ''}` : '全部';
+    return `${title} - ${targetLabel}${source === 'ci' ? '（CI 发布）' : ''}`;
+  };
+
+  const createNpmPackageSyncTask = async ({ targetId = 'all', version, source } = {}) => {
+    const pkg = targetId === 'all' ? null : await models.npmPackage.findByPk(targetId);
     const task = await fastify.task.services.create({
       runnerType: 'system',
       input: {
-        name: `NPM 包同步`,
+        name: buildTaskName({ title: 'NPM 包同步', target: pkg && pkg.packageName, version, source }),
         version: version || null
       },
       targetId,
@@ -41,11 +47,12 @@ module.exports = fp(async (fastify, options) => {
     return result;
   };
 
-  const createRemoteComponentDeployTask = async ({ targetId = 'all', version } = {}) => {
+  const createRemoteComponentDeployTask = async ({ targetId = 'all', version, source } = {}) => {
+    const component = targetId === 'all' ? null : await models.remoteComponent.findByPk(targetId);
     const task = await fastify.task.services.create({
       runnerType: 'system',
       input: {
-        name: `远程组件部署`,
+        name: buildTaskName({ title: '远程组件部署', target: component && (component.packageName || component.remote), version, source }),
         version: version || null
       },
       targetId,

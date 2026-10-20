@@ -2,14 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import classnames from 'classnames';
-import { Empty, Input, Spin, Typography } from 'antd';
-import { AppstoreOutlined, SearchOutlined } from '@ant-design/icons';
+import { Button, Empty, Input, Spin, Typography } from 'antd';
+import { ApiOutlined, AppstoreOutlined, SearchOutlined } from '@ant-design/icons';
 import { useIsMobile } from '@kne/responsive-utils';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import { hasUserToken } from '@components/Shared/auth';
 import DefaultAppIcon from '@components/Shared/DefaultAppIcon';
 import { useOpenApp } from '@components/Shared/AppEntry';
+import { McpInstallModal, USER_MCP_TOOLS } from '@components/Shared/McpInstall';
 import pwaDocument from '@kne/pwa-document';
 import style from './style.module.scss';
 
@@ -113,6 +114,7 @@ const AppCenter = createWithRemoteLoader({
     const { formatMessage, locale } = useIntl();
     const isLoggedIn = useMemo(() => hasUserToken(), []);
     const [keyword, setKeyword] = useState('');
+    const [mcpOpen, setMcpOpen] = useState(false);
     const loadingView = (
       <div className={style['loading']}>
         <Spin />
@@ -136,11 +138,17 @@ const AppCenter = createWithRemoteLoader({
                 </Title>
                 <Paragraph className={style['description']}>{formatMessage({ id: 'appCenter.pageDescription' })}</Paragraph>
               </div>
-              <div className={style['search']}>
-                <Input allowClear size="large" prefix={<SearchOutlined />} placeholder={formatMessage({ id: 'appCenter.searchPlaceholder' })} value={keyword} onChange={e => setKeyword(e.target.value)} />
+              <div className={style['actions']}>
+                <div className={style['search']}>
+                  <Input allowClear size="large" prefix={<SearchOutlined />} placeholder={formatMessage({ id: 'appCenter.searchPlaceholder' })} value={keyword} onChange={e => setKeyword(e.target.value)} />
+                </div>
+                <Button size="large" shape="round" icon={<ApiOutlined />} onClick={() => setMcpOpen(true)}>
+                  {formatMessage({ id: 'appCenter.installMcp' })}
+                </Button>
               </div>
             </div>
           </section>
+          <McpInstallModal open={mcpOpen} onCancel={() => setMcpOpen(false)} description={formatMessage({ id: 'appCenter.installMcpDesc' })} tools={USER_MCP_TOOLS} />
           <section className={style['panel']}>
             <Fetch
               {...apis.group.groupList}
