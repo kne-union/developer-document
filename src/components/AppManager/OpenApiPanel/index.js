@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Empty, Spin } from 'antd';
+import { Alert, Spin } from 'antd';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
+import { getDisplayStatus } from '../StatusTag';
 import style from './style.module.scss';
 
 const REFRESH_AHEAD_MS = 60 * 1000;
@@ -197,11 +198,13 @@ const RunningOpenApi = createWithRemoteLoader({
   );
 });
 
-/** 未运行时不加载远程组件，直接提示 */
+/** 未正常运行（含部署/恢复中 DB status 仍为 running）时不请求文档与记录接口，直接提示当前状态 */
 const OpenApiPanel = withLocale(({ data }) => {
   const { formatMessage } = useIntl();
-  if (data.status !== 'running') {
-    return <Empty className={style['empty']} description={formatMessage({ id: data.currentVersionId ? 'appManager.openApi.notRunning' : 'appManager.openApi.notDeployed' })} />;
+  const displayStatus = getDisplayStatus({ status: data.status, deployment: data.deployment });
+  if (displayStatus !== 'running') {
+    const statusLabel = formatMessage({ id: `appManager.status.${displayStatus}`, defaultMessage: displayStatus });
+    return <Alert className={style['alert']} type="warning" showIcon message={formatMessage({ id: data.currentVersionId || data.deployment ? 'appManager.openApi.notRunning' : 'appManager.openApi.notDeployed' }, { status: statusLabel })} />;
   }
   return <RunningOpenApi data={data} />;
 });

@@ -902,7 +902,7 @@ export default {
   'appManager.load.pm2Status.offline': 'Not Running',
   'appManager.tabs.overview': 'Overview',
   'appManager.tabs.openApi': 'API Docs',
-  'appManager.openApi.notRunning': 'The app must be running to view its API docs',
+  'appManager.openApi.notRunning': 'The app is currently "{status}" and not running normally. API docs and online debugging are only available while it is running',
   'appManager.openApi.notDeployed': 'The app has not been deployed yet, no API docs',
   'appManager.tabs.versions': 'Versions',
   'appManager.tabs.env': 'Environment',
