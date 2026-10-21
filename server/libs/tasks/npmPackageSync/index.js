@@ -33,6 +33,18 @@ const runner = async (fastify, options, { task, polling, updateProgress, log }) 
       const latestVersion = npmInfo.version;
       const indexVersion = targetVersion || latestVersion;
 
+      if (targetVersion && !(npmInfo.versions && npmInfo.versions[targetVersion])) {
+        log({ data: { packageName: pkg.packageName, targetVersion, latestVersion }, message: `目标版本 ${targetVersion} 尚未就绪，跳过本次同步` });
+        results.push({
+          packageName: pkg.packageName,
+          success: true,
+          versionReady: false,
+          latestVersion,
+          indexOk: false
+        });
+        continue;
+      }
+
       await services.npmPackage.deployExamples({ id: pkg.id });
 
       await pkg.update({
@@ -102,15 +114,22 @@ const runner = async (fastify, options, { task, polling, updateProgress, log }) 
 
   const successCount = results.filter(r => r.success).length;
   const failCount = results.filter(r => !r.success).length;
-  const indexFailCount = results.filter(r => r.success && r.indexOk === false).length;
+  const indexFailCount = results.filter(r => r.success && r.versionReady !== false && r.indexOk === false).length;
+  const versionNotReady = results.some(r => r.versionReady === false);
+  const retry = versionNotReady ? await services.task.scheduleVersionRetry({ task }) : null;
+  if (retry) {
+    log({ data: retry, message: `已创建重试任务，${retry.retryDelay} 秒后执行` });
+  }
+  const retryMessage = retry ? `；目标版本 ${targetVersion} 未就绪，${retry.retryDelay} 秒后重试` : versionNotReady ? `；目标版本 ${targetVersion} 未就绪，已停止重试` : '';
 
   return {
     success: true,
-    message: `同步完成：成功 ${successCount} 个，失败 ${failCount} 个，索引失败 ${indexFailCount} 个`,
+    message: `同步完成：成功 ${successCount} 个，失败 ${failCount} 个，索引失败 ${indexFailCount} 个${retryMessage}`,
     total: packages.length,
     successCount,
     failCount,
     indexFailCount,
+    retry,
     results
   };
 };
