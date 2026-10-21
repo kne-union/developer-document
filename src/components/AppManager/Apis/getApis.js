@@ -19,6 +19,33 @@ const getApis = options => {
       method: 'GET',
       paramsType: 'params'
     },
+    openApi: {
+      url: `${prefix}/app/open-api`,
+      method: 'GET',
+      paramsType: 'params'
+    },
+    openApiToken: {
+      url: `${prefix}/app/open-api/token`,
+      method: 'POST'
+    },
+    openApiRecords: {
+      url: `${prefix}/app/open-api/records`,
+      method: 'GET',
+      paramsType: 'params'
+    },
+    openApiRecordsCount: {
+      url: `${prefix}/app/open-api/records/count`,
+      method: 'GET',
+      paramsType: 'params'
+    },
+    openApiRecordsSave: {
+      url: `${prefix}/app/open-api/records/save`,
+      method: 'POST'
+    },
+    openApiRecordsRemove: {
+      url: `${prefix}/app/open-api/records/remove`,
+      method: 'POST'
+    },
     uploadVersion: {
       url: `${prefix}/app/version/upload`,
       method: 'POST'

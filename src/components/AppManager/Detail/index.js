@@ -10,6 +10,7 @@ import VersionPanel from '../VersionPanel';
 import EnvEditor from '../EnvEditor';
 import LogViewer from '../LogViewer';
 import DataOps from '../DataOps';
+import OpenApiPanel from '../OpenApiPanel';
 import Overview from './Overview';
 import Settings from './Settings';
 import DeployingStatusPoller from './DeployingStatusPoller';
@@ -49,6 +50,8 @@ const Detail = createWithRemoteLoader({
               content = <DataOps data={data} onSuccess={reload} />;
             } else if (activeKey === 'logs') {
               content = <LogViewer data={data} />;
+            } else if (activeKey === 'openApi') {
+              content = <OpenApiPanel data={data} />;
             } else if (activeKey === 'settings') {
               content = <Settings data={data} onSuccess={reload} />;
             } else {
@@ -88,6 +91,7 @@ const Detail = createWithRemoteLoader({
                   stateOption: [
                     { tab: formatMessage({ id: 'appManager.tabs.overview' }), key: 'overview' },
                     { tab: formatMessage({ id: 'appManager.tabs.versions' }), key: 'versions' },
+                    { tab: formatMessage({ id: 'appManager.tabs.openApi' }), key: 'openApi' },
                     { tab: formatMessage({ id: 'appManager.tabs.env' }), key: 'env' },
                     { tab: formatMessage({ id: 'appManager.tabs.data' }), key: 'data' },
                     { tab: formatMessage({ id: 'appManager.tabs.logs' }), key: 'logs' },

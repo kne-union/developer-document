@@ -593,28 +593,7 @@ const registerAppApiTools = (mcpServer, { fastify, userId }) => {
       detail: z.boolean().optional().describe('返回完整定义，默认 false'),
       limit: z.number().optional().describe('最多返回接口数，目录默认 300，详情默认 10')
     },
-    async ({ name, ...filters }, services) => {
-      const app = await services.app.detail({ name });
-      if (app.status !== 'running') {
-        throw new Error(`应用 ${name} 当前状态为 ${app.status}，运行中才能读取文档`);
-      }
-      const token = await fastify.appOidc.getOpenApiToken(app);
-      const response = await fetch(`http://127.0.0.1:${app.port}/open-api.json`, {
-        headers: { authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(15000)
-      });
-      const isJson = String(response.headers.get('content-type') || '').includes('application/json');
-      if (response.status === 404 || (response.ok && !isJson)) {
-        throw new Error(`应用 ${name} 未开启 /open-api.json：需 @kne/fastify-app-runtime >=0.1.1、server 最前面注册 @fastify/swagger 且注册了 account 模块`);
-      }
-      if (response.status === 401) {
-        throw new Error(`应用 ${name} 拒绝服务令牌：需将 @kne/fastify-app-runtime 升级到 >=0.1.2 后重新部署`);
-      }
-      if (!response.ok) {
-        throw new Error(`读取应用 ${name} 文档失败：HTTP ${response.status} ${(await response.text()).slice(0, 200)}`);
-      }
-      return summarizeOpenApi(await response.json(), Object.assign({ name }, filters));
-    }
+    async ({ name, ...filters }, services) => summarizeOpenApi(await services.openApi.getDocument({ name }), Object.assign({ name }, filters))
   );
 
   register(
