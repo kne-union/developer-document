@@ -142,16 +142,18 @@ const AppCenter = createWithRemoteLoader({
                 <div className={style['search']}>
                   <Input allowClear size="large" prefix={<SearchOutlined />} placeholder={formatMessage({ id: 'appCenter.searchPlaceholder' })} value={keyword} onChange={e => setKeyword(e.target.value)} />
                 </div>
-                <Button size="large" shape="round" icon={<ApiOutlined />} onClick={() => setMcpOpen(true)}>
-                  {formatMessage({ id: 'appCenter.installMcp' })}
-                </Button>
+                {isLoggedIn && (
+                  <Button size="large" shape="round" icon={<ApiOutlined />} onClick={() => setMcpOpen(true)}>
+                    {formatMessage({ id: 'appCenter.installMcp' })}
+                  </Button>
+                )}
               </div>
             </div>
           </section>
           <McpInstallModal open={mcpOpen} onCancel={() => setMcpOpen(false)} description={formatMessage({ id: 'appCenter.installMcpDesc' })} tools={USER_MCP_TOOLS} />
           <section className={style['panel']}>
             <Fetch
-              {...apis.group.groupList}
+              {...apis.appManager.group.groupList}
               params={{ type: 'app', language: locale, output: 'list' }}
               render={({ data: groups, loading: groupsLoading }) =>
                 groupsLoading ? (
