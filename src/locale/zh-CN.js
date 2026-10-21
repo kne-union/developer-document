@@ -901,7 +901,7 @@ export default {
   'appManager.load.pm2Status.offline': '未运行',
   'appManager.tabs.overview': '概览',
   'appManager.tabs.openApi': '接口文档',
-  'appManager.openApi.notRunning': '应用运行中才能查看接口文档',
+  'appManager.openApi.notRunning': '应用当前状态为「{status}」，未正常运行，运行中才能查看接口文档和在线调试',
   'appManager.openApi.notDeployed': '应用尚未部署，暂无接口文档',
   'appManager.tabs.versions': '版本',
   'appManager.tabs.env': '环境变量',
