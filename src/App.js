@@ -18,7 +18,6 @@ const AdminDocument = loadable(() => import('@components/AdminDocument'), { fall
 const AdminDevManagement = loadable(() => import('@components/AdminDevManagement'), { fallback: pageLoading });
 const AdminRemoteComponent = loadable(() => import('@components/AdminRemoteComponent'), { fallback: pageLoading });
 const AdminNpmPackage = loadable(() => import('@components/AdminNpmPackage'), { fallback: pageLoading });
-const AppManager = loadable(() => import('@components/AppManager'), { fallback: pageLoading });
 
 const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage, appManagerEnabled }) => {
   return (
@@ -104,7 +103,7 @@ const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage, appManage
         <Route path="dev-management/*" element={<AdminDevManagement baseUrl={`${baseUrl}/admin`} />} />
         <Route path="remote-component/*" element={<AdminRemoteComponent baseUrl={`${baseUrl}/admin`} />} />
         <Route path="npm-package/*" element={<AdminNpmPackage baseUrl={`${baseUrl}/admin`} />} />
-        {appManagerEnabled && <Route path="app-manager/*" element={<AppManager baseUrl={`${baseUrl}/admin`} />} />}
+        {appManagerEnabled && <Route path="app-manager/*" element={<RemoteLoader key="app-manager" module="components-app-manager:Manager" baseUrl={`${baseUrl}/admin`} />} />}
         <Route path="task/*" element={<RemoteLoader key="task" module="components-admin:Task" baseUrl={baseUrl + '/admin'} />} />
         <Route path="signature" element={<RemoteLoader key="signature" module="components-admin:Signature" />} />
         <Route path="oidc/*" element={<RemoteLoader key="oidc" module="components-admin:OidcAdmin" baseUrl={`${baseUrl}/admin/oidc`} />} />
