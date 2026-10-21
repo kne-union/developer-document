@@ -95,7 +95,7 @@ const globalInit = async () => {
       'components-thirdparty': {
         ...registry,
         remote: 'components-thirdparty',
-        defaultVersion: '0.1.50'
+        defaultVersion: '0.1.53'
       },
       'developer-document':
         process.env.NODE_ENV === 'development'

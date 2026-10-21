@@ -294,6 +294,8 @@ const createServer = () => {
           systemEnvKeys: appOidc.systemEnvKeys,
           resolveSystemEnv: appOidc.resolveSystemEnv,
           onAppRemoved: appOidc.onAppRemoved,
+          getOpenApiToken: appOidc.getOpenApiToken,
+          issueUserAccessToken: appOidc.issueUserAccessToken,
           resolveVersionFile: async ({ fileId }) => {
             const { buffer } = await fastify.fileManager.services.fileRecord.getFileBlob({ id: fileId });
             return buffer;
