@@ -34,7 +34,7 @@
     "@fastify/static": "^8.3.0",
     "@kne/fastify-account": "^2.0.10",
     "@kne/fastify-aliyun": "^1.1.7",
-    "@kne/fastify-app-manager": "^0.1.24",
+    "@kne/fastify-app-manager": "^0.1.27",
     "@kne/fastify-app-runtime": "^0.1.4",
     "@kne/fastify-file-manager": "^3.0.8",
     "@kne/fastify-group": "^0.2.6",
