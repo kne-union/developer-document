@@ -1,6 +1,6 @@
 {
   "name": "developer-document",
-  "version": "0.1.49",
+  "version": "0.1.50",
   "description": "用来部署一个开发者文档系统.",
   "scripts": {
     "init": "npm run init-server && husky",
@@ -100,6 +100,7 @@
     "@kne/pwa-document": "^0.1.0",
     "@kne/react-box": "^0.1.13",
     "@kne/responsive-utils": "^0.1.16",
+    "@kne/system-layout": "^0.2.4",
     "@kne/timeline": "^1.0.5",
     "@kne/token-storage": "^1.0.0",
     "@kne/use-ref-callback": "^0.1.3",

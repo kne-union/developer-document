@@ -129,8 +129,14 @@ const createServer = () => {
         }
       });
 
+      fastify.register(require('@kne/fastify-tenant'), {
+        prefix: `${options.prefix}/tenant`,
+        getUserModel: options.getUserModel
+      });
+
       fastify.register(require('@kne/fastify-oidc'), {
         mode: 'standalone',
+        tenant: () => fastify.tenant,
         origin: oidcOptions.origin,
         isMain: fastify.config.OIDC_IS_MAIN,
         keyEncryptionSecret: oidcOptions.keySecret,
@@ -291,8 +297,19 @@ const createServer = () => {
             password: fastify.config.DB_PASSWORD,
             logging: false
           },
-          systemEnvKeys: appOidc.systemEnvKeys,
-          resolveSystemEnv: appOidc.resolveSystemEnv,
+          systemEnvKeys: [...appOidc.systemEnvKeys, 'OIDC_APP_CODE', 'OIDC_APP_NAME', 'OIDC_APP_TENANT_SYNC_URI'],
+          resolveSystemEnv: async params => {
+            const env = await appOidc.resolveSystemEnv(params);
+            if (env?.AUTH_MODE !== 'central') {
+              return env;
+            }
+            // 子应用据此向宿主应用中心注册权限树；independent 子应用直连进程端口接收租户变更通知（ORIGIN 带 /app/{name} 推不出）
+            return Object.assign(env, {
+              OIDC_APP_CODE: params.app.name,
+              OIDC_APP_NAME: params.app.label || params.app.name,
+              OIDC_APP_TENANT_SYNC_URI: `${params.upstreamUrl}/api/oidc/tenant-sync`
+            });
+          },
           onAppRemoved: appOidc.onAppRemoved,
           getOpenApiToken: appOidc.getOpenApiToken,
           issueUserAccessToken: appOidc.issueUserAccessToken,

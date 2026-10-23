@@ -1,6 +1,6 @@
 {
   "name": "developer-document",
-  "version": "1.0.41",
+  "version": "1.0.42",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -40,11 +40,12 @@
     "@kne/fastify-group": "^0.2.6",
     "@kne/fastify-message": "^1.0.13",
     "@kne/fastify-namespace": "^1.2.1",
-    "@kne/fastify-oidc": "^0.1.6",
+    "@kne/fastify-oidc": "^0.1.10",
     "@kne/fastify-response-data-format": "^1.0.0",
     "@kne/fastify-sequelize": "^4.0.5",
     "@kne/fastify-signature": "^1.0.3",
     "@kne/fastify-statistics": "^0.1.7",
+    "@kne/fastify-tenant": "^1.0.0-alpha.55",
     "@kne/fastify-task": "^2.0.7",
     "@kne/fetch-npm-package": "^0.1.4",
     "@kne/load-npm-info": "^0.1.9",

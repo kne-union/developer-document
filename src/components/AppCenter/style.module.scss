@@ -243,6 +243,30 @@
   padding: 96px 0;
 }
 
+// 嵌入外部布局（租户端 system-layout Page）时不再画卡片外框
+.embedded {
+  max-width: none;
+  padding: 0;
+
+  .panel {
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .panel-header {
+    padding: 0 0 12px;
+    background: none;
+  }
+
+  .grid {
+    padding: 20px 0 0;
+  }
+}
+
 @include resp.mobile-container {
   .page {
     padding: 12px 0 24px;
@@ -289,6 +313,12 @@
     padding: 0;
     border-bottom: none;
     background: none;
+  }
+
+  .embedded .panel {
+    width: 100%;
+    margin-inline: 0;
+    padding-inline: 0;
   }
 
   .tabs {

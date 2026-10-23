@@ -89,7 +89,7 @@ const globalInit = async () => {
       'components-admin': {
         ...registry,
         remote: 'components-admin',
-        defaultVersion: '1.1.117'
+        defaultVersion: '1.1.131'
       },
       'components-thirdparty': {
         ...registry,
