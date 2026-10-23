@@ -5,6 +5,7 @@ import { CaretRightOutlined, PauseOutlined, ReloadOutlined } from '@ant-design/i
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
+import { getDisplayStatus } from '../StatusTag';
 import style from './style.module.scss';
 
 const { Text } = Typography;
@@ -53,16 +54,18 @@ const LifecycleBar = createWithRemoteLoader({
       return null;
     }
 
-    const statusLabel = formatMessage({ id: `appManager.status.${status}`, defaultMessage: status });
+    const displayStatus = getDisplayStatus({ status, deployment: data.deployment });
+    const statusLabel = formatMessage({ id: `appManager.status.${displayStatus}`, defaultMessage: displayStatus });
+    const deployStep = data.deployment?.step ? formatMessage({ id: `appManager.deploy.step.${data.deployment.step}` }) : null;
 
     return (
-      <div className={classnames(style['lifecycle-panel'], style[`tone-${status}`], className)} role="group" aria-label={formatMessage({ id: 'appManager.lifecycle.groupLabel' })}>
+      <div className={classnames(style['lifecycle-panel'], style[`tone-${displayStatus}`], className)} role="group" aria-label={formatMessage({ id: 'appManager.lifecycle.groupLabel' })}>
         <Flex className={style['lifecycle-inner']} align="center" justify="space-between" gap={16} wrap="wrap">
           <Flex align="center" gap={10} className={style['lifecycle-status']}>
             <span className={style['status-orb']} aria-hidden />
             <div className={style['status-copy']}>
               <Text className={style['status-label']}>{statusLabel}</Text>
-              <Text className={style['status-hint']}>{formatMessage({ id: 'appManager.lifecycle.groupLabel' })}</Text>
+              <Text className={style['status-hint']}>{deployStep || formatMessage({ id: 'appManager.lifecycle.groupLabel' })}</Text>
             </div>
           </Flex>
 

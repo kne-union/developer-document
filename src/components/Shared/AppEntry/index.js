@@ -30,13 +30,29 @@ const openUrl = url => {
   window.open(url, '_blank', 'noopener');
 };
 
+/** 部署/恢复中或未运行的应用不可进入，返回提示文案 id；可进入返回 null */
+export const getAppUnavailableReason = app => {
+  if (app?.deployment) {
+    return app.deployment.source === 'restore' ? 'appEntry.unavailable.restoring' : 'appEntry.unavailable.deploying';
+  }
+  if (app?.status && app.status !== 'running') {
+    return 'appEntry.unavailable.notRunning';
+  }
+  return null;
+};
+
 /** 无入口或只有一个入口直接打开；多个入口弹窗让用户选择 */
 export const useOpenApp = () => {
-  const { modal } = App.useApp();
+  const { modal, message } = App.useApp();
   const { formatMessage } = useIntl();
 
   return useCallback(
     app => {
+      const unavailable = getAppUnavailableReason(app);
+      if (unavailable) {
+        message.error(formatMessage({ id: unavailable }, { name: app.label || app.name }));
+        return;
+      }
       const entries = getAppEntries(app);
       if (entries.length <= 1) {
         openUrl(entries[0]?.url || app?.pathUrl);
@@ -72,7 +88,7 @@ export const useOpenApp = () => {
         )
       });
     },
-    [modal, formatMessage]
+    [modal, message, formatMessage]
   );
 };
 
@@ -91,7 +107,7 @@ export const OpenAppLink = ({ app, className, children }) => {
       target={inInstalledApp ? undefined : '_blank'}
       rel={inInstalledApp ? undefined : 'noreferrer'}
       onClick={
-        entries.length > 1
+        entries.length > 1 || getAppUnavailableReason(app)
           ? e => {
               e.preventDefault();
               openApp(app);

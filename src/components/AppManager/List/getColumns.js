@@ -1,4 +1,5 @@
 import DefaultAppIcon from '@components/Shared/DefaultAppIcon';
+import { OpenAppLink } from '@components/Shared/AppEntry';
 import StatusTag from '../StatusTag';
 
 const goAppDetail = (navigate, item) => {
@@ -58,9 +59,9 @@ const getColumns = ({ navigate, formatMessage, Image }) => {
           return null;
         }
         return (
-          <a href={dataSource.pathUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
-            {dataSource.pathUrl}
-          </a>
+          <span onClick={e => e.stopPropagation()}>
+            <OpenAppLink app={dataSource}>{dataSource.pathUrl}</OpenAppLink>
+          </span>
         );
       }
     },
