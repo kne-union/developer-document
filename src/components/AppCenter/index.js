@@ -108,7 +108,9 @@ const AppPanel = ({ list, groups, keyword, Image }) => {
 const AppCenter = createWithRemoteLoader({
   modules: ['components-core:Global@usePreset', 'components-core:Layout@Page', 'components-core:Image']
 })(
-  withLocale(({ remoteModules }) => {
+  withLocale(({ remoteModules, tenantAppCodes }) => {
+    // 租户端按租户已开通的应用展示；普通用户端只展示公开应用
+    const isTenant = Array.isArray(tenantAppCodes);
     const [usePreset, Page, Image] = remoteModules;
     const { apis } = usePreset();
     const { formatMessage, locale } = useIntl();
@@ -120,10 +122,28 @@ const AppCenter = createWithRemoteLoader({
         <Spin />
       </div>
     );
+    // 分组只用于页签，取不到时仍展示应用
+    const renderApps = groups => (
+      <Fetch
+        {...(isTenant ? apis.appManager.centerList : apis.appManager.centerPublicList)}
+        render={({ data, loading }) => {
+          if (loading) {
+            return loadingView;
+          }
+          const apps = (data?.pageData || []).filter(item => !isTenant || tenantAppCodes.includes(item.name));
+          return (
+            <>
+              <PwaSync apps={apps} />
+              <AppPanel list={apps} groups={groups} keyword={keyword} Image={Image} />
+            </>
+          );
+        }}
+      />
+    );
 
-    return (
-      <Page name="app-center" noMargin>
-        <div className={style['page']}>
+    const content = (
+      <div className={classnames(style['page'], { [style['embedded']]: isTenant })}>
+        {!isTenant && (
           <section className={style['header']}>
             <div className={style['header-top']}>
               <div className={style['title-block']}>
@@ -142,39 +162,34 @@ const AppCenter = createWithRemoteLoader({
                 <div className={style['search']}>
                   <Input allowClear size="large" prefix={<SearchOutlined />} placeholder={formatMessage({ id: 'appCenter.searchPlaceholder' })} value={keyword} onChange={e => setKeyword(e.target.value)} />
                 </div>
-                <Button size="large" shape="round" icon={<ApiOutlined />} onClick={() => setMcpOpen(true)}>
-                  {formatMessage({ id: 'appCenter.installMcp' })}
-                </Button>
+                {isLoggedIn && (
+                  <Button size="large" shape="round" icon={<ApiOutlined />} onClick={() => setMcpOpen(true)}>
+                    {formatMessage({ id: 'appCenter.installMcp' })}
+                  </Button>
+                )}
               </div>
             </div>
           </section>
-          <McpInstallModal open={mcpOpen} onCancel={() => setMcpOpen(false)} description={formatMessage({ id: 'appCenter.installMcpDesc' })} tools={USER_MCP_TOOLS} />
-          <section className={style['panel']}>
-            <Fetch
-              {...apis.group.groupList}
-              params={{ type: 'app', language: locale, output: 'list' }}
-              render={({ data: groups, loading: groupsLoading }) =>
-                groupsLoading ? (
-                  loadingView
-                ) : (
-                  <Fetch
-                    {...(isLoggedIn ? apis.appManager.centerList : apis.appManager.centerPublicList)}
-                    render={({ data, loading }) =>
-                      loading ? (
-                        loadingView
-                      ) : (
-                        <>
-                          <PwaSync apps={data?.pageData || []} />
-                          <AppPanel list={data?.pageData || []} groups={Array.isArray(groups) ? groups : []} keyword={keyword} Image={Image} />
-                        </>
-                      )
-                    }
-                  />
-                )
-              }
-            />
-          </section>
-        </div>
+        )}
+        <McpInstallModal open={mcpOpen} onCancel={() => setMcpOpen(false)} description={formatMessage({ id: 'appCenter.installMcpDesc' })} tools={USER_MCP_TOOLS} />
+        <section className={style['panel']}>
+          <Fetch
+            {...apis.appManager.group.groupList}
+            params={{ type: 'app', language: locale, output: 'list' }}
+            error={() => renderApps([])}
+            render={({ data: groups, loading: groupsLoading }) => (groupsLoading ? loadingView : renderApps(Array.isArray(groups) ? groups : []))}
+          />
+        </section>
+      </div>
+    );
+
+    if (isTenant) {
+      return content;
+    }
+
+    return (
+      <Page name="app-center" noMargin>
+        {content}
       </Page>
     );
   })

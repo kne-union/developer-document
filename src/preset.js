@@ -5,8 +5,7 @@ import { preset as remoteLoaderPreset, loadModule } from '@kne/remote-loader';
 import createAjax from '@kne/axios-fetch';
 import transform from 'lodash/transform';
 import { getApis } from '@components/Apis';
-import { getApis as getAppManagerApis } from '@components/AppManager/Apis';
-import { setOidcClient } from '@components/Shared/auth';
+import { setOidcClient, getUserAccessToken } from '@components/Shared/auth';
 import ensureSlash from '@kne/ensure-slash';
 
 window.PUBLIC_URL = window.runtimePublicUrl || process.env.PUBLIC_URL;
@@ -90,12 +89,17 @@ const globalInit = async () => {
       'components-admin': {
         ...registry,
         remote: 'components-admin',
-        defaultVersion: '1.1.117'
+        defaultVersion: '1.1.131'
       },
       'components-thirdparty': {
         ...registry,
         remote: 'components-thirdparty',
-        defaultVersion: '0.1.50'
+        defaultVersion: '0.1.54'
+      },
+      'components-app-manager': {
+        ...registry,
+        remote: 'components-app-manager',
+        defaultVersion: '0.1.0'
       },
       'developer-document':
         process.env.NODE_ENV === 'development'
@@ -183,7 +187,8 @@ const globalInit = async () => {
   };
   const remoteApis = await (async () => {
     const input = {
-      fileManager: 'components-file-manager:Apis@getApis'
+      fileManager: 'components-file-manager:Apis@getApis',
+      appManager: 'components-app-manager:Apis@getApis'
     };
 
     const remoteApiKeys = Object.keys(input);
@@ -240,10 +245,7 @@ const globalInit = async () => {
         }
       }
     },
-    getApis(),
-    {
-      appManager: getAppManagerApis()
-    }
+    getApis()
   );
   let setting = {};
   try {
@@ -262,6 +264,7 @@ const globalInit = async () => {
     oidc,
     setting,
     staticUrl: baseApiUrl,
+    getUserAccessToken,
     enums,
     apis,
     themeToken: {

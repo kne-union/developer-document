@@ -2,6 +2,12 @@ const getApis = options => {
   const { prefix } = Object.assign({}, { prefix: '/api/v1' }, options);
 
   return {
+    tenantApps: {
+      list: {
+        url: '/api/oidc/tenant/apps',
+        method: 'GET'
+      }
+    },
     devToken: {
       issue: {
         url: `${prefix}/dev-token/issue`,

@@ -11,7 +11,8 @@ const OIDC_PACKAGE = '@kne/fastify-oidc';
 const OPEN_API_SCOPE = 'open-api:read';
 const DOCS_CLIENT_ID = 'app-center-docs';
 
-const SYSTEM_ENV_KEYS = ['AUTH_MODE', 'OIDC_ISSUER', 'OIDC_AUDIENCE', 'OIDC_CLIENT_ID', 'OIDC_SERVICE_CLIENT_ID', 'OIDC_SERVICE_CLIENT_SECRET'];
+// OIDC_APP_TENANT_MODE 不由系统注入：independent 需要子应用自己传入 fastify-tenant，由子应用代码声明
+const SYSTEM_ENV_KEYS = ['AUTH_MODE', 'OIDC_ISSUER', 'OIDC_AUDIENCE', 'OIDC_CLIENT_ID', 'OIDC_SERVICE_CLIENT_ID', 'OIDC_SERVICE_CLIENT_SECRET', 'OIDC_APP_CODE', 'OIDC_APP_NAME', 'OIDC_APP_TENANT_SYNC_URI'];
 
 const supportsOidc = async serverDir => {
   try {
@@ -220,7 +221,12 @@ const createAppOidc = (fastify, { pathPrefix = '/app' } = {}) => {
         OIDC_AUDIENCE: urls.audience,
         OIDC_CLIENT_ID: ids.spa,
         OIDC_SERVICE_CLIENT_ID: ids.service,
-        OIDC_SERVICE_CLIENT_SECRET: serviceSecret
+        OIDC_SERVICE_CLIENT_SECRET: serviceSecret,
+        // 子应用据此向宿主应用中心注册权限树（需 @kne/fastify-oidc 支持 app）
+        OIDC_APP_CODE: app.name,
+        OIDC_APP_NAME: app.label || app.name,
+        // independent 子应用接收租户变更通知；ORIGIN 带 /app/{name} 路径推不出正确地址，直连子应用端口
+        OIDC_APP_TENANT_SYNC_URI: `http://127.0.0.1:${app.port}/api/oidc/tenant-sync`
       },
       app.env?.ORIGIN ? {} : { ORIGIN: urls.appUrl }
     );

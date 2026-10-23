@@ -17,6 +17,11 @@ module.exports = fp(
         name: 'appManager',
         prefix: '/api/v1/app-manager',
         appsRoot: path.join(process.cwd(), 'managed-apps'),
+        // 网关转发、就绪探测、OpenAPI 读取共用；本 wrapper 不经过包的 index.js，需自行给默认值
+        upstreamHost: '127.0.0.1',
+        deployRecordKeep: 20,
+        deployLogMaxLines: 2000,
+        deployErrorLogTailLines: 50,
         portMin: 4000,
         portMax: 7999,
         pathPrefix: '/app',

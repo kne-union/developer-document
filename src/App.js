@@ -18,7 +18,7 @@ const AdminDocument = loadable(() => import('@components/AdminDocument'), { fall
 const AdminDevManagement = loadable(() => import('@components/AdminDevManagement'), { fallback: pageLoading });
 const AdminRemoteComponent = loadable(() => import('@components/AdminRemoteComponent'), { fallback: pageLoading });
 const AdminNpmPackage = loadable(() => import('@components/AdminNpmPackage'), { fallback: pageLoading });
-const AppManager = loadable(() => import('@components/AppManager'), { fallback: pageLoading });
+const TenantPortal = loadable(() => import('@components/TenantPortal'), { fallback: pageLoading });
 
 const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage, appManagerEnabled }) => {
   return (
@@ -83,6 +83,11 @@ const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage, appManage
                   path: '/admin/signature'
                 },
                 {
+                  key: 'tenant',
+                  title: formatMessage({ id: 'app.adminNav.tenant' }),
+                  path: '/admin/tenant'
+                },
+                {
                   key: 'oidc',
                   title: formatMessage({ id: 'app.adminNav.oidc' }),
                   path: '/admin/oidc'
@@ -104,9 +109,10 @@ const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage, appManage
         <Route path="dev-management/*" element={<AdminDevManagement baseUrl={`${baseUrl}/admin`} />} />
         <Route path="remote-component/*" element={<AdminRemoteComponent baseUrl={`${baseUrl}/admin`} />} />
         <Route path="npm-package/*" element={<AdminNpmPackage baseUrl={`${baseUrl}/admin`} />} />
-        {appManagerEnabled && <Route path="app-manager/*" element={<AppManager baseUrl={`${baseUrl}/admin`} />} />}
+        {appManagerEnabled && <Route path="app-manager/*" element={<RemoteLoader key="app-manager" module="components-app-manager:Manager" baseUrl={`${baseUrl}/admin`} />} />}
         <Route path="task/*" element={<RemoteLoader key="task" module="components-admin:Task" baseUrl={baseUrl + '/admin'} />} />
         <Route path="signature" element={<RemoteLoader key="signature" module="components-admin:Signature" />} />
+        <Route path="tenant/*" element={<RemoteLoader key="tenant" module="components-admin:TenantAdmin" baseUrl={`${baseUrl}/admin`} />} />
         <Route path="oidc/*" element={<RemoteLoader key="oidc" module="components-admin:OidcAdmin" baseUrl={`${baseUrl}/admin/oidc`} />} />
         <Route path="setting/*" element={<RemoteLoader key="setting" module="developer-document:Setting" baseUrl={`${baseUrl}/admin/setting`} />} />
         <Route path="*" element={<RemoteLoader key="admin" module="components-admin:Admin" baseUrl={baseUrl + '/admin'} />} />
@@ -282,6 +288,7 @@ const AdminFooter = () => {
     location.pathname.startsWith('/account') ||
     location.pathname.startsWith('/oidc-') ||
     location.pathname.startsWith('/admin') ||
+    location.pathname.startsWith('/tenant') ||
     location.pathname === '/remote-components/detail' ||
     location.pathname.startsWith('/share')
   );
@@ -347,6 +354,50 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
                       }
                     ]}
                   />
+                </OidcAuthenticate>
+              )
+            },
+            {
+              path: 'join-tenant',
+              element: (
+                <OidcAuthenticate>
+                  <AppChildrenRouter
+                    errorPage
+                    notFoundPage
+                    element={<AfterUserLoginLayout />}
+                    list={[
+                      {
+                        index: true,
+                        element: <RemoteLoader module="components-admin:Tenant@JoinInvitation" baseUrl={baseUrl} />
+                      }
+                    ]}
+                  />
+                </OidcAuthenticate>
+              )
+            },
+            {
+              path: 'login-tenant',
+              element: (
+                <OidcAuthenticate>
+                  <AppChildrenRouter
+                    errorPage
+                    notFoundPage
+                    element={<AfterUserLoginLayout />}
+                    list={[
+                      {
+                        index: true,
+                        element: <RemoteLoader module="components-admin:Tenant@LoginTenant" tenantPath={`${baseUrl}/tenant`} />
+                      }
+                    ]}
+                  />
+                </OidcAuthenticate>
+              )
+            },
+            {
+              path: 'tenant/*',
+              element: (
+                <OidcAuthenticate>
+                  <TenantPortal baseUrl={`${baseUrl}/tenant`} />
                 </OidcAuthenticate>
               )
             },

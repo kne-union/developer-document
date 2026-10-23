@@ -138,8 +138,14 @@ const createServer = () => {
         }
       });
 
+      fastify.register(require('@kne/fastify-tenant'), {
+        prefix: `${options.prefix}/tenant`,
+        getUserModel: options.getUserModel
+      });
+
       fastify.register(require('@kne/fastify-oidc'), {
         mode: 'standalone',
+        tenant: () => fastify.tenant,
         origin: oidcOptions.origin,
         isMain: fastify.config.OIDC_IS_MAIN,
         keyEncryptionSecret: oidcOptions.keySecret,
