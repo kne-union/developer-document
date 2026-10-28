@@ -1,4 +1,6 @@
 const crypto = require('node:crypto');
+const path = require('node:path');
+const { Readable } = require('node:stream');
 const z = require('zod/v4');
 
 const MAX_TEXT = 30000;
@@ -27,10 +29,55 @@ const pickApp = app =>
 
 const iconFileId = z.string().optional().describe('文件管理里的图标文件 id，格式与后台一致（id 或 id?filename=）');
 const iconUrl = z.string().optional().describe('图标图片的 http(s) 地址。未传 icon 时由服务端下载到文件管理后再写入应用');
+const iconBase64 = z.string().optional().describe('本地图标图片内容：base64 或 data URL（data:image/png;base64,...），不超过 2MB；优先于 iconUrl，用于上传本地图标');
+const iconFilename = z.string().optional().describe('iconBase64 对应的文件名（如 icon-512.png），用于确定扩展名与类型；默认 icon.png');
+const entries = z
+  .array(
+    z.object({
+      label: z.string().describe('入口名称'),
+      path: z.string().describe('相对应用根的路径，如 /tenant'),
+      showInCenter: z.boolean().optional().describe('是否在应用中心展示，默认 true')
+    })
+  )
+  .optional()
+  .describe('应用入口（决定应用中心展示与 PWA 入口）；传入即整体替换，传 [] 清空');
 
-const resolveAppIcon = async (fastify, { icon, iconUrl }) => {
+const toIconValue = record => {
+  const id = record.id || record.uuid;
+  if (!id) {
+    throw new Error('图标上传失败');
+  }
+  return record.filename ? `${id}?filename=${record.filename}` : id;
+};
+
+const MAX_ICON_BYTES = 2 * 1024 * 1024;
+const ICON_MIME_TYPES = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon', '.gif': 'image/gif' };
+
+const uploadIconBase64 = async (fastify, { iconBase64, iconFilename }) => {
+  const matched = iconBase64.match(/^data:([^;,]+)?(?:;[^,]*)?,(.*)$/s);
+  const content = Buffer.from((matched ? matched[2] : iconBase64).replace(/\s/g, ''), 'base64');
+  if (!content.length) {
+    throw new Error('iconBase64 内容为空或不是合法的 base64');
+  }
+  if (content.length > MAX_ICON_BYTES) {
+    throw new Error('图标不能超过 2MB');
+  }
+  const filename = iconFilename || 'icon.png';
+  const mimetype = (matched && matched[1]) || ICON_MIME_TYPES[path.extname(filename).toLowerCase()];
+  if (!mimetype || !mimetype.startsWith('image/')) {
+    throw new Error('iconBase64 须为图片（png / jpg / svg / webp / ico / gif）');
+  }
+  return await fastify.fileManager.services.fileRecord.uploadToFileSystem({
+    file: { filename, mimetype, encoding: 'binary', file: Readable.from([content]) }
+  });
+};
+
+const resolveAppIcon = async (fastify, { icon, iconUrl, iconBase64, iconFilename }) => {
   if (icon) {
     return icon;
+  }
+  if (iconBase64) {
+    return toIconValue(await uploadIconBase64(fastify, { iconBase64, iconFilename }));
   }
   if (!iconUrl) {
     return undefined;
@@ -44,13 +91,10 @@ const resolveAppIcon = async (fastify, { icon, iconUrl }) => {
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new Error('iconUrl 只支持 http 或 https');
   }
-  const record = await fastify.fileManager.services.fileRecord.uploadFromUrl({ url: iconUrl });
-  const id = record.id || record.uuid;
-  if (!id) {
-    throw new Error('图标上传失败');
-  }
-  return record.filename ? `${id}?filename=${record.filename}` : id;
+  return toIconValue(await fastify.fileManager.services.fileRecord.uploadFromUrl({ url: iconUrl }));
 };
+
+const omitIconSource = ({ iconUrl, iconBase64, iconFilename, ...rest }) => rest;
 
 const pickSteps = events => (events || []).map(({ step, status, detail, message }) => ({ step, status, detail, message }));
 
@@ -202,38 +246,43 @@ const registerAppManagerTools = (mcpServer, { fastify }) => {
 
   register(
     'create_app',
-    '创建应用（分配端口与访问路径）；创建后用 upload_app_version 上传版本，再 deploy_app。图标用 icon（已上传的文件 id）或 iconUrl（图片地址）',
+    '创建应用（分配端口与访问路径）；创建后用 upload_app_version 上传版本，再 deploy_app。图标用 icon（已上传的文件 id）、iconBase64（本地图片内容）或 iconUrl（图片地址）；entries 配置应用入口',
     {
       name: appName,
       label: z.string().describe('显示名称'),
       description: z.string().optional(),
       domain: z.string().optional().describe('绑定域名（可选）'),
       icon: iconFileId,
+      iconBase64,
+      iconFilename,
       iconUrl,
-      isPublic: z.boolean().optional().describe('是否在应用中心公开，默认公开')
+      isPublic: z.boolean().optional().describe('是否在应用中心公开，默认公开'),
+      entries
     },
     async (args, services) => {
       const icon = await resolveAppIcon(fastify, args);
-      return pickApp(await services.app.create(Object.assign({}, args, icon === undefined ? {} : { icon })));
+      return pickApp(await services.app.create(Object.assign(omitIconSource(args), icon === undefined ? {} : { icon })));
     }
   );
 
   register(
     'update_app',
-    '更新应用元信息（名称、描述、域名、图标、是否公开）；环境变量请用 save_app_env',
+    '更新应用元信息（名称、描述、域名、图标、是否公开、入口）；图标可用 iconBase64 上传本地图片；环境变量请用 save_app_env',
     {
       name: appName,
       label: z.string().optional(),
       description: z.string().optional(),
       domain: z.string().optional(),
       icon: iconFileId,
+      iconBase64,
+      iconFilename,
       iconUrl,
-      isPublic: z.boolean().optional()
+      isPublic: z.boolean().optional(),
+      entries
     },
     async (args, services) => {
       const icon = await resolveAppIcon(fastify, args);
-      const payload = Object.assign({}, args);
-      delete payload.iconUrl;
+      const payload = omitIconSource(args);
       if (icon !== undefined) {
         payload.icon = icon;
       }
