@@ -14,7 +14,7 @@ const DocumentDetailView = withLocale(({ data, headerExtra, footer, simple }) =>
   const { formatMessage } = useIntl();
 
   return (
-    <div className={styles.detailPage}>
+    <div className={styles.detailPage} data-print-root>
       <section className={styles.detailHeader}>
         <div className={styles.headerIdentity}>
           <span className={styles.headerIdentityIcon}>
@@ -90,7 +90,7 @@ const DocumentDetailView = withLocale(({ data, headerExtra, footer, simple }) =>
           <FileTextOutlined />
           <span>{formatMessage({ id: 'shared.documentDetail.contentLabel' })}</span>
         </div>
-        <div className={styles.detailContentBody}>
+        <div className={styles.detailContentBody} data-print-body>
           <MarkdownRender>{data.content}</MarkdownRender>
         </div>
       </section>

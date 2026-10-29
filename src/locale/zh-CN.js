@@ -263,6 +263,7 @@ export default {
   'shared.shareButton.copySuccess': '分享链接已复制到剪贴板',
   'shared.shareButton.copyFailed': '复制失败，请手动复制',
   'shared.shareButton.buttonText': '分享',
+  'shared.printButton.buttonText': '打印',
   'shared.npmPackage.exampleLoadFailed': '示例加载失败，请稍后重试',
   'shared.npmPackage.identityLabel': '组件',
   'shared.npmPackage.defaultDescription': '该组件提供标准化的能力封装，可用于快速接入和示例验证。',
