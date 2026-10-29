@@ -264,6 +264,7 @@ export default {
   'shared.shareButton.copySuccess': 'Share link copied to clipboard',
   'shared.shareButton.copyFailed': 'Copy failed, please copy manually',
   'shared.shareButton.buttonText': 'Share',
+  'shared.printButton.buttonText': 'Print',
   'shared.npmPackage.exampleLoadFailed': 'Example loading failed, please try again later',
   'shared.npmPackage.identityLabel': 'Component',
   'shared.npmPackage.defaultDescription': 'This component provides standardized capability encapsulation for quick integration and example verification.',

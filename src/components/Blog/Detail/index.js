@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import { hasUserToken } from '@components/Shared/auth';
-import { ShareButton, BlogDetailView } from '@components/Shared';
+import { ShareButton, PrintButton, BlogDetailView } from '@components/Shared';
 import styles from '../style.module.scss';
 
 const { Title, Paragraph } = Typography;
@@ -64,12 +64,15 @@ const BlogDetail = createWithRemoteLoader({
               <BlogDetailView
                 data={data}
                 headerExtra={
-                  <ShareButton
-                    type="blog"
-                    id={data.id}
-                    disabled={data.status !== 'published' || !data.isPublic}
-                    disabledReason={!data.isPublic ? formatMessage({ id: 'blog.detail.privateCannotShare' }) : formatMessage({ id: 'blog.detail.unpublishedCannotShare' })}
-                  />
+                  <Space>
+                    <PrintButton title={data.title} />
+                    <ShareButton
+                      type="blog"
+                      id={data.id}
+                      disabled={data.status !== 'published' || !data.isPublic}
+                      disabledReason={!data.isPublic ? formatMessage({ id: 'blog.detail.privateCannotShare' }) : formatMessage({ id: 'blog.detail.unpublishedCannotShare' })}
+                    />
+                  </Space>
                 }
                 footer={
                   <div className={styles.detailActions}>

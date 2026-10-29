@@ -18,7 +18,7 @@ const BlogDetailView = createWithRemoteLoader({
     const isRichContent = /<\/?[a-z][\s\S]*>/i.test(data.content || '');
 
     return (
-      <div className={styles.detailPage}>
+      <div className={styles.detailPage} data-print-root>
         <section className={styles.detailHeader}>
           <div className={styles.headerIdentity}>
             <span className={styles.headerIdentityIcon}>
@@ -94,7 +94,9 @@ const BlogDetailView = createWithRemoteLoader({
             <FileTextOutlined />
             <span>{formatMessage({ id: 'shared.blogDetail.contentLabel' })}</span>
           </div>
-          <div className={styles.detailContentBody}>{isRichContent ? <CKEditor.Content>{data.content}</CKEditor.Content> : <div className={styles.articleContent}>{data.content}</div>}</div>
+          <div className={styles.detailContentBody} data-print-body>
+            {isRichContent ? <CKEditor.Content>{data.content}</CKEditor.Content> : <div className={styles.articleContent}>{data.content}</div>}
+          </div>
         </section>
 
         {footer}
