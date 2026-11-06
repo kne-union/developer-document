@@ -5,6 +5,7 @@ import AdminExperience from '@components/AdminExperience';
 import AdminWorklog from '@components/AdminWorklog';
 import AdminFlowManagement from '@components/AdminFlowManagement';
 import AdminSearchAnalytics from '@components/AdminSearchAnalytics';
+import AdminSkill from '@components/AdminSkill';
 
 const AdminDevManagement = ({ baseUrl }) => {
   const moduleBaseUrl = `${baseUrl}/dev-management`;
@@ -18,6 +19,7 @@ const AdminDevManagement = ({ baseUrl }) => {
       <Route path="worklog/*" element={<AdminWorklog baseUrl={moduleBaseUrl} menu={menu} />} />
       <Route path="flow/*" element={<AdminFlowManagement baseUrl={moduleBaseUrl} menu={menu} />} />
       <Route path="search-analytics/*" element={<AdminSearchAnalytics baseUrl={moduleBaseUrl} menu={menu} />} />
+      <Route path="skill/*" element={<AdminSkill baseUrl={moduleBaseUrl} menu={menu} />} />
     </Routes>
   );
 };

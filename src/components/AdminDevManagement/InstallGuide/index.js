@@ -86,7 +86,14 @@ const InstallGuide = createWithRemoteLoader({
       'flow_release_review',
       'flow_release_waive',
       'flow_release_transition',
-      'flow_release_undo'
+      'flow_release_undo',
+      // 技能 / 规则管理
+      'search_skill',
+      'get_skill',
+      'create_skill',
+      'update_skill',
+      'delete_skill',
+      'export_skills'
     ];
 
     return (
@@ -152,6 +159,9 @@ const InstallGuide = createWithRemoteLoader({
                   </Link>
                   <Link to={`${baseUrl}/search-analytics`}>
                     <LinkOutlined /> {formatMessage({ id: 'app.adminNav.searchAnalytics' })}
+                  </Link>
+                  <Link to={`${baseUrl}/skill`}>
+                    <LinkOutlined /> {formatMessage({ id: 'app.adminNav.skill' })}
                   </Link>
                 </Space>
                 <Paragraph type="secondary" style={{ marginTop: 16 }}>
