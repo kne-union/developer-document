@@ -5,6 +5,9 @@ const z = require('zod/v4');
 const { createDevTokenAuthenticate } = require('../utils/dev-token');
 const registerAppManagerTools = require('./app-manager-tools');
 const registerBlogTools = require('./blog-tools');
+const { registerFlowTools } = require('./flow-tools');
+const { registerFlowClaimTools } = require('./flow-claim-tools');
+const { registerFlowReleaseTools } = require('./flow-release-tools');
 
 const registerTools = (mcpServer, { services, userId }) => {
   mcpServer.registerTool(
@@ -266,6 +269,10 @@ module.exports = fp(async (fastify, options) => {
       const userId = request.userInfo.id;
       const mcpServer = new McpServer({ name: 'developer-document', version: '1.0.0' });
       registerTools(mcpServer, { services, userId });
+      // v0.3.4：所有节点 AI 可驱动，三级 scope 默认全量开放，不再依赖令牌显式声明
+      registerFlowTools(mcpServer, { services, userId, scope: ['flow:read', 'flow:write', 'flow:release'] });
+      registerFlowClaimTools(mcpServer, { services, userId });
+      registerFlowReleaseTools(mcpServer, { services, userId });
       if (fastify.appManager && fastify.appOidc) {
         registerAppManagerTools.registerAppApiTools(mcpServer, { fastify, userId });
       }

@@ -19,6 +19,8 @@ const AdminDevManagement = loadable(() => import('@components/AdminDevManagement
 const AdminRemoteComponent = loadable(() => import('@components/AdminRemoteComponent'), { fallback: pageLoading });
 const AdminNpmPackage = loadable(() => import('@components/AdminNpmPackage'), { fallback: pageLoading });
 const TenantPortal = loadable(() => import('@components/TenantPortal'), { fallback: pageLoading });
+// 免登录一次性确认短链页：放在认证布局之外，token 验签即身份
+const FlowConfirmPage = loadable(() => import('@components/FlowConfirmPage'), { fallback: pageLoading });
 
 const AdminApp = ({ AfterAdminUserLoginLayout, baseUrl, formatMessage, appManagerEnabled }) => {
   return (
@@ -408,6 +410,11 @@ const AppInner = withLocale(({ Layout, AfterUserLoginLayout, AfterAdminUserLogin
                   <AdminApp AfterAdminUserLoginLayout={AfterAdminUserLoginLayout} baseUrl={baseUrl} formatMessage={formatMessage} appManagerEnabled={appManagerEnabled} />
                 </OidcAuthenticate>
               )
+            },
+            {
+              // 免登录：此条目与 account/*、share 同级，不被 OidcAuthenticate 包裹，也不进入后台 Layout
+              path: 'flow-confirm/:token',
+              element: <FlowConfirmPage />
             },
             {
               path: 'share',

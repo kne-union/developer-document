@@ -1,0 +1,91 @@
+// 一次性确认短链页：免登录、移动端优先，只用最少的表面层次。
+.page {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 32px 20px 56px;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.title {
+  margin-bottom: 4px !important;
+}
+
+.subtitle {
+  color: #8a9099;
+}
+
+.block {
+  margin-bottom: 16px;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #eceef1;
+  border-radius: 10px;
+}
+
+.blockTitle {
+  margin-bottom: 12px !important;
+  color: #1f2329;
+}
+
+.markdown {
+  max-width: 68ch;
+  font-size: 14px;
+  line-height: 1.75;
+  word-break: break-word;
+}
+
+.node {
+  padding: 8px 0;
+  border-bottom: 1px solid #f2f3f5;
+}
+
+.node:last-child {
+  border-bottom: 0;
+}
+
+.nodeNote {
+  padding-left: 26px;
+  color: #8a9099;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.primary {
+  height: 44px;
+}
+
+.secondary {
+  display: flex;
+  gap: 10px;
+}
+
+.secondary button {
+  flex: 1;
+  height: 40px;
+}
+
+.footer {
+  margin-top: 24px;
+  color: #a0a6ad;
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: 20px 16px 40px;
+  }
+
+  .block {
+    padding: 16px;
+  }
+}

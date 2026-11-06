@@ -14,7 +14,51 @@ export const MCP_TARGETS = [
   { value: 'workbuddy', labelKey: 'adminDevManagement.install.mcpTarget.workbuddy', hintKey: 'adminDevManagement.install.mcpTargetHint.workbuddy', transportType: 'http' }
 ];
 
-export const USER_MCP_TOOLS = ['list_running_apps', 'get_app_open_api', 'call_app_api', 'search_document_index', 'fetch_docs', 'search_document', 'search_experience', 'get_prompt', 'search_worklog', 'upload_worklog', 'upload_experience'];
+// 与 server/libs/mcp 实际注册保持一致（流程管理六组按 scope 分流注册，硬删 flow_delete 永远不注册）
+export const USER_MCP_TOOLS = [
+  'list_running_apps',
+  'get_app_open_api',
+  'call_app_api',
+  'check_worklog_exists',
+  'check_experience_exists',
+  'search_document_index',
+  'fetch_docs',
+  'search_document',
+  'search_experience',
+  'get_prompt',
+  'search_worklog',
+  'upload_worklog',
+  'upload_experience',
+  'flow_list',
+  'flow_get_context',
+  'flow_get_templates',
+  'flow_check_exit',
+  'flow_get_run',
+  'flow_start_run',
+  'flow_save_deliverables',
+  'flow_submit_deliverables',
+  'flow_finish_run',
+  'flow_create',
+  'flow_update',
+  'flow_archive',
+  'flow_propose_decomposition',
+  'flow_apply_decomposition',
+  'flow_claim_task',
+  'flow_peek_queue',
+  'flow_heartbeat_task',
+  'flow_complete_task',
+  'flow_pause_task',
+  'flow_resume_task',
+  'flow_request_confirmation',
+  'flow_get_confirmation',
+  'flow_cancel_confirmation',
+  'flow_list_my_confirmations',
+  'flow_release_check',
+  'flow_release_review',
+  'flow_release_waive',
+  'flow_release_transition',
+  'flow_release_undo'
+];
 
 export const resolveSyncUrl = () => {
   const runtimeRoot = (window.runtimeApiUrl || '').replace(/\/$/, '');

@@ -353,6 +353,138 @@ const getApis = options => {
         method: 'GET',
         paramsType: 'params'
       }
+    },
+    // 流程管理：人机共用同一套 REST 接口；GET 带参接口统一 paramsType: 'params'
+    flow: {
+      list: {
+        url: `${prefix}/flow/list`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      detail: {
+        url: `${prefix}/flow/detail`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      stages: {
+        url: `${prefix}/flow/stages`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      stageRecords: {
+        url: `${prefix}/flow/stage-records`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      summary: {
+        url: `${prefix}/flow/summary`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      tree: {
+        url: `${prefix}/flow/tree`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      templates: {
+        url: `${prefix}/flow/deliverable/templates`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      deliverables: {
+        url: `${prefix}/flow/deliverable/list`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      deliverableCheck: {
+        url: `${prefix}/flow/deliverable/check`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      confirmationList: {
+        url: `${prefix}/flow/confirmation/list`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      queuePeek: {
+        url: `${prefix}/flow/queue/peek`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      releaseList: {
+        url: `${prefix}/flow/release/list`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      runDetail: {
+        url: `${prefix}/flow/run/detail`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      create: {
+        url: `${prefix}/flow/create`,
+        method: 'POST'
+      },
+      update: {
+        url: `${prefix}/flow/update`,
+        method: 'POST'
+      },
+      archive: {
+        url: `${prefix}/flow/archive`,
+        method: 'POST'
+      },
+      delete: {
+        url: `${prefix}/flow/delete`,
+        method: 'POST'
+      },
+      transition: {
+        url: `${prefix}/flow/transition`,
+        method: 'POST'
+      },
+      decomposePropose: {
+        url: `${prefix}/flow/decompose/propose`,
+        method: 'POST'
+      },
+      decomposeApply: {
+        url: `${prefix}/flow/decompose/apply`,
+        method: 'POST'
+      },
+      confirmationAnswer: {
+        url: `${prefix}/flow/confirmation/answer`,
+        method: 'POST'
+      },
+      confirmationCancel: {
+        url: `${prefix}/flow/confirmation/cancel`,
+        method: 'POST'
+      },
+      pause: {
+        url: `${prefix}/flow/pause`,
+        method: 'POST'
+      },
+      resume: {
+        url: `${prefix}/flow/resume`,
+        method: 'POST'
+      },
+      deliverableSave: {
+        url: `${prefix}/flow/deliverable/save`,
+        method: 'POST'
+      },
+      deliverableSubmit: {
+        url: `${prefix}/flow/deliverable/submit`,
+        method: 'POST'
+      },
+      deliverableReview: {
+        url: `${prefix}/flow/deliverable/review`,
+        method: 'POST'
+      },
+      deliverableWaive: {
+        url: `${prefix}/flow/deliverable/waive`,
+        method: 'POST'
+      },
+      releaseUndo: {
+        url: `${prefix}/flow/release/undo`,
+        method: 'POST'
+      }
     }
   };
 };

@@ -40,7 +40,54 @@ const InstallGuide = createWithRemoteLoader({
       }
     ];
 
-    const mcpTools = ['check_worklog_exists', 'check_experience_exists', 'upload_experience', 'upload_worklog', 'search_experience', 'search_document_index', 'search_document'];
+    // 与 server/libs/mcp 实际注册保持一致：基础检索 10 个 + 流程管理六组 29 个
+    const mcpTools = [
+      'check_worklog_exists',
+      'check_experience_exists',
+      'upload_experience',
+      'upload_worklog',
+      'search_experience',
+      'search_document_index',
+      'search_document',
+      'fetch_docs',
+      'search_worklog',
+      'get_prompt',
+      // 流程管理 · 只读
+      'flow_list',
+      'flow_get_context',
+      'flow_get_templates',
+      'flow_check_exit',
+      'flow_get_run',
+      // 流程管理 · 写入（flow:write）
+      'flow_start_run',
+      'flow_save_deliverables',
+      'flow_submit_deliverables',
+      'flow_finish_run',
+      'flow_create',
+      'flow_update',
+      'flow_archive',
+      // 流程管理 · 裂变
+      'flow_propose_decomposition',
+      'flow_apply_decomposition',
+      // 流程管理 · 派单与暂停
+      'flow_claim_task',
+      'flow_peek_queue',
+      'flow_heartbeat_task',
+      'flow_complete_task',
+      'flow_pause_task',
+      'flow_resume_task',
+      // 流程管理 · 真人确认
+      'flow_request_confirmation',
+      'flow_get_confirmation',
+      'flow_cancel_confirmation',
+      'flow_list_my_confirmations',
+      // 流程管理 · 放行（flow:release）
+      'flow_release_check',
+      'flow_release_review',
+      'flow_release_waive',
+      'flow_release_transition',
+      'flow_release_undo'
+    ];
 
     return (
       <Page menu={menu} title={formatMessage({ id: 'adminDevManagement.install.pageTitle' })}>

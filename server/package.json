@@ -43,6 +43,7 @@
     "@kne/fastify-oidc": "^0.1.10",
     "@kne/fastify-response-data-format": "^1.0.0",
     "@kne/fastify-sequelize": "^4.0.5",
+    "@kne/fastify-shorten": "^1.0.16",
     "@kne/fastify-signature": "^1.0.3",
     "@kne/fastify-statistics": "^0.1.7",
     "@kne/fastify-tenant": "^1.0.0-alpha.55",

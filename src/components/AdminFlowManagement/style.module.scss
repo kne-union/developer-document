@@ -1,0 +1,664 @@
+// 流程管理样式（CSS Modules）：布局交给 BizUnit / InfoPage / TablePage，这里只做少量补充。
+.stageSteps {
+  padding: 4px 0 8px;
+}
+
+// 长文本正文：控制行宽，Markdown 渲染结果保持可读
+.markdownBody {
+  max-width: 72ch;
+  font-size: 14px;
+  line-height: 1.75;
+  word-break: break-word;
+}
+
+.sectionStack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── 详情页：页面头部（指标 + 流水号），不再做成卡片 ────── */
+.detailHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.headerMain {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+
+  // 标题与下方指标之间再拉开一点，让大标题有独立的呼吸空间
+  .flowTitle + .headerStats {
+    margin-top: 2px;
+  }
+}
+
+.headerStats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 36px;
+  row-gap: 14px;
+  min-width: 0;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+// 流水号与更新时间：一行小字，替代原来单独的「概览」区块
+.headerMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.metaCode {
+  font-family:
+    sfmono-regular,
+    consolas,
+    liberation mono,
+    menlo,
+    monospace;
+  letter-spacing: 0.2px;
+}
+
+.metaDot {
+  width: 3px;
+  height: 3px;
+  background: #d0d5dd;
+  border-radius: 50%;
+}
+
+// JSON 快照只在「更多记录」里出现，限高避免撑爆页面
+.jsonBlock {
+  max-height: 260px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  background: #f7f8fa;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.statLabel {
+  font-size: 12px;
+  line-height: 18px;
+  color: rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+}
+
+.statValue {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+  white-space: nowrap;
+}
+
+.statInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statTag {
+  margin: 0;
+  font-weight: 500;
+}
+
+.statOverdue {
+  color: #cf1322;
+}
+
+// 材料进度：数字 + 细进度条，比纯文本更有进度感
+.statProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 92px;
+}
+
+.statProgressText {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
+
+.statProgressBar {
+  display: block;
+  width: 92px;
+  height: 4px;
+  overflow: hidden;
+  background: #eef1f5;
+  border-radius: 2px;
+
+  > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #1677ff, #4096ff);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+}
+
+.headerActions {
+  flex-shrink: 0;
+}
+
+/* ── 详情页：顶部阶段栏（StateBar step） ───────────────── */
+/* 不加卡片外壳，与列表页保持一致 */
+.stageBar {
+  margin-bottom: 20px;
+}
+
+/* ── 详情页：无框分区（材料 / 需求说明 / 记录） ────────── */
+// 只用留白与标题分层，不再给每个区块套卡片边框
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.sectionSubtitle {
+  font-size: 12px;
+  line-height: 18px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+// 记录区：ghost 折叠面板，去掉 antd 默认面板边框与灰底，只留条目分隔线
+.records {
+  :global(.ant-collapse-item) {
+    border-bottom: 1px solid #f2f4f8;
+  }
+
+  :global(.ant-collapse-item:last-child) {
+    border-bottom: none;
+  }
+
+  :global(.ant-collapse-header) {
+    padding: 12px 0 !important;
+  }
+
+  :global(.ant-collapse-content-box) {
+    padding: 4px 0 16px !important;
+  }
+}
+
+// 内容区主标题：页头固定为「流程管理」，具体流程标题在这里展开。
+// 它是整页唯一的视觉锚点，字号/字重要明显高于区块标题（14px）与指标值（15px），
+// 否则页面会「一片同级文字」，看不出正在看哪条流程。
+.flowTitle {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 34px;
+  letter-spacing: -0.2px;
+  color: #17181c;
+  word-break: break-word;
+}
+
+/* ── 列表页：顶部阶段栏（StateBar step），替代筛选行里的阶段下拉 ── */
+/* 不加卡片外壳，直接贴在页面内容区顶部 */
+.listStageBar {
+  margin-bottom: 12px;
+  overflow-x: auto;
+
+  // 阶段多时横向可滑，避免挤压换行
+  :global(.ant-space) {
+    flex-wrap: nowrap;
+  }
+}
+
+/* ── 材料卡片：内容直接内联展示，替代「表格 + 查看内容弹窗」 ── */
+.deliverableList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+// 历史阶段：整块材料降为「存档」质感——状态色条统一灰化、底色与边框更淡、去掉 hover 反馈。
+// 用整体明度差表达「这是过去的内容」，比挂一枚「历史阶段（只读）」标签更克制。
+.deliverableList[data-archive='true'] {
+  .deliverableCard {
+    background: #fcfcfd;
+    border-color: #f2f4f8;
+
+    &::before {
+      background: #e3e7ee;
+    }
+
+    &:hover {
+      border-color: #f2f4f8;
+      box-shadow: none;
+    }
+  }
+
+  .cardTitle {
+    color: rgba(0, 0, 0, 0.68);
+  }
+
+  .cardBody {
+    background: #f5f6f8;
+  }
+
+  .materialItem {
+    background: #fafbfc;
+  }
+
+  .cardBodyCollapsed::after {
+    background: linear-gradient(180deg, rgba(245, 246, 248, 0), #f5f6f8);
+  }
+
+  .cardRemark {
+    background: #fbf8ee;
+  }
+}
+
+.deliverableCard {
+  position: relative;
+  padding: 16px 18px 16px 20px;
+  background: #fff;
+  border: 1px solid #edf0f5;
+  border-radius: 12px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+
+  // 左侧状态色条：扫一眼就知道哪份材料还没交、哪份待审
+  &::before {
+    position: absolute;
+    top: 15px;
+    bottom: 15px;
+    left: 0;
+    width: 3px;
+    background: var(--card-accent, #d9d9d9);
+    border-radius: 0 3px 3px 0;
+    content: '';
+  }
+
+  &[data-status='submitted'] {
+    --card-accent: #1677ff;
+  }
+
+  &[data-status='accepted'] {
+    --card-accent: #52c41a;
+  }
+
+  &[data-status='ai_draft'] {
+    --card-accent: #faad14;
+  }
+
+  &[data-status='rejected'] {
+    --card-accent: #ff4d4f;
+  }
+
+  &[data-status='pending'] {
+    --card-accent: #d9d9d9;
+  }
+
+  &[data-status='waived'] {
+    --card-accent: #bfbfbf;
+  }
+
+  &:hover {
+    border-color: #e2e8f2;
+    box-shadow: 0 2px 10px rgba(16, 24, 40, 0.05);
+  }
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cardTitleWrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.cardFlag {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.cardActions {
+  flex-shrink: 0;
+}
+
+// 验收标准：一行灰字，说明「做到什么算通过」，不占主视觉
+.cardCriteria {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.cardCriteriaLabel {
+  flex-shrink: 0;
+  color: rgba(0, 0, 0, 0.35);
+
+  &::after {
+    content: '：';
+  }
+}
+
+// 内容区：直接铺开正文。这里刻意不做 max-height + overflow 的内滚动，
+// 否则鼠标停在正文上时滚轮会被卡片内部吃掉、整页滚不动。
+// 只用浅底区分，不再加边框（卡片本身已经是唯一一层线）
+.cardBody {
+  padding: 12px 14px;
+  margin-top: 10px;
+  background: #f8f9fb;
+  border-radius: 8px;
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+// 折叠态：overflow hidden 不产生滚动容器，滚轮照样滚页面
+.cardBodyCollapsed {
+  position: relative;
+  max-height: 320px;
+  overflow: hidden;
+
+  &::after {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 48px;
+    background: linear-gradient(180deg, rgba(248, 249, 251, 0), #f8f9fb);
+    content: '';
+    pointer-events: none;
+  }
+}
+
+.cardToggle {
+  display: flex;
+  width: fit-content;
+  height: 24px;
+  padding: 0;
+  margin: 4px 0 0 auto;
+  font-size: 13px;
+}
+
+.contentEmpty {
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.3);
+}
+
+.contentLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 20px;
+  word-break: break-all;
+}
+
+.contentFile {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.75);
+  background: #fff;
+  border-radius: 6px;
+}
+
+// 清单：勾选态与未勾选态对比明显
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checklistItem,
+.checklistItemDone {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 21px;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.checklistItemDone {
+  color: rgba(0, 0, 0, 0.45);
+
+  .checklistLabel {
+    text-decoration: line-through;
+    text-decoration-color: rgba(0, 0, 0, 0.25);
+  }
+}
+
+.checklistMark {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 1;
+  color: #d0d5dd;
+
+  .checklistItemDone & {
+    color: #52c41a;
+  }
+}
+
+.checklistLabel {
+  word-break: break-word;
+}
+
+.checklistRemark {
+  flex-shrink: 0;
+  color: rgba(0, 0, 0, 0.35);
+
+  &::before {
+    content: '· ';
+  }
+}
+
+// 多份材料：每条一个轻量区块，避免和卡片本体的边框抢视觉
+.materialList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.materialItem {
+  padding: 10px 12px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.materialItemHead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.materialType {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.materialItemLabel {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.materialItemRemark {
+  font-size: 12px;
+  line-height: 18px;
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.materialItemBody {
+  margin-top: 6px;
+
+  &:empty {
+    display: none;
+  }
+}
+
+// 审核意见：单独一条浅底色提示，和正文区分
+.cardRemark {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+  background: #fff8e6;
+  border-radius: 8px;
+}
+
+.cardRemarkLabel {
+  flex-shrink: 0;
+  color: rgba(0, 0, 0, 0.45);
+
+  &::after {
+    content: '：';
+  }
+}
+
+@media (max-width: 768px) {
+  .detailHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .flowTitle {
+    font-size: 20px;
+    line-height: 28px;
+  }
+
+  .headerStats {
+    column-gap: 24px;
+    row-gap: 12px;
+  }
+
+  .headerActions {
+    align-self: flex-start;
+  }
+
+  .cardHead {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+// 拆分任务树：非当前节点是可点的链接，当前节点用主色浅底 + 「当前」徽标标出来，
+// 光标保持默认箭头，一眼能看出自己在这儿、且这条不该点
+.treeNodeLink {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  color: #1677ff;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// 单行不换行：标题过长时先压缩标题自身（省略号），「当前」徽标永远保持完整
+.treeNodeCurrent {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 1px 8px;
+  color: #1677ff;
+  font-weight: 400;
+  background: #e8f1ff;
+  border-radius: 4px;
+  cursor: default;
+}
+
+.treeNodeTitle {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+// flex: none + nowrap：宽度被挤压时不会把「当前」竖排成两行
+.treeNodeBadge {
+  flex: none;
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 16px;
+  color: #fff;
+  white-space: nowrap;
+  background: #1677ff;
+  border-radius: 8px;
+}

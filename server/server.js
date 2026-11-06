@@ -320,6 +320,9 @@ const createServer = () => {
         });
       }
 
+      // 一次性确认短链：短码由 shorten 插件落库并校验过期，32 位防枚举，无需自建签名密钥
+      fastify.register(require('@kne/fastify-shorten'), { length: 32, maxAttempts: 10 });
+
       fastify.register(require('@kne/fastify-namespace'), {
         options,
         name: options.name,

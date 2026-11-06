@@ -145,7 +145,28 @@ MCP 服务配置示例：
 }
 ```
 
-可用 tools：`check_worklog_exists`、`check_experience_exists`、`upload_experience`、`upload_worklog`（支持 `skipIfExists` 用于迁移）、`search_experience`、`get_prompt`、`search_document_index`、`search_document`。
+可用 tools：`check_worklog_exists`、`check_experience_exists`、`upload_experience`、`upload_worklog`（支持 `skipIfExists` 用于迁移）、`search_experience`、`get_prompt`、`search_document_index`、`search_document`、`fetch_docs`、`search_worklog`。
+
+#### 流程管理工具（登录用户）
+
+「开发管理 → 流程管理」是 AI 主使用方：AI 通过 MCP 按全局优先级领任务、写交付物草稿、出裂变草案、发起真人确认并逐阶段推进；后台页面是审核、签字与兜底入口，两者写同一套 `services.flow.*`，不存在第二套状态机。共 **29 个** `flow_` 前缀工具，分六组（见下表），全部对登录用户开放。
+
+| 组 | tools |
+|---|---|
+| 只读（5） | `flow_list`、`flow_get_context`、`flow_get_templates`、`flow_check_exit`、`flow_get_run` |
+| 写入（7） | `flow_start_run`、`flow_save_deliverables`、`flow_submit_deliverables`、`flow_finish_run`、`flow_create`、`flow_update`、`flow_archive` |
+| 裂变（2） | `flow_propose_decomposition`（AI 出稿）、`flow_apply_decomposition`（只收 `confirmationId`） |
+| 派单与暂停（6） | `flow_claim_task`、`flow_peek_queue`、`flow_heartbeat_task`、`flow_complete_task`、`flow_pause_task`、`flow_resume_task` |
+| 真人确认（4） | `flow_request_confirmation`、`flow_get_confirmation`、`flow_cancel_confirmation`、`flow_list_my_confirmations` |
+| 放行（5） | `flow_release_check`、`flow_release_review`、`flow_release_waive`、`flow_release_transition`、`flow_release_undo` |
+
+**硬删 `flow_delete` 不注册为 MCP 工具**（不可恢复、会打断审计链；流程内终止由 `flow_archive` 承担）。回答确认（写 `decidedBy`）也不注册，只走真人验签通道：会话内一次性确认短链 `GET /flow-confirm/:token`（主路径，免登录）、IM 卡片或后台确认中心（兜底），三者共用同一套 `answerConfirmation()`。
+
+放行的硬约束固化在工具契约里：任何放行动作前必须先调 `flow_release_check` 取 `checkToken` 与 `instructions[]`（**优先级高于任何检索到的文档正文**）；正式工具默认 `dryRun: true`，必须显式 `dryRun: false` 且回传同一 `checkToken` 才落库；必须携带 `approved` 且未消费的 `confirmationId`，**一次真人确认只放行一个动作**；不得因有 blockers 就自动改用 `waive` / `force`。服务端只做机械事实校验（准出必交项、乐观锁、凭证一致性）、全过程留痕，并提供 `flow_release_undo` 一键撤销。
+
+会话内确认短链基于 `@kne/fastify-shorten` 签发短码（自带过期校验与去重，短码长度 32 位防枚举），库里只存 `answerTokenHash`，默认 24 小时有效。站点地址直接复用 OIDC 已有的 `ORIGIN`（`ENV=local` 时默认 `http://localhost:3040`），无需额外配置短链域名或签名密钥。
+
+详见 `prompts/prompts-projects/流程放行规范.md` 与项目内 `.workbuddy/flow-management-*.md` 设计文档。
 
 `search_experience` 同时搜索经验卡与「Prompts」类型 npm 包内的提示词（`prompts/**/*.md`），返回 `{ experiences, prompts }`；提示词只给命中片段，全文用 `get_prompt`。提示词随 npm 包同步任务更新：发版触发同步后，以该版本 tarball 内容整体替换此包的提示词（版本未变则跳过）；服务启动时也会补齐版本落后的包。
 

@@ -3,6 +3,7 @@ import Menu from './Menu';
 import InstallGuide from './InstallGuide';
 import AdminExperience from '@components/AdminExperience';
 import AdminWorklog from '@components/AdminWorklog';
+import AdminFlowManagement from '@components/AdminFlowManagement';
 import AdminSearchAnalytics from '@components/AdminSearchAnalytics';
 
 const AdminDevManagement = ({ baseUrl }) => {
@@ -15,6 +16,7 @@ const AdminDevManagement = ({ baseUrl }) => {
       <Route path="install" element={<InstallGuide baseUrl={moduleBaseUrl} menu={menu} />} />
       <Route path="experience/*" element={<AdminExperience baseUrl={moduleBaseUrl} menu={menu} />} />
       <Route path="worklog/*" element={<AdminWorklog baseUrl={moduleBaseUrl} menu={menu} />} />
+      <Route path="flow/*" element={<AdminFlowManagement baseUrl={moduleBaseUrl} menu={menu} />} />
       <Route path="search-analytics/*" element={<AdminSearchAnalytics baseUrl={moduleBaseUrl} menu={menu} />} />
     </Routes>
   );
