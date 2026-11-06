@@ -286,6 +286,51 @@ const getApis = options => {
         paramsType: 'params'
       }
     },
+    skill: {
+      list: {
+        url: `${prefix}/skill/manage/list`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      detail: {
+        url: `${prefix}/skill/manage/detail`,
+        method: 'GET'
+      },
+      create: {
+        url: `${prefix}/skill/manage/create`,
+        method: 'POST'
+      },
+      update: {
+        url: `${prefix}/skill/manage/update`,
+        method: 'POST'
+      },
+      close: {
+        url: `${prefix}/skill/manage/close`,
+        method: 'POST'
+      },
+      reopen: {
+        url: `${prefix}/skill/manage/reopen`,
+        method: 'POST'
+      },
+      delete: {
+        url: `${prefix}/skill/manage/delete`,
+        method: 'POST'
+      },
+      search: {
+        url: `${prefix}/skill/search`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      upload: {
+        url: `${prefix}/skill/upload`,
+        method: 'POST'
+      },
+      export: {
+        url: `${prefix}/skill/export`,
+        method: 'GET',
+        paramsType: 'params'
+      }
+    },
     worklog: {
       list: {
         url: `${prefix}/worklog/manage/list`,

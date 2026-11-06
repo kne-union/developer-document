@@ -8,6 +8,7 @@ const registerBlogTools = require('./blog-tools');
 const { registerFlowTools } = require('./flow-tools');
 const { registerFlowClaimTools } = require('./flow-claim-tools');
 const { registerFlowReleaseTools } = require('./flow-release-tools');
+const { registerSkillTools } = require('./skill-tools');
 
 const registerTools = (mcpServer, { services, userId }) => {
   mcpServer.registerTool(
@@ -269,6 +270,8 @@ module.exports = fp(async (fastify, options) => {
       const userId = request.userInfo.id;
       const mcpServer = new McpServer({ name: 'developer-document', version: '1.0.0' });
       registerTools(mcpServer, { services, userId });
+      // 技能/规则与 experience/worklog 一样，对所有 dev token 开放检索与维护
+      registerSkillTools(mcpServer, { services, userId });
       // v0.3.4：所有节点 AI 可驱动，三级 scope 默认全量开放，不再依赖令牌显式声明
       registerFlowTools(mcpServer, { services, userId, scope: ['flow:read', 'flow:write', 'flow:release'] });
       registerFlowClaimTools(mcpServer, { services, userId });

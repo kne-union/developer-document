@@ -57,7 +57,13 @@ export const USER_MCP_TOOLS = [
   'flow_release_review',
   'flow_release_waive',
   'flow_release_transition',
-  'flow_release_undo'
+  'flow_release_undo',
+  'search_skill',
+  'get_skill',
+  'create_skill',
+  'update_skill',
+  'delete_skill',
+  'export_skills'
 ];
 
 export const resolveSyncUrl = () => {

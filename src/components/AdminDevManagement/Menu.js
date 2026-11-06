@@ -27,6 +27,11 @@ const Menu = createWithRemoteLoader({
             path: `${baseUrl}/install`
           },
           {
+            label: formatMessage({ id: 'app.adminNav.skill' }),
+            key: 'skill',
+            path: `${baseUrl}/skill`
+          },
+          {
             label: formatMessage({ id: 'app.adminNav.experience' }),
             key: 'experience',
             path: `${baseUrl}/experience`
