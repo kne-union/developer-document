@@ -529,6 +529,20 @@ const getApis = options => {
       releaseUndo: {
         url: `${prefix}/flow/release/undo`,
         method: 'POST'
+      },
+      releaseReject: {
+        url: `${prefix}/flow/release/reject`,
+        method: 'POST'
+      },
+      releaseFeedback: {
+        url: `${prefix}/flow/release/feedback`,
+        method: 'GET',
+        paramsType: 'params'
+      },
+      runList: {
+        url: `${prefix}/flow/run/list`,
+        method: 'GET',
+        paramsType: 'params'
       }
     }
   };

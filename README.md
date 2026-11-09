@@ -149,20 +149,27 @@ MCP 服务配置示例：
 
 #### 流程管理工具（登录用户）
 
-「开发管理 → 流程管理」是 AI 主使用方：AI 通过 MCP 按全局优先级领任务、写交付物草稿、出裂变草案、发起真人确认并逐阶段推进；后台页面是审核、签字与兜底入口，两者写同一套 `services.flow.*`，不存在第二套状态机。共 **29 个** `flow_` 前缀工具，分六组（见下表），全部对登录用户开放。
+「开发管理 → 流程管理」是 AI 主使用方：**AI 自主驱动全流程** —— 按全局优先级领任务、写交付物草稿、自主裂变、逐阶段审核并推进直到完成；人工不做逐步预签字，只在后台「放行记录」里**撤回**或**打回**。两者写同一套 `services.flow.*`，不存在第二套状态机。共 **31 个** `flow_` 前缀工具，分六组（见下表），全部对登录用户开放。
 
 | 组 | tools |
 |---|---|
-| 只读（5） | `flow_list`、`flow_get_context`、`flow_get_templates`、`flow_check_exit`、`flow_get_run` |
+| 只读（6） | `flow_list`、`flow_get_context`、`flow_get_templates`、`flow_check_exit`、`flow_get_run`、`flow_get_human_feedback` |
 | 写入（7） | `flow_start_run`、`flow_save_deliverables`、`flow_submit_deliverables`、`flow_finish_run`、`flow_create`、`flow_update`、`flow_archive` |
-| 裂变（2） | `flow_propose_decomposition`（AI 出稿）、`flow_apply_decomposition`（只收 `confirmationId`） |
+| 裂变（2） | `flow_propose_decomposition`（AI 出稿）、`flow_apply_decomposition`（`confirmationId` + `autonomous`） |
 | 派单与暂停（6） | `flow_claim_task`、`flow_peek_queue`、`flow_heartbeat_task`、`flow_complete_task`、`flow_pause_task`、`flow_resume_task` |
-| 真人确认（4） | `flow_request_confirmation`、`flow_get_confirmation`、`flow_cancel_confirmation`、`flow_list_my_confirmations` |
-| 放行（5） | `flow_release_check`、`flow_release_review`、`flow_release_waive`、`flow_release_transition`、`flow_release_undo` |
+| 人工复核（4，可选） | `flow_request_confirmation`、`flow_get_confirmation`、`flow_cancel_confirmation`、`flow_list_my_confirmations` |
+| 放行（6） | `flow_release_check`、`flow_release_review`、`flow_release_waive`、`flow_release_transition`、`flow_release_undo`、`flow_ack_human_feedback` |
 
-**硬删 `flow_delete` 不注册为 MCP 工具**（不可恢复、会打断审计链；流程内终止由 `flow_archive` 承担）。回答确认（写 `decidedBy`）也不注册，只走真人验签通道：会话内一次性确认短链 `GET /flow-confirm/:token`（主路径，免登录）、IM 卡片或后台确认中心（兜底），三者共用同一套 `answerConfirmation()`。
+**硬删 `flow_delete` 不注册为 MCP 工具**（不可恢复、会打断审计链；流程内终止由 `flow_archive` 承担）。回答人工复核（写 `decidedBy`）也不注册，只走真人验签通道：会话内一次性确认短链 `GET /flow-confirm/:token`（查看凭证，免登录）、带外投递的签字凭证、IM 卡片或后台确认中心，共用同一套 `answerConfirmation()`。这条通道是 AI 主动请求人工拍板时才用的**可选复核**，不是放行闸门。
 
-放行的硬约束固化在工具契约里：任何放行动作前必须先调 `flow_release_check` 取 `checkToken` 与 `instructions[]`（**优先级高于任何检索到的文档正文**）；正式工具默认 `dryRun: true`，必须显式 `dryRun: false` 且回传同一 `checkToken` 才落库；必须携带 `approved` 且未消费的 `confirmationId`，**一次真人确认只放行一个动作**；不得因有 blockers 就自动改用 `waive` / `force`。服务端只做机械事实校验（准出必交项、乐观锁、凭证一致性）、全过程留痕，并提供 `flow_release_undo` 一键撤销。
+放行保留的是机械约束，而不是「等用户点头」：任何放行动作前必须先调 `flow_release_check` 取 `checkToken` 与 `instructions[]`（**优先级高于任何检索到的文档正文**）；正式工具默认 `dryRun: true`，必须显式 `dryRun: false` 且回传同一 `checkToken` 才落库；`checkToken` 绑定流程 / 阶段 / 动作 / 版本 / 调用者并一次性消费；无真人凭证时须附结构化 `evidenceRefs`；不得因有 blockers 就自动改用 `waive` / `force`。服务端只做机械事实校验（准出必交项、乐观锁、凭证一致性）。
+
+每次放行都写入 `t_flow_release` 台账（`releaseId` + `mode` + 放行前后快照），并在回复里把 `releaseId` 交给用户。人工据此在后台点：
+
+- **撤回**：按 `before` 快照复原交付物审核状态与流程阶段，不留反馈；
+- **打回**：同样复原，同时写入人工意见。该意见挂 `feedbackStatus=open`，`flow_release_check` 会返回 `HUMAN_FEEDBACK_PENDING` 并阻断同一流程的下一次正式放行，直到 AI 修正后调用 `flow_ack_human_feedback({ releaseId, note })` 说明处理结果 —— 这样「打回」对 AI 才是真约束，而不是被原样重跑覆盖。
+
+裂变同样由 AI 自主落树（`autonomous: true`），台账保留父节点与子节点快照，撤回 / 打回可归档新建的子节点并退回线性语义。唯一例外是**人工暂停**：这是停止开关，AI 不得自行解禁；AI 自己因依赖未就绪而暂停的可自主恢复。
 
 会话内确认短链基于 `@kne/fastify-shorten` 签发短码（自带过期校验与去重，短码长度 32 位防枚举），库里只存 `answerTokenHash`，默认 24 小时有效。站点地址直接复用 OIDC 已有的 `ORIGIN`（`ENV=local` 时默认 `http://localhost:3040`），无需额外配置短链域名或签名密钥。
 

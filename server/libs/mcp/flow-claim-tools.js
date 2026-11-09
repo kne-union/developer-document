@@ -7,8 +7,8 @@ const z = require('zod/v4');
  */
 const toText = value => (typeof value === 'string' ? value : JSON.stringify(value, null, 2));
 
-const registerFlowClaimTools = (mcpServer, { services, userId }) => {
-  const ctx = { userInfo: { id: userId }, actorType: 'mcp-ai' };
+const registerFlowClaimTools = (mcpServer, { services, userId, isAdmin = false }) => {
+  const ctx = { userInfo: { id: userId }, actorType: 'mcp-ai', isAdmin };
   const flow = () => services.flow;
 
   const run = handler => async args => {
@@ -30,10 +30,10 @@ const registerFlowClaimTools = (mcpServer, { services, userId }) => {
       stage: z.string().optional(),
       minPriority: z.string().optional(),
       goal: z.string().optional(),
-      flowId: z.string().optional().describe('人工指定某流程插队，仍走租约与幂等'),
+      flowId: z.string().optional().describe('仅超管可用：人工指定某流程插队，仍走租约与幂等'),
       capacity: z.number().optional(),
       idempotencyKey: z.string().optional(),
-      force: z.boolean().optional(),
+      force: z.boolean().optional().describe('仅超管可用：绕过现有租约与限流'),
       model: z.string().optional(),
       clientName: z.string().optional()
     },
@@ -78,12 +78,12 @@ const registerFlowClaimTools = (mcpServer, { services, userId }) => {
 
   register(
     'flow_resume_task',
-    '恢复被暂停的任务，恢复后重新入池且 aging 从 0 起。AI 恢复必须携带 approved 且未消费的 subject=resume 真人确认凭证（防止 AI 自己叫停又自己解禁）；人在后台恢复不需要凭证。',
+    '恢复被暂停的任务，恢复后重新入池且 aging 从 0 起。AI 自己因依赖未就绪暂停的可自主恢复；人工暂停是停止开关，AI 不得自行解禁，需由真人在后台恢复或携带 subject=resume 确认凭证。',
     {
       nodeId: z.string().optional(),
       rootId: z.string().optional(),
       stage: z.string().optional(),
-      confirmationId: z.string().describe('AI 恢复必填：真人 approve 过的 resume 凭证'),
+      confirmationId: z.string().optional().describe('仅人工暂停且 AI 需恢复时：真人 approve 过的 resume 凭证'),
       reason: z.string().optional(),
       idempotencyKey: z.string().optional()
     },

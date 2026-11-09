@@ -1,6 +1,6 @@
 {
   "name": "developer-document",
-  "version": "1.0.44",
+  "version": "1.0.45",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -10,7 +10,8 @@
     "build:md": "npx @kne/md-doc",
     "start:md": "npx @kne/md-doc --watch",
     "sync:kne-document": "node ./scripts/sync-local-kne-document.js",
-    "rebuild:document-index": "node ./scripts/rebuild-document-index-search-text.js"
+    "rebuild:document-index": "node ./scripts/rebuild-document-index-search-text.js",
+    "test": "node --test test/*.test.js"
   },
   "files": [
     "index.js",

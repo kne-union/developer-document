@@ -3,7 +3,10 @@
  * 必须放在 libs/utils 下，避免被自动扫描目录当成插件加载。
  *
  * v0.3.4：取消全部 allowedProducers='human'，23 项均为 any；
- * 真实性改由 verificationRequired + evidenceRefs 可解析 + 真人签字三重保证。
+ * 真实性改由 verificationRequired + evidenceRefs 可解析 + 放行台账留痕保证；
+ * AI 自主放行，人工在事后撤回 / 打回，不再逐步预签字。
+ * 裂变是可选能力：decomposition_plan / design_decomposition 默认非必交，
+ * 不裂变的单节点不应被强制交裂变方案。
  */
 
 const VERIFICATION_REQUIRED_CODES = ['requirement_review', 'design_review', 'test_report', 'defect_closure', 'release_ticket', 'canary_result', 'go_live_checklist', 'monitor_snapshot'];
@@ -70,10 +73,11 @@ const DELIVERABLE_TEMPLATES = {
       stage: 'requirement',
       code: 'decomposition_plan',
       nameKey: 'adminFlow.deliverableTemplate.decompositionPlan.name',
-      name: '需求分解方案（裂变）',
+      name: '需求分解方案（裂变，可选）',
       contentType: 'jsonb',
+      required: false,
       acceptCriteriaKey: 'adminFlow.deliverableTemplate.decompositionPlan.criteria',
-      acceptCriteria: '列出拟裂变的 N 个产品设计；需真人确认后才落树',
+      acceptCriteria: '仅主动裂变时需要；列出拟拆出的 N 个产品设计，由 AI 自主落树，人工可事后撤回 / 打回',
       reviewerRole: '产品负责人 + 技术负责人'
     }
   ]),
@@ -122,10 +126,11 @@ const DELIVERABLE_TEMPLATES = {
       stage: 'product_design',
       code: 'design_decomposition',
       nameKey: 'adminFlow.deliverableTemplate.designDecomposition.name',
-      name: '开发计划拆分（裂变）',
+      name: '开发计划拆分（裂变，可选）',
       contentType: 'jsonb',
+      required: false,
       acceptCriteriaKey: 'adminFlow.deliverableTemplate.designDecomposition.criteria',
-      acceptCriteria: '列出拟裂变的 N 个开发计划；需真人确认后才落树',
+      acceptCriteria: '仅主动裂变时需要；列出拟拆出的 N 个开发计划，由 AI 自主落树，人工可事后撤回 / 打回',
       reviewerRole: '技术负责人'
     }
   ]),

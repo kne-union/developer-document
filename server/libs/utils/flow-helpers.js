@@ -19,24 +19,50 @@ const uid = prefix => `${prefix}${Date.now().toString(36)}_${crypto.randomBytes(
 const releaseId = () => uid('rel_');
 const leaseId = () => uid('lease_');
 
-// ---- flow_release_check 的短时 checkToken（同一进程内有效，5 分钟） ----
+// ---- flow_release_check 的短时 checkToken（进程内有效，5 分钟；多实例部署需外置 Redis / DB） ----
 const checkTokenStore = new Map();
 const CHECK_TOKEN_TTL = 5 * 60 * 1000;
 
 const issueCheckToken = payload => {
   const token = uid('relchk_');
-  checkTokenStore.set(token, { ...payload, expiresAt: Date.now() + CHECK_TOKEN_TTL });
+  checkTokenStore.set(token, { ...payload, previewed: false, expiresAt: Date.now() + CHECK_TOKEN_TTL });
   return { checkToken: token, expiresIn: CHECK_TOKEN_TTL / 1000 };
 };
 
-const takeCheckToken = (token, expectedFlowId) => {
+/** dryRun 预览通过后打标记，正式放行必须携带该标记；标记本身不消费 token */
+const markCheckTokenPreviewed = token => {
   const entry = checkTokenStore.get(token);
   if (!entry || entry.expiresAt < Date.now()) {
     checkTokenStore.delete(token);
     throw fail('CHECK_TOKEN_INVALID', 'checkToken 无效或已过期，请重新调用 flow_release_check');
   }
-  if (expectedFlowId && asId(entry.flowId) !== asId(expectedFlowId)) {
-    throw fail('CHECK_TOKEN_MISMATCH', 'checkToken 与当前流程不匹配');
+  entry.previewed = true;
+  return entry;
+};
+
+/**
+ * 校验并（默认）消费 checkToken。
+ * 预检时写入的 flowId / action / toStage / stage / runId / actorUserId / version 全部逐项绑定，
+ * 用一次即失效，避免同一凭证跨动作、跨用户、跨版本复用。
+ */
+const takeCheckToken = (token, expected = {}, { consume = true } = {}) => {
+  const entry = checkTokenStore.get(token);
+  if (!entry || entry.expiresAt < Date.now()) {
+    checkTokenStore.delete(token);
+    throw fail('CHECK_TOKEN_INVALID', 'checkToken 无效或已过期，请重新调用 flow_release_check');
+  }
+  const mismatch = key => {
+    const stored = entry[key];
+    const wanted = expected[key];
+    if (stored === undefined || stored === null || wanted === undefined || wanted === null) return false;
+    return asId(stored) !== asId(wanted);
+  };
+  if (['flowId', 'runId', 'action', 'toStage', 'stage', 'subject', 'actorUserId', 'version'].some(mismatch)) {
+    throw fail('CHECK_TOKEN_MISMATCH', 'checkToken 与本次放行动作不匹配，请重新调用 flow_release_check');
+  }
+  if (consume) {
+    if (!entry.previewed) throw fail('DRYRUN_REQUIRED', '正式放行前必须先以 dryRun=true 执行一次预览');
+    checkTokenStore.delete(token);
   }
   return entry;
 };
@@ -83,6 +109,29 @@ const appendEvents = (row, events) => {
 
 // ---- 引用校验：杜绝 AI 编造引用 ----
 const REF_TYPES = ['experience', 'document_index', 'worklog', 'url', 'file'];
+const SAFE_URL = /^https?:\/\//i;
+const REF_ALIASES = { doc: 'document_index', document: 'document_index', docs: 'document_index', experience: 'experience', exp: 'experience', worklog: 'worklog', log: 'worklog', file: 'file', url: 'url', link: 'url' };
+
+/** 把引用统一解析成 { type, ref }；裸文本（如「已核验」）不可解析，直接判为伪造引用 */
+const parseRef = value => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (SAFE_URL.test(trimmed)) return { type: 'url', ref: trimmed };
+    const matched = trimmed.match(/^([a-z_]+):(.+)$/i);
+    if (matched) {
+      const type = REF_ALIASES[matched[1].toLowerCase()];
+      return type ? { type, ref: matched[2].trim() } : null;
+    }
+    return null;
+  }
+  if (value && typeof value === 'object' && typeof value.ref === 'string' && value.ref.trim()) {
+    const type = REF_ALIASES[String(value.type || '').toLowerCase()];
+    return type ? { type, ref: value.ref.trim() } : null;
+  }
+  return null;
+};
+
 const validateSourceRefs = refs => {
   if (refs === undefined || refs === null) return [];
   if (!Array.isArray(refs)) throw fail('INVALID_SOURCE_REFS', 'sourceRefs 必须是数组');
@@ -93,16 +142,43 @@ const validateSourceRefs = refs => {
     if (!ref.ref || typeof ref.ref !== 'string') {
       throw fail('INVALID_SOURCE_REFS', `sourceRefs[${index}].ref 必填`);
     }
-    if (ref.type === 'url' && !/^https?:\/\//i.test(ref.ref)) {
+    if (ref.type === 'url' && !SAFE_URL.test(ref.ref)) {
       throw fail('INVALID_SOURCE_REFS', `sourceRefs[${index}] 的 url 必须以 http(s):// 开头`);
+    }
+    // 任意类型都不得夹带非 http(s) 的 url 字段，避免 javascript: / file: 协议混入
+    if (ref.url !== undefined && ref.url !== null && !SAFE_URL.test(String(ref.url))) {
+      throw fail('INVALID_SOURCE_REFS', `sourceRefs[${index}].url 协议不合法`);
     }
   });
   return refs;
 };
 
+/** 放行证据必须是结构化、可定位的引用，不能只塞一句「已核验」 */
+const normalizeEvidenceRefs = refs => {
+  if (!Array.isArray(refs) || refs.length === 0) throw fail('EVIDENCE_REQUIRED', '放行凭证缺少 evidenceRefs 原始证据引用');
+  return refs.map((item, index) => {
+    const parsed = parseRef(item);
+    if (!parsed) throw fail('INVALID_EVIDENCE_REF', `evidenceRefs[${index}] 不是可解析引用，需为 {type, ref} 或 experience:/worklog:/doc:/file:/http(s) 前缀`);
+    if (parsed.type === 'url' && !SAFE_URL.test(parsed.ref)) throw fail('INVALID_EVIDENCE_REF', `evidenceRefs[${index}] 的 url 必须以 http(s):// 开头`);
+    return parsed;
+  });
+};
+
 const suggestQueries = (stage, templateCodes = []) => {
   const prefix = stage || 'requirement';
   return [`search_worklog:${prefix} 阶段历史记录`, `search_experience:${prefix} 交付物`, `search_document_index:${templateCodes.slice(0, 2).join(' ')} 或相关组件文档`, 'fetch_docs:读取命中的文档正文'];
+};
+
+// ---- 交付物文件引用：收集需要校验存在性的 fileId ----
+const collectFileRefs = ({ contentType, payload = {} }) => {
+  const ids = [];
+  if (contentType === 'file' && payload.fileId) ids.push(String(payload.fileId));
+  if (contentType === 'jsonb' && Array.isArray(payload.options)) {
+    payload.options.forEach(item => {
+      if (item && item.type === 'file' && item.fileId) ids.push(String(item.fileId));
+    });
+  }
+  return [...new Set(ids)];
 };
 
 module.exports = {
@@ -114,10 +190,14 @@ module.exports = {
   leaseId,
   issueCheckToken,
   takeCheckToken,
+  markCheckTokenPreviewed,
   hashToken,
   assertRateLimit,
   makeEvent,
   appendEvents,
   validateSourceRefs,
+  normalizeEvidenceRefs,
+  parseRef,
+  collectFileRefs,
   suggestQueries
 };
