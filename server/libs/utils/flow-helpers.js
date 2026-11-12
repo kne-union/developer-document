@@ -1,6 +1,7 @@
 /**
  * 流程模块共享工具（放 utils，避免被自动扫描目录当成插件）。
- * 包含：带业务错误码的异常、短时 checkToken、一次性确认短链签名、简单限流、事件构造。
+ * 包含：带业务错误码的异常、一次性确认短链哈希、事件构造、引用校验。
+ * checkToken 与限流见 ./flow-security-store.js（数据库实现，无内存 fallback）。
  */
 const crypto = require('crypto');
 
@@ -19,76 +20,9 @@ const uid = prefix => `${prefix}${Date.now().toString(36)}_${crypto.randomBytes(
 const releaseId = () => uid('rel_');
 const leaseId = () => uid('lease_');
 
-// ---- flow_release_check 的短时 checkToken（进程内有效，5 分钟；多实例部署需外置 Redis / DB） ----
-const checkTokenStore = new Map();
-const CHECK_TOKEN_TTL = 5 * 60 * 1000;
-
-const issueCheckToken = payload => {
-  const token = uid('relchk_');
-  checkTokenStore.set(token, { ...payload, previewed: false, expiresAt: Date.now() + CHECK_TOKEN_TTL });
-  return { checkToken: token, expiresIn: CHECK_TOKEN_TTL / 1000 };
-};
-
-/** dryRun 预览通过后打标记，正式放行必须携带该标记；标记本身不消费 token */
-const markCheckTokenPreviewed = token => {
-  const entry = checkTokenStore.get(token);
-  if (!entry || entry.expiresAt < Date.now()) {
-    checkTokenStore.delete(token);
-    throw fail('CHECK_TOKEN_INVALID', 'checkToken 无效或已过期，请重新调用 flow_release_check');
-  }
-  entry.previewed = true;
-  return entry;
-};
-
-/**
- * 校验并（默认）消费 checkToken。
- * 预检时写入的 flowId / action / toStage / stage / runId / actorUserId / version 全部逐项绑定，
- * 用一次即失效，避免同一凭证跨动作、跨用户、跨版本复用。
- */
-const takeCheckToken = (token, expected = {}, { consume = true } = {}) => {
-  const entry = checkTokenStore.get(token);
-  if (!entry || entry.expiresAt < Date.now()) {
-    checkTokenStore.delete(token);
-    throw fail('CHECK_TOKEN_INVALID', 'checkToken 无效或已过期，请重新调用 flow_release_check');
-  }
-  const mismatch = key => {
-    const stored = entry[key];
-    const wanted = expected[key];
-    if (stored === undefined || stored === null || wanted === undefined || wanted === null) return false;
-    return asId(stored) !== asId(wanted);
-  };
-  if (['flowId', 'runId', 'action', 'toStage', 'stage', 'subject', 'actorUserId', 'version'].some(mismatch)) {
-    throw fail('CHECK_TOKEN_MISMATCH', 'checkToken 与本次放行动作不匹配，请重新调用 flow_release_check');
-  }
-  if (consume) {
-    if (!entry.previewed) throw fail('DRYRUN_REQUIRED', '正式放行前必须先以 dryRun=true 执行一次预览');
-    checkTokenStore.delete(token);
-  }
-  return entry;
-};
-
 // ---- 一次性真人确认短链：短码由 @kne/fastify-shorten 签发并解析，库里只存哈希 ----
+// checkToken / 限流已迁到数据库，见 createFlowSecurity（flow-security-store.js），不保留内存 Map。
 const hashToken = token => crypto.createHash('sha256').update(token).digest('hex');
-
-// ---- 简单限流：flowId + userId + 分钟，防 Agent 死循环刷写 ----
-const rateStore = new Map();
-const RATE_LIMIT_PER_MINUTE = 60;
-
-const assertRateLimit = (flowId, userId) => {
-  const key = `${flowId || '-'}:${userId || '-'}:${Math.floor(Date.now() / 60000)}`;
-  const count = (rateStore.get(key) || 0) + 1;
-  rateStore.set(key, count);
-  if (rateStore.size > 5000) {
-    for (const k of rateStore.keys()) {
-      if (rateStore.size <= 2500) break;
-      rateStore.delete(k);
-    }
-  }
-  if (count > RATE_LIMIT_PER_MINUTE) {
-    throw fail('RATE_LIMITED', '写入过于频繁，请稍后重试');
-  }
-  return true;
-};
 
 // ---- events 追加式审计 ----
 const makeEvent = ({ tool, action, target, result, actorUserId, actorType = 'mcp-ai', extra = {} }) => ({
@@ -188,11 +122,7 @@ module.exports = {
   uid,
   releaseId,
   leaseId,
-  issueCheckToken,
-  takeCheckToken,
-  markCheckTokenPreviewed,
   hashToken,
-  assertRateLimit,
   makeEvent,
   appendEvents,
   validateSourceRefs,

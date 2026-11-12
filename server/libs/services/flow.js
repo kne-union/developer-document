@@ -2,22 +2,8 @@ const fp = require('fastify-plugin');
 const { Op } = require('sequelize');
 const { STAGES, STAGE_CODES, ORDER, NODE_TYPES, NODE_TYPE_STAGES, NODE_TYPE_CHILDREN, stageIndex, isStageAllowed, assertStageAllowed, nodeTypeOfStage } = require('../utils/flow-stages');
 const { DELIVERABLE_TEMPLATES, getTemplatesByStage, getTemplate, validateOptions } = require('../utils/flow-deliverable-templates');
-const {
-  fail,
-  asId,
-  plain,
-  releaseId,
-  issueCheckToken,
-  takeCheckToken,
-  markCheckTokenPreviewed,
-  assertRateLimit,
-  makeEvent,
-  appendEvents,
-  validateSourceRefs,
-  normalizeEvidenceRefs,
-  collectFileRefs,
-  suggestQueries
-} = require('../utils/flow-helpers');
+const { fail, asId, plain, releaseId, makeEvent, appendEvents, validateSourceRefs, normalizeEvidenceRefs, collectFileRefs, suggestQueries } = require('../utils/flow-helpers');
+const { createFlowSecurity } = require('../utils/flow-security-store');
 
 const CONTENT_FIELDS = ['fileId', 'fileName', 'url', 'content', 'checklist', 'options'];
 const ACCEPTED = ['accepted', 'waived'];
@@ -25,6 +11,12 @@ const ACCEPTED = ['accepted', 'waived'];
 module.exports = fp(async (fastify, options) => {
   const { models, services } = fastify[options.name];
   const transaction = fn => fastify.sequelize.instance.transaction(fn);
+  const generateId = () => String(fastify.sequelize.generateId());
+  const { issueCheckToken, takeCheckToken, markCheckTokenPreviewed, assertRateLimit } = createFlowSecurity({
+    models,
+    sequelize: fastify.sequelize.instance,
+    generateId
+  });
 
   // ---------- 通用 ----------
   const getFlow = async id => {
@@ -115,11 +107,9 @@ module.exports = fp(async (fastify, options) => {
     return getTemplatesByStage(stage);
   };
 
-  const generateCode = async transaction => {
-    const prefix = `FLOW-${new Date().toISOString().slice(0, 7).replace('-', '')}-`;
-    const count = await models.flow.count({ where: { code: { [Op.like]: `${prefix}%` } }, paranoid: false, ...(transaction ? { transaction } : {}) });
-    return `${prefix}${String(count + 1).padStart(4, '0')}`;
-  };
+  // 业务编号 code 使用项目既有雪花 ID（@kne/fastify-sequelize + nodejs-snowflake），以字符串落库，避免 JS 精度丢失。
+  // 不再用记录数 / 自增生成。主键 id 本身已由插件 beforeCreate 写成雪花 ID，与 code 是两个字段。
+  const generateCode = () => generateId();
 
   /** 进入阶段时按模板幂等生成交付物 */
   const ensureDeliverables = async ({ flowId, stage, transaction: tx }) => {
@@ -192,7 +182,7 @@ module.exports = fp(async (fastify, options) => {
     const now = new Date();
     const row = await models.flow.create(
       {
-        code: await generateCode(tx),
+        code: generateCode(),
         title: String(title).slice(0, 200),
         description: description || null,
         priority,
@@ -248,7 +238,7 @@ module.exports = fp(async (fastify, options) => {
   const create = async (params = {}, request = {}) => {
     const userId = asId(request?.userInfo?.id || request?.user?.userId);
     const isAi = request?.actorType === 'mcp-ai';
-    assertRateLimit(params.parentId || 'new', userId);
+    await assertRateLimit(params.parentId || 'new', userId);
     const nodeType = params.nodeType || (params.parentId ? NODE_TYPE_CHILDREN[(await getFlow(params.parentId)).nodeType] || 'requirement' : 'requirement');
     return transaction(async tx => {
       const row = await createNode(
@@ -400,7 +390,7 @@ module.exports = fp(async (fastify, options) => {
     ['title', 'description', 'priority', 'ownerUserId', 'dueAt', 'tags', 'participantIds'].forEach(key => {
       if (fields[key] !== undefined) allowed[key] = fields[key];
     });
-    assertRateLimit(flow.id, asId(request?.userInfo?.id));
+    await assertRateLimit(flow.id, asId(request?.userInfo?.id));
     await flow.update({ ...allowed, version: Number(flow.version) + 1 });
     return { id: asId(flow.id), version: flow.version, updated: Object.keys(allowed) };
   };
@@ -852,7 +842,7 @@ module.exports = fp(async (fastify, options) => {
     await assertActor(flow, request);
     const allowPaused = params.allowPaused === true;
     if (!allowPaused) await assertNotPaused(flow);
-    assertRateLimit(flow.id, asId(request?.userInfo?.id));
+    await assertRateLimit(flow.id, asId(request?.userInfo?.id));
     const saved = [],
       skipped = [];
     for (const item of items) {
@@ -931,7 +921,7 @@ module.exports = fp(async (fastify, options) => {
     ].filter(Boolean);
     // 具体流转动作统一归一为 transition，避免 check 与 release_transition 的 action 口径不一致
     const boundAction = ['advance', 'rollback', 'complete', 'force'].includes(action) ? 'transition' : action;
-    const token = issueCheckToken({
+    const token = await issueCheckToken({
       flowId: asId(flow.id),
       action: boundAction,
       toStage,
@@ -976,18 +966,16 @@ module.exports = fp(async (fastify, options) => {
       throw fail('HUMAN_FEEDBACK_PENDING', `存在 ${feedback.length} 条未处理的人工打回意见，请先修正并调用 flow_ack_human_feedback：${feedback.map(item => item.feedback).join('；')}`);
     }
     if (checkToken === undefined) throw fail('CHECK_TOKEN_REQUIRED', '缺少 checkToken，请先调用 flow_release_check');
-    takeCheckToken(
-      checkToken,
-      {
-        flowId: asId(flow.id),
-        runId: asId(runId),
-        action,
-        stage: flow.stage,
-        version: Number(flow.version),
-        actorUserId: asId(request?.userInfo?.id)
-      },
-      { consume: !dryRun }
-    );
+    const tokenExpected = {
+      flowId: asId(flow.id),
+      runId: asId(runId),
+      action,
+      stage: flow.stage,
+      version: Number(flow.version),
+      actorUserId: asId(request?.userInfo?.id)
+    };
+    // 正式消费放在下面的业务事务内，校验（不消费）先做，避免证据校验失败时烧掉凭证
+    await takeCheckToken(checkToken, tokenExpected, { consume: false });
     await assertNotPaused(flow);
     const mode = confirmationId ? 'human_confirmed' : 'ai_autonomous';
     // 无真人凭证时，证据由本次放行动作自己给出；裸文本「已核验」一律拒绝。
@@ -999,7 +987,7 @@ module.exports = fp(async (fastify, options) => {
     }
     const rid = releaseId();
     if (dryRun) {
-      markCheckTokenPreviewed(checkToken);
+      await markCheckTokenPreviewed(checkToken);
       return {
         dryRun: true,
         mode,
@@ -1011,8 +999,9 @@ module.exports = fp(async (fastify, options) => {
         ].filter(Boolean)
       };
     }
-    // 凭证消费、快照、状态写入、台账、审计全部在同一事务内
+    // 凭证一次性原子消费与快照、状态写入、台账、审计全部在同一事务内；失败回滚后凭证仍未消费
     return transaction(async tx => {
+      await takeCheckToken(checkToken, tokenExpected, { consume: true, transaction: tx });
       if (confirmationId) {
         await services.flowConfirmation.consume({
           confirmationId,

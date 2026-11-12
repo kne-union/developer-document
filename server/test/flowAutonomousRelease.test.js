@@ -2,10 +2,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const flowService = require('../libs/services/flow');
 const { getTemplatesByStage } = require('../libs/utils/flow-deliverable-templates');
+const { openIsolatedSecurityDb } = require('./helpers/isolatedSecurityDb');
 
 /**
- * 用轻量内存模型加载真实的 services.flow，覆盖「AI 自主驱动 + 人工撤回 / 打回」主链路。
- * 不连数据库：所有 Sequelize 调用都由下面的 stub 承接，事务只透传一个标记对象。
+ * 流程主链路仍用内存 stub；checkToken 与限流改走本机隔离真实 SQLite（不连生产）。
+ * 事务使用该 SQLite 的真实 transaction，以便凭证消费与回滚语义和实现一致。
  */
 
 const makeRow = initial => {
@@ -32,6 +33,7 @@ const makeRow = initial => {
 const matches = (row, where = {}) => Object.entries(where).every(([key, value]) => (value && typeof value === 'object' ? true : row[key] === value));
 
 const makeEnv = async () => {
+  const securityDb = await openIsolatedSecurityDb();
   const flowRow = makeRow({
     id: 'F1',
     code: 'FLOW-1',
@@ -154,7 +156,9 @@ const makeEnv = async () => {
       create: async data => makeRow({ id: 'C1', ...data }),
       update: async () => [1]
     },
-    flowRelease: releases
+    flowRelease: releases,
+    flowCheckToken: securityDb.models.flowCheckToken,
+    flowRateLimit: securityDb.models.flowRateLimit
   };
 
   const services = {
@@ -175,7 +179,7 @@ const makeEnv = async () => {
 
   const fastify = {
     ns: { models, services },
-    sequelize: { instance: { transaction: async fn => fn({ tx: true }) } },
+    sequelize: { instance: securityDb.sequelize, generateId: securityDb.generateId },
     log: { info() {}, warn() {}, error() {} }
   };
   await flowService(fastify, { name: 'ns' });
@@ -186,6 +190,7 @@ const makeEnv = async () => {
     flowRow,
     deliverableRows,
     releaseRows,
+    close: securityDb.close,
     ctx: { userInfo: { id: 'u_ai' }, actorType: 'mcp-ai' },
     admin: { userInfo: { id: 'u_admin' }, isAdmin: true }
   };

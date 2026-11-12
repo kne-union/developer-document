@@ -6,7 +6,7 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
       code: {
         type: DataTypes.STRING(32),
         unique: true,
-        comment: '流程流水号 FLOW-YYYYMM-0001'
+        comment: '业务编号：项目雪花 ID 的十进制字符串（与主键 id 分开；id 亦为雪花）。不用记录数生成。'
       },
       title: {
         type: DataTypes.STRING(200),
