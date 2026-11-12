@@ -48,6 +48,8 @@ const createServer = () => {
         OIDC_SERVICE_CLIENT_ID: { type: 'string', default: 'developer-document-service' },
         OIDC_SERVICE_CLIENT_SECRET: { type: 'string', default: '' },
         DEV_TOKEN_TTL: { type: 'number', default: 180 * 24 * 60 * 60 },
+        // nodejs-snowflake 的 instance_id，取值 0–4095；多进程 / 多实例必须互不相同，否则业务编号与主键可能碰撞
+        SNOWFLAKE_INSTANCE_ID: { type: 'number', default: 1 },
 
         OSS_REGION: { type: 'string' },
         OSS_BUCKET: { type: 'string' },
@@ -76,6 +78,10 @@ const createServer = () => {
           database: fastify.config.DB_DATABASE,
           username: fastify.config.DB_USERNAME,
           password: fastify.config.DB_PASSWORD
+        },
+        snowflake: {
+          instance_id: Number(fastify.config.SNOWFLAKE_INSTANCE_ID),
+          custom_epoch: new Date('2024-01-01').getTime()
         },
         connections: fastify.config.APPS_DB_DATABASE
           ? {

@@ -2,7 +2,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Collapse, Empty, Tag, Typography } from 'antd';
+import { Alert, Button, Collapse, Empty, Spin, Tag } from 'antd';
 import dayjs from 'dayjs';
 import MarkdownRender from '@kne/markdown-components-render';
 import '@kne/markdown-components-render/dist/index.css';
@@ -17,11 +17,16 @@ import ReleaseLog from './ReleaseLog';
 import { STAGE_CODES, STATUS_COLOR, PRIORITY_COLOR, stageMessageId, statusMessageId, priorityMessageId } from '../constants';
 import styles from '../style.module.scss';
 
-const { Text } = Typography;
 const formatTime = value => (value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '-');
+const ownerName = data => data?.ownerUser?.nickname || data?.ownerUser?.email || data?.ownerUserId || '-';
 
-// 详情页：顶部指标 + 阶段 StateBar，下方材料 / 需求说明 / 记录全部跟随所选阶段。
-// 版式刻意只有一层线（材料卡片），其余靠留白与浅底分区，避免框套框。
+const scrollToRecords = () => {
+  const node = document.getElementById('flow-records');
+  if (node) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// 详情页：顶部先交代状态与待办（打回 / 暂停 / 超期），再是标题、指标与关键操作，
+// 阶段条是全页唯一阶段入口；材料跟随所选阶段，记录区默认折叠，有待处理打回时自动展开台账。
 const TabDetail = createWithRemoteLoader({
   modules: ['components-core:Layout@Page', 'components-core:StateBar', 'components-core:Global@usePreset']
 })(
@@ -39,19 +44,29 @@ const TabDetail = createWithRemoteLoader({
       setSelectedStage(null);
     }, [id]);
 
+    const pageProps = {
+      ...props,
+      menu: menu || null,
+      backUrl: baseUrl,
+      title: formatMessage({ id: 'adminFlow.list.pageTitle' })
+    };
+
     return (
       <Fetch
         {...Object.assign({}, apis.flow.detail, { params: { id } })}
+        loading={
+          <Page {...pageProps}>
+            <div className={styles.pageState}>
+              <Spin />
+            </div>
+          </Page>
+        }
+        error={() => (
+          <Page {...pageProps}>
+            <Empty description={formatMessage({ id: 'adminFlow.detail.loadError' })} />
+          </Page>
+        )}
         render={({ data, reload }) => {
-          // 页头固定为模块名「流程管理」并带返回按钮；具体流程标题放到内容区第一行，
-          // 这样标题栏能明确「我在哪个模块」，返回路径也不会丢
-          const pageProps = {
-            ...props,
-            menu: menu || null,
-            backUrl: baseUrl,
-            title: formatMessage({ id: 'adminFlow.list.pageTitle' })
-          };
-
           if (!data) {
             return (
               <Page {...pageProps}>
@@ -64,6 +79,7 @@ const TabDetail = createWithRemoteLoader({
           const stage = selectedStage || currentStage;
           const isViewingCurrent = stage === currentStage;
           const stageName = formatMessage({ id: stageMessageId(stage), defaultMessage: stage });
+          const currentStageName = formatMessage({ id: stageMessageId(currentStage), defaultMessage: currentStage });
 
           // 详情接口返回全阶段材料，这里按所选阶段精确统计，避免历史阶段数字串味
           const allDeliverables = data.deliverables || [];
@@ -75,6 +91,7 @@ const TabDetail = createWithRemoteLoader({
 
           const isPaused = !!data.pausedAt;
           const overdue = !!data.dueAt && data.status === 'active' && dayjs(data.dueAt).isBefore(dayjs(), 'day');
+          const openFeedback = Array.isArray(data.openFeedback) ? data.openFeedback : [];
 
           const stats = [
             {
@@ -105,7 +122,7 @@ const TabDetail = createWithRemoteLoader({
             {
               key: 'owner',
               label: formatMessage({ id: 'adminFlow.detail.owner' }),
-              value: data.ownerUser?.nickname || data.ownerUser?.email || '-'
+              value: ownerName(data)
             },
             {
               key: 'due',
@@ -120,7 +137,7 @@ const TabDetail = createWithRemoteLoader({
                   <span className={styles.statProgressText}>
                     {doneCount}/{requiredTotal || 0}
                   </span>
-                  <span className={styles.statProgressBar}>
+                  <span className={styles.statProgressBar} aria-hidden="true">
                     <span style={{ width: `${progressPercent}%` }} />
                   </span>
                 </span>
@@ -134,6 +151,17 @@ const TabDetail = createWithRemoteLoader({
               ? `${formatMessage({ id: 'adminFlow.detail.materialsSummary' }, { total: requiredTotal, done: doneCount })} · ${formatMessage({ id: 'adminFlow.detail.aiDraftHint' }, { count: aiDraftCount })}`
               : formatMessage({ id: 'adminFlow.detail.materialsSummary' }, { total: requiredTotal, done: doneCount })
             : formatMessage({ id: 'adminFlow.detail.archiveHint' });
+
+          const pauseDescription = data.pauseReason
+            ? formatMessage({ id: 'adminFlow.detail.pausedReason' }, { reason: data.pauseReason })
+            : formatMessage({ id: data.pausedByType === 'mcp-ai' ? 'adminFlow.detail.pausedByAi' : 'adminFlow.detail.pausedByHuman' });
+
+          const recordLabel = (id, badge) => (
+            <span className={styles.recordLabel}>
+              {formatMessage({ id })}
+              {badge ? <span className={styles.recordBadge}>{badge}</span> : null}
+            </span>
+          );
 
           return (
             <Page {...pageProps}>
@@ -149,9 +177,15 @@ const TabDetail = createWithRemoteLoader({
                       </div>
                     ))}
                   </div>
-                  {/* 流水号与更新时间降级为一行小字，不再单独占一个概览区块 */}
+                  {/* 流水号、阶段停留与更新时间降级为一行小字，不再单独占一个概览区块 */}
                   <div className={styles.headerMeta}>
                     <span className={styles.metaCode}>{data.code || '-'}</span>
+                    {data.status === 'active' && typeof data.stayMinutes === 'number' ? (
+                      <>
+                        <span className={styles.metaDot} />
+                        <span>{formatMessage({ id: 'adminFlow.detail.stayMinutes' }, { minutes: data.stayMinutes })}</span>
+                      </>
+                    ) : null}
                     <span className={styles.metaDot} />
                     <span>{formatMessage({ id: 'adminFlow.detail.updatedAtInline' }, { time: formatTime(data.updatedAt) })}</span>
                   </div>
@@ -161,24 +195,71 @@ const TabDetail = createWithRemoteLoader({
                 </div>
               </div>
 
-              {/* 顶部阶段切换：StateBar step，是全页唯一的阶段入口 */}
+              {(openFeedback.length || isPaused || overdue) && (
+                <div className={styles.bannerStack}>
+                  {openFeedback.length ? (
+                    <Alert
+                      type="error"
+                      showIcon
+                      className={styles.banner}
+                      message={formatMessage({ id: 'adminFlow.detail.feedbackPendingTitle' }, { count: openFeedback.length })}
+                      description={
+                        <div className={styles.bannerBody}>
+                          <p>{openFeedback[0].feedback}</p>
+                          <p className={styles.bannerHint}>{formatMessage({ id: 'adminFlow.detail.feedbackPendingHint' })}</p>
+                        </div>
+                      }
+                      action={
+                        <Button size="small" onClick={scrollToRecords}>
+                          {formatMessage({ id: 'adminFlow.detail.viewRelease' })}
+                        </Button>
+                      }
+                    />
+                  ) : null}
+                  {isPaused ? <Alert type="warning" showIcon className={styles.banner} message={formatMessage({ id: 'adminFlow.detail.paused' })} description={pauseDescription} /> : null}
+                  {overdue ? (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      className={styles.banner}
+                      message={formatMessage({ id: 'adminFlow.detail.overdueTitle' })}
+                      description={formatMessage({ id: 'adminFlow.detail.overdueHint' }, { time: formatTime(data.dueAt) })}
+                    />
+                  ) : null}
+                </div>
+              )}
+
+              {/* 顶部阶段切换：StateBar step，是全页唯一的阶段入口；当前阶段在标签里标出，避免回看历史时分不清「现在走到哪」 */}
               <div className={styles.stageBar}>
                 <StateBar
                   type="step"
                   activeKey={stage}
                   onChange={key => setSelectedStage(key)}
-                  stateOption={STAGE_CODES.map((code, index) => ({
-                    key: code,
-                    tab: formatMessage({ id: stageMessageId(code), defaultMessage: code }),
-                    ...(index === STAGE_CODES.length - 1 ? { className: 'last' } : {})
-                  }))}
+                  stateOption={STAGE_CODES.map((code, index) => {
+                    const name = formatMessage({ id: stageMessageId(code), defaultMessage: code });
+                    return {
+                      key: code,
+                      tab: code === currentStage ? formatMessage({ id: 'adminFlow.detail.stageTabCurrent' }, { stage: name }) : name,
+                      ...(index === STAGE_CODES.length - 1 ? { className: 'last' } : {})
+                    };
+                  })}
                 />
               </div>
+
+              {!isViewingCurrent ? (
+                <Alert
+                  type="info"
+                  showIcon
+                  className={styles.banner}
+                  message={formatMessage({ id: 'adminFlow.detail.viewingArchiveTitle' }, { stage: stageName })}
+                  description={formatMessage({ id: 'adminFlow.detail.viewingArchiveHint' }, { current: currentStageName })}
+                />
+              ) : null}
 
               <div className={styles.sectionStack}>
                 <section className={styles.section}>
                   <div className={styles.sectionHead}>
-                    <h3 className={styles.sectionTitle}>{formatMessage({ id: 'adminFlow.detail.materials' }, { stage: stageName })}</h3>
+                    <h2 className={styles.sectionTitle}>{formatMessage({ id: 'adminFlow.detail.materials' }, { stage: stageName })}</h2>
                     <span className={styles.sectionSubtitle}>{materialsSubtitle}</span>
                   </div>
                   <DeliverablesPanel flowId={id} data={data} stage={stage} reload={reload} />
@@ -186,28 +267,36 @@ const TabDetail = createWithRemoteLoader({
 
                 <section className={styles.section}>
                   <div className={styles.sectionHead}>
-                    <h3 className={styles.sectionTitle}>{formatMessage({ id: 'adminFlow.detail.description' })}</h3>
+                    <h2 className={styles.sectionTitle}>{formatMessage({ id: 'adminFlow.detail.description' })}</h2>
                   </div>
                   {data.description ? (
                     <div className={styles.markdownBody}>
                       <MarkdownRender>{data.description}</MarkdownRender>
                     </div>
                   ) : (
-                    <Text type="secondary">-</Text>
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} className={styles.sectionEmpty} description={formatMessage({ id: 'adminFlow.detail.descriptionEmpty' })} />
                   )}
                 </section>
 
-                {/* 记录类内容收进无边框折叠，展开后由内部表格自己承担线条 */}
-                <Collapse
-                  ghost
-                  className={styles.records}
-                  items={[
-                    { key: 'records', label: formatMessage({ id: 'adminFlow.detail.timeline' }), children: <StageRecords flowId={id} /> },
-                    { key: 'tree', label: formatMessage({ id: 'adminFlow.detail.tabTree' }), children: <Tree baseUrl={baseUrl} rootId={data.rootId || id} currentId={id} /> },
-                    { key: 'ai', label: formatMessage({ id: 'adminFlow.detail.tabAiRuns' }), children: <AiRuns flowId={id} runs={data.aiRuns || data.recentRuns || []} /> },
-                    { key: 'release', label: formatMessage({ id: 'adminFlow.detail.tabRelease' }), children: <ReleaseLog flowId={id} /> }
-                  ]}
-                />
+                {/* 记录类内容收进无边框折叠，展开后由内部表格自己承担线条；有待处理打回时默认打开台账 */}
+                <div id="flow-records">
+                  <Collapse
+                    ghost
+                    key={`${id}-${openFeedback.length ? 'feedback' : 'plain'}`}
+                    className={styles.records}
+                    defaultActiveKey={openFeedback.length ? ['release'] : []}
+                    items={[
+                      { key: 'records', label: recordLabel('adminFlow.detail.timeline'), children: <StageRecords flowId={id} /> },
+                      { key: 'tree', label: recordLabel('adminFlow.detail.tabTree'), children: <Tree baseUrl={baseUrl} rootId={data.rootId || id} currentId={id} /> },
+                      { key: 'ai', label: recordLabel('adminFlow.detail.tabAiRuns'), children: <AiRuns flowId={id} runs={data.aiRuns || data.recentRuns || []} /> },
+                      {
+                        key: 'release',
+                        label: recordLabel('adminFlow.detail.tabRelease', openFeedback.length ? formatMessage({ id: 'adminFlow.detail.feedbackBadge' }, { count: openFeedback.length }) : null),
+                        children: <ReleaseLog flowId={id} />
+                      }
+                    ]}
+                  />
+                </div>
               </div>
             </Page>
           );

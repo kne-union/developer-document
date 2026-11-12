@@ -12,7 +12,8 @@ DECLARE
         't_flow', 'p_flow',
         't_flow_ai_run', 'p_flow_ai_run',
         't_flow_confirmation', 'p_flow_confirmation',
-        't_flow_deliverable', 'p_flow_deliverable'
+        't_flow_deliverable', 'p_flow_deliverable',
+        't_flow_release', 'p_flow_release'
     ];
 BEGIN
     FOREACH tbl IN ARRAY names LOOP
@@ -21,7 +22,7 @@ BEGIN
         END IF;
 
         IF tbl LIKE '%flow_ai_run' THEN
-            -- 租约唯一索引：active 释放后为 NULL，多行 NULL 互不冲突
+            -- 租约唯一约束由模型内的 unique(work_item_key, active) 建；此处只补派单扫描用的普通索引
             EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %s (work_item_key, active)', 'idx_' || tbl || '_lease', tbl);
             EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %s (lease_expires_at, status)', 'idx_' || tbl || '_expire', tbl);
             EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %s (flow_id, started_at)', 'idx_' || tbl || '_flow_started', tbl);
@@ -29,6 +30,10 @@ BEGIN
             EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %s (node_id, status, expires_at)', 'idx_' || tbl || '_pending', tbl);
         ELSIF tbl LIKE '%flow_deliverable' THEN
             EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %s (flow_id, stage, status)', 'idx_' || tbl || '_exit', tbl);
+        ELSIF tbl LIKE '%flow_release' THEN
+            -- 打回意见扫描与放行记录分页
+            EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %s (flow_id, feedback_status)', 'idx_' || tbl || '_feedback', tbl);
+            EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %s (release_id)', 'idx_' || tbl || '_release', tbl);
         ELSE
             -- t_flow / p_flow：暂停节点 path 扫描与树查询
             EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON %s (paused_at)', 'idx_' || tbl || '_paused', tbl);

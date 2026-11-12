@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { Alert, App, Button, List } from 'antd';
 import withLocale from '@root/withLocale';
@@ -19,17 +20,24 @@ const TransitionInner = createWithRemoteLoader({
     const needToStage = ['advance', 'rollback', 'force'].includes(action);
     const needRemarkRequired = ['rollback', 'force', 'archive'].includes(action);
     const missing = check?.missing || [];
+    const blockingChildren = check?.blockingChildren || [];
+    const waiting = check?.waiting || [];
     const stageOptions = getStageOptions(formatMessage);
+    const blockers = [
+      ...missing.map(item => item.name || item.templateCode),
+      ...blockingChildren.map(item => `${formatMessage({ id: 'adminFlow.transition.blockingChildren' })} ${item}`),
+      ...waiting.map(item => `${formatMessage({ id: 'adminFlow.transition.waiting' })} ${item}`)
+    ];
 
     return (
       <>
         {['advance', 'force', 'complete'].includes(action) ? (
           <Alert
-            type={check && !check.canAdvance ? 'warning' : 'info'}
+            type={check && !(check.canAdvance ?? blockers.length === 0) ? 'warning' : 'info'}
             showIcon
             style={{ marginBottom: 12 }}
             message={formatMessage({ id: 'adminFlow.transition.missingTitle' })}
-            description={missing.length ? <List size="small" dataSource={missing} renderItem={item => <List.Item>{item.name || item.templateCode}</List.Item>} /> : formatMessage({ id: 'adminFlow.transition.missingEmpty' })}
+            description={blockers.length ? <List size="small" dataSource={blockers} renderItem={item => <List.Item>{item}</List.Item>} /> : formatMessage({ id: 'adminFlow.transition.missingEmpty' })}
           />
         ) : null}
 
@@ -79,6 +87,7 @@ const Transition = createWithRemoteLoader({
     const { ajax, apis } = usePreset();
     const { message } = App.useApp();
     const { formatMessage } = useIntl();
+    const submitting = useRef(false);
 
     // 相邻下一阶段，作为推进 / 强制推进的默认目标
     const stageIndex = STAGE_CODES.indexOf(data?.stage);
@@ -114,9 +123,12 @@ const Transition = createWithRemoteLoader({
                   params: { flowId: data.id, fromStage: data.stage, action }
                 })
               );
-              check = resData?.code === 0 ? resData.data : null;
+              if (resData?.code !== 0) throw new Error(resData?.msg || resData?.message || 'precheck failed');
+              check = resData.data || null;
             } catch (e) {
-              check = null;
+              // 预检失败不能当成「无阻塞」继续打开弹窗，否则后台会把缺失必交项当成已满足
+              message.error(`${formatMessage({ id: 'adminFlow.transition.checkFailed' })}：${e?.message || String(e)}`);
+              return;
             }
           }
 
@@ -128,18 +140,22 @@ const Transition = createWithRemoteLoader({
               // 默认目标阶段也要给完整选项对象，否则 SuperSelect 不回显
               data: { toStage: toSelectOption(nextStage, stageOptions) },
               onSubmit: async formData => {
+                if (submitting.current) return false;
                 // 有缺项时禁用普通「推进」，只允许「强制推进」
                 if (action === 'advance' && check && !check.canAdvance) {
                   message.warning(formatMessage({ id: 'adminFlow.transition.disabledHint' }));
                   return false;
                 }
-                const apiConfig = action === 'archive' ? apis.flow.archive : apis.flow.transition;
-                const { data: resData } = await ajax(Object.assign({}, apiConfig, { data: buildPayload(formData) }));
-                if (resData.code !== 0) {
-                  return false;
+                submitting.current = true;
+                try {
+                  const apiConfig = action === 'archive' ? apis.flow.archive : apis.flow.transition;
+                  const { data: resData } = await ajax(Object.assign({}, apiConfig, { data: buildPayload(formData) }));
+                  if (resData.code !== 0) return false;
+                  message.success(formatMessage({ id: 'adminFlow.transition.success' }));
+                  onSuccess && onSuccess();
+                } finally {
+                  submitting.current = false;
                 }
-                message.success(formatMessage({ id: 'adminFlow.transition.success' }));
-                onSuccess && onSuccess();
               }
             },
             children: <TransitionInner action={action} check={check} nextStage={nextStage} />

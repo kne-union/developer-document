@@ -4,7 +4,11 @@ const fp = require('fastify-plugin');
  * 流程管理 REST 接口。
  * 人与 MCP 写同一套 services.flow.*，本层只做 schema 校验与转发，不写业务判断。
  * 唯一例外：GET /flow/confirmation/:token 与 POST /flow/confirmation/:token/answer
- * 是免 adminAuth 的真人签字通道，身份来自 @kne/fastify-shorten 签发的一次性短码。
+ * 是免 adminAuth 的「可选人工复核」通道。URL 里的短码只是「查看凭证」，
+ * 提交决策必须另附经带外通道投递的 answerToken（签字凭证），或在显式开启的授权代签模式下附授权凭据。
+ *
+ * 产品方向：AI 自主驱动全流程，人工控制点只有后台的「撤回」（/release/undo）
+ * 与「打回」（/release/reject + feedback）。确认单不再是放行的前置闸门。
  */
 module.exports = fp(async (fastify, options) => {
   const { services } = fastify[options.name];
@@ -13,8 +17,15 @@ module.exports = fp(async (fastify, options) => {
   const prefix = `${options.prefix}/flow`;
   const F = () => services.flow;
 
-  const get = (path, schema, handler) => fastify.get(`${prefix}${path}`, { onRequest: adminAuth, schema }, async request => handler(request.query || {}, request));
-  const post = (path, schema, handler) => fastify.post(`${prefix}${path}`, { onRequest: adminAuth, schema }, async request => handler(request.body || {}, request));
+  // adminAuth 已保证是后台管理员；显式注入 isAdmin，service 层据此生成 admin_center 审计凭证，
+  // MCP 侧无法伪造该标记（ctx 只带 userInfo.id / actorType）。
+  const asAdminRequest = request => {
+    // 不要展开 request（装饰属性多为原型 getter）；原地打标记即可
+    request.isAdmin = true;
+    return request;
+  };
+  const get = (path, schema, handler) => fastify.get(`${prefix}${path}`, { onRequest: adminAuth, schema }, async request => handler(request.query || {}, asAdminRequest(request)));
+  const post = (path, schema, handler) => fastify.post(`${prefix}${path}`, { onRequest: adminAuth, schema }, async request => handler(request.body || {}, asAdminRequest(request)));
 
   // ---------- 阶段常量与统计 ----------
   get('/stages', { summary: '阶段常量与阶段模板数量' }, () => F().stages());
@@ -172,12 +183,14 @@ module.exports = fp(async (fastify, options) => {
     '/deliverable/review',
     {
       summary: '审核通过 / 驳回',
-      body: { type: 'object', required: ['id', 'result'], properties: { id: { type: 'string' }, result: { type: 'string', enum: ['accept', 'reject'] }, reviewRemark: { type: 'string' } } }
+      body: { type: 'object', required: ['id', 'result'], properties: { id: { type: 'string' }, result: { type: 'string', enum: ['accept', 'reject'] }, reviewRemark: { type: 'string' }, confirmationId: { type: 'string' } } }
     },
     (body, request) => F().deliverableReview(body, request)
   );
-  post('/deliverable/waive', { summary: '豁免必交项', body: { type: 'object', required: ['id', 'reviewRemark'], properties: { id: { type: 'string' }, reviewRemark: { type: 'string' } } } }, (body, request) =>
-    F().deliverableWaive(body, request)
+  post(
+    '/deliverable/waive',
+    { summary: '豁免必交项', body: { type: 'object', required: ['id', 'reviewRemark'], properties: { id: { type: 'string' }, reviewRemark: { type: 'string' }, confirmationId: { type: 'string' } } } },
+    (body, request) => F().deliverableWaive(body, request)
   );
 
   // ---------- 裂变（AI 出稿 + 真人确认） ----------
@@ -203,8 +216,8 @@ module.exports = fp(async (fastify, options) => {
   post(
     '/decompose/apply',
     {
-      summary: '按已批准的确认凭证落树',
-      body: { type: 'object', required: ['confirmationId'], additionalProperties: false, properties: { confirmationId: { type: 'string' } } }
+      summary: '按草案落树（autonomous=true 时 AI 自主）',
+      body: { type: 'object', required: ['confirmationId'], additionalProperties: false, properties: { confirmationId: { type: 'string' }, autonomous: { type: 'boolean' } } }
     },
     (body, request) => F().applyDecomposition(body, request)
   );
@@ -261,7 +274,10 @@ module.exports = fp(async (fastify, options) => {
             answers: { type: 'array' },
             comment: { type: 'string' },
             finalChildren: { type: 'array' },
-            humanEdits: { type: 'object' }
+            humanEdits: { type: 'object' },
+            answerToken: { type: 'string' },
+            assisted: { type: 'boolean' },
+            authorizationRef: { type: 'string' }
           }
         }
       }
@@ -281,7 +297,7 @@ module.exports = fp(async (fastify, options) => {
   post(
     '/resume',
     {
-      summary: '恢复（人无需凭证，AI 需 subject=resume 凭证）',
+      summary: '恢复（AI 自主恢复自己暂停的任务；人工暂停需真人恢复）',
       body: { type: 'object', properties: { nodeId: { type: 'string' }, rootId: { type: 'string' }, stage: { type: 'string' }, reason: { type: 'string' }, confirmationId: { type: 'string' } } }
     },
     (body, request) => F().resume(body, request)
@@ -290,6 +306,18 @@ module.exports = fp(async (fastify, options) => {
   // ---------- 队列与放行记录（后台可观测） ----------
   get('/queue/peek', { summary: 'AI 任务队列与排除项', query: { type: 'object', properties: { stage: { type: 'string' }, limit: { type: 'number', default: 10 } } } }, (query, request) => F().queuePeek(query, request));
   get('/release/list', { summary: '放行记录', query: { type: 'object', properties: { flowId: { type: 'string' }, perPage: { type: 'number' }, currentPage: { type: 'number' } } } }, (query, request) => F().releaseList(query, request));
-  post('/release/undo', { summary: '撤销一次放行', body: { type: 'object', required: ['releaseId', 'reason'], properties: { releaseId: { type: 'string' }, reason: { type: 'string' } } } }, (body, request) => F().releaseUndo(body, request));
+  post('/release/undo', { summary: '撤回一次放行（按快照复原，不留反馈）', body: { type: 'object', required: ['releaseId', 'reason'], properties: { releaseId: { type: 'string' }, reason: { type: 'string' } } } }, (body, request) =>
+    F().releaseUndo(body, request)
+  );
+  // 人工打回：复原 + 写意见，AI 未 ack 前 releaseCheck 会阻断同一流程的下一次放行
+  post('/release/reject', { summary: '打回一次放行并附人工意见', body: { type: 'object', required: ['releaseId', 'reason'], properties: { releaseId: { type: 'string' }, reason: { type: 'string', maxLength: 1000 } } } }, (body, request) =>
+    F().releaseReject(body, request)
+  );
+  get('/release/feedback', { summary: '人工打回意见', query: { type: 'object', properties: { flowId: { type: 'string' }, status: { type: 'string', enum: ['open', 'acknowledged'] } } } }, (query, request) =>
+    F().humanFeedback(query, request)
+  );
   get('/run/detail', { summary: 'AI run 详情', query: { type: 'object', properties: { runId: { type: 'string' } }, required: ['runId'] } }, (query, request) => F().runDetail(query, request));
+  get('/run/list', { summary: 'AI run 列表（详情页 AI 记录 Tab）', query: { type: 'object', properties: { flowId: { type: 'string' }, perPage: { type: 'number' }, currentPage: { type: 'number' } } } }, (query, request) =>
+    F().runList(query, request)
+  );
 });

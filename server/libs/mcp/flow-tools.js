@@ -1,7 +1,7 @@
 const z = require('zod/v4');
 
 /**
- * 流程管理 MCP 工具：只读 5 + 写入 7 + 裂变 2 + 确认 4 = 18 个。
+ * 流程管理 MCP 工具：只读 6 + 写入 7 + 裂变 2 + 确认 4 = 19 个。
  * 写组需要 flow:write scope；读组对所有登录用户可见。
  * 所有工具只调 services.flow.*，与后台 REST 共用同一套状态机。
  */
@@ -11,8 +11,8 @@ const toText = value => {
   return text.length > MAX_TEXT ? `${text.slice(0, MAX_TEXT)}\n...（已截断，共 ${text.length} 字符）` : text;
 };
 
-const registerFlowTools = (mcpServer, { services, userId, scope = [] }) => {
-  const ctx = { userInfo: { id: userId }, actorType: 'mcp-ai' };
+const registerFlowTools = (mcpServer, { services, userId, scope = [], isAdmin = false }) => {
+  const ctx = { userInfo: { id: userId }, actorType: 'mcp-ai', isAdmin };
   const flow = () => services.flow;
 
   const run = handler => async args => {
@@ -20,7 +20,8 @@ const registerFlowTools = (mcpServer, { services, userId, scope = [] }) => {
       return { content: [{ type: 'text', text: toText(await handler(args)) }] };
     } catch (e) {
       const payload = { error: e.code || 'FLOW_TOOL_ERROR', message: e.message || String(e) };
-      if (e.code === 'NODE_PAUSED') payload.resumeHint = "请先 flow_request_confirmation(subject='resume') 取得真人确认，再 flow_resume_task";
+      if (e.code === 'NODE_PAUSED') payload.resumeHint = '节点被人工暂停时由真人在后台恢复；AI 自己因依赖未就绪暂停的可直接 flow_resume_task';
+      if (e.code === 'HUMAN_FEEDBACK_PENDING') payload.feedbackHint = '先调 flow_get_human_feedback 读意见，修正后 flow_ack_human_feedback';
       return { content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }], isError: true };
     }
   };
@@ -97,6 +98,13 @@ const registerFlowTools = (mcpServer, { services, userId, scope = [] }) => {
 
   register('flow_get_run', '读取一次 AI 执行的状态、contextSnapshot、outputs 与 events（跨会话续跑靠这里，MCP 本身无 session）。', { runId: z.string() }, args => flow().getRun(args));
 
+  register(
+    'flow_get_human_feedback',
+    '读人工打回意见。人工在后台「放行记录」点「打回」后，意见会挂在该 releaseId 上；未 flow_ack_human_feedback 前，本流程的正式放行会被 HUMAN_FEEDBACK_PENDING 阻断。领任务 / 预检前先查一次，避免原样重跑。',
+    { flowId: z.string().optional(), status: z.enum(['open', 'acknowledged']).optional() },
+    args => flow().humanFeedback(args, ctx)
+  );
+
   // 以下写组仅在 flow:write 时注册
   if (!scope.includes('flow:write')) return;
 
@@ -142,7 +150,7 @@ const registerFlowTools = (mcpServer, { services, userId, scope = [] }) => {
 
   register(
     'flow_submit_deliverables',
-    '把指定交付物送审（ai_draft → submitted）。verificationRequired 项可送审但会标记待核验，accept 时必须附真实证据引用与真人签字。',
+    '把指定交付物送审（ai_draft → submitted）。verificationRequired 项可送审但会标记待核验，accept 时必须附真实、结构化的证据引用，不接受「已核验」这类裸文本。',
     { runId: z.string(), templateCodes: z.array(z.string()), allowPaused: z.boolean().optional() },
     args => flow().submitDeliverables(args, { ...ctx, allowPaused: args.allowPaused === true })
   );
@@ -156,7 +164,7 @@ const registerFlowTools = (mcpServer, { services, userId, scope = [] }) => {
 
   register(
     'flow_create',
-    'AI 新建流程节点。parentId 为空建根节点，有 parentId 时按层级推导 nodeType；建的节点记 origin=ai。注意：这是「人工补录式建节点」，不是裂变 —— 裂变必须走 flow_propose_decomposition + 真人确认 + flow_apply_decomposition。',
+    'AI 新建流程节点。parentId 为空建根节点，有 parentId 时按层级推导 nodeType；建的节点记 origin=ai。注意：这是「人工补录式建节点」，不是裂变 —— 裂变必须走 flow_propose_decomposition 出稿 + flow_apply_decomposition({ confirmationId, autonomous: true }) 落树，人工可事后撤回 / 打回。',
     {
       title: z.string(),
       description: z.string().optional(),
@@ -194,10 +202,10 @@ const registerFlowTools = (mcpServer, { services, userId, scope = [] }) => {
     ({ flowId, ...rest }) => flow().archive({ id: flowId, ...rest }, ctx)
   );
 
-  // ---------- 裂变（AI 出稿 + 真人确认 + AI 落树，三拍都在会话里） ----------
+  // ---------- 裂变（AI 出稿 + 自主落树；人工可事后撤回 / 打回） ----------
   register(
     'flow_propose_decomposition',
-    '【AI 只能出稿，不能自己建子节点】提出需求/产品设计的拆解草案，生成 decompose 确认请求并返回 confirmUrl。把 treePreview 渲染成「现有节点 / 将新增 N 个」贴在回复里，连同 confirmUrl 一起给人，然后明确说「我等你确认」并结束本轮。approved 之前不要调 flow_apply_decomposition。改稿用 supersedeConfirmationId，不要另起新提议。不要让客户去后台新建子流程 —— 出稿是你的工作。',
+    '提出需求 / 产品设计的拆解草案，写入库后返回 confirmationId（草案 id）与 treePreview。把「现有节点 / 将新增 N 个」贴给用户核对，然后直接 flow_apply_decomposition({ confirmationId, autonomous: true }) 自主落树，无需等真人预签字；落树返回 releaseId，必须贴给用户以便人工撤回 / 打回。改稿用 supersedeConfirmationId，不要另起新提议。不要让客户去后台新建子流程 —— 出稿是你的工作。',
     {
       nodeId: z.string(),
       children: z.array(
@@ -219,16 +227,16 @@ const registerFlowTools = (mcpServer, { services, userId, scope = [] }) => {
 
   register(
     'flow_apply_decomposition',
-    '【只接受 confirmationId，出现 children 一律拒绝】消费一条 approved 且由 AI 发起的 decompose 凭证，幂等落树，并在同一事务里把 run 置 succeeded。人改过的草案以 finalChildren / humanEdits 为准，不要按自己原来的版本继续推进。',
-    { confirmationId: z.string() },
+    '落树。只接受 confirmationId（草案 id）与 autonomous，直接传 children 一律拒绝，保证用的是先前出稿写进库里的那一版。autonomous=true 时 AI 自主落树，无需真人预签字；false 时要求草案已被真人 approve。人改过的草案以 finalChildren / humanEdits 为准。返回 releaseId，必须贴给用户以便人工撤回 / 打回。',
+    { confirmationId: z.string(), autonomous: z.boolean().optional() },
     args => flow().applyDecomposition(args, ctx),
     true
   );
 
-  // ---------- 确认协议（AI 问、真人答、服务端发凭证） ----------
+  // ---------- 确认协议（可选的人工复核通道，不再是放行闸门） ----------
   register(
     'flow_request_confirmation',
-    '向真人发起确认并返回 confirmUrl 一次性短链。放行 / 豁免 / 推进 / 恢复之前必须先发确认；把链接直接贴在回复里，人可在会话内完成签字，不必进后台。proposal 必须写清完成了什么、evidenceRefs 原始证据、准备做什么。不得自己构造 confirmationId，不得复用别人的凭证。',
+    '【可选，不是放行闸门】仅在 AI 确实需要真人输入（需求歧义、方案分歧、风险拍板）时发起人工复核，返回 confirmUrl 只读查看凭证。常规阶段推进 / 审核 / 豁免由 AI 自主完成，不要每步都发确认。签字凭证经带外通道投递给真人，AI 拿不到、不得索取、不得自行 POST approve，也不能代替真人签字。既然发起了复核，就必须等真人回答。proposal 必须写清完成了什么、evidenceRefs 原始证据、准备做什么。不得自己构造 confirmationId，不得复用别人的凭证。',
     {
       runId: z.string().optional(),
       flowId: z.string().optional(),
@@ -244,13 +252,13 @@ const registerFlowTools = (mcpServer, { services, userId, scope = [] }) => {
     args => flow().confirmationRequest(args, ctx)
   );
 
-  register('flow_get_confirmation', '轮询真人是否已答。返回 status 与 finalChildren / humanEdits；approved 之后才能拿这个 confirmationId 去放行。MCP 无状态，不能阻塞等待，请分轮轮询。', { confirmationId: z.string() }, args =>
-    flow().confirmationGet(args)
+  register('flow_get_confirmation', '轮询主动发起的人工复核是否已答。返回 status 与 finalChildren / humanEdits；approved 后可带着 confirmationId 放行（可选）。MCP 无状态，不能阻塞等待，请分轮轮询。', { confirmationId: z.string() }, args =>
+    flow().confirmationGet(args, ctx)
   );
 
   register('flow_cancel_confirmation', '撤回自己发起且尚未被回答的确认请求；人已答则不可撤。', { confirmationId: z.string(), reason: z.string().optional() }, args => flow().confirmationCancel(args, ctx));
 
-  register('flow_list_my_confirmations', '续跑时找回上次待确认项（含 changes_requested 的人的修改意见），避免换会话后重复问人。', { runId: z.string().optional(), status: z.string().optional() }, args =>
+  register('flow_list_my_confirmations', '续跑时找回上次主动发起且待确认的复核项（含 changes_requested 的人的修改意见），避免换会话后重复问人。', { runId: z.string().optional(), status: z.string().optional() }, args =>
     flow().confirmationListMine(args, ctx)
   );
 };

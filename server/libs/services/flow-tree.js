@@ -1,7 +1,7 @@
 const fp = require('fastify-plugin');
 const { Op } = require('sequelize');
 const { NODE_TYPE_CHILDREN, NODE_TYPE_STAGES, isStageAllowed } = require('../utils/flow-stages');
-const { fail, asId, plain, makeEvent } = require('../utils/flow-helpers');
+const { fail, asId, plain, makeEvent, releaseId } = require('../utils/flow-helpers');
 
 const MAX_DEPTH = 4;
 const MAX_CHILDREN = 20;
@@ -62,8 +62,9 @@ module.exports = fp(async (fastify, options) => {
   };
 
   /**
-   * 模块私有：建子节点只允许被 applyDecomposition 以已批准的 confirmation 调用。
-   * 对外不暴露 createChildren，从机制上堵死「无凭证建树」。
+   * 模块私有：建子节点只允许被 applyDecomposition 以 approved 草案调用。
+   * autonomous 模式下由服务端先授权置为 approved（台账记 ai_autonomous），不是真人签字。
+   * 对外不暴露 createChildren，从机制上堵死「AI 直接传 children 建树」。
    */
   const createChildren = async ({ parent, children, confirmation, transaction }) => {
     if (!confirmation || confirmation.status !== 'approved' || confirmation.subject !== 'decompose' || confirmation.requestedByType !== 'ai') {
@@ -186,38 +187,83 @@ module.exports = fp(async (fastify, options) => {
       ...confirmation,
       warnings,
       instructions: [
-        '你不能自己创建子节点，只能提出拆解草案并等真人确认。',
-        '把 treePreview 渲染成「现有节点 / 将新增 N 个」贴给用户，并给出 confirmUrl。',
-        '本轮到此结束，明确告诉人「我等你确认」；approved 之前不要调用 flow_apply_decomposition。',
-        '人给修改意见时用 supersedeConfirmationId 出下一版，不要另起一条新提议。'
+        'AI 自主驱动：确认草案无误后直接 flow_apply_decomposition({ confirmationId, autonomous: true }) 落树，无需等真人预签字。',
+        '落树会返回 releaseId，必须贴给用户：人工可在后台「放行记录」撤回或打回这次裂变。',
+        '把 treePreview 渲染成「现有节点 / 将新增 N 个」贴给用户，便于人工事后核对。',
+        '若你主动希望真人先拍板，可发 confirmUrl 等确认（可选，不是必填闸门）；人给修改意见时用 supersedeConfirmationId 出下一版。'
       ]
     };
   };
 
-  /** 落树：DTO 只允许 confirmationId，出现 children 直接拒 */
+  /**
+   * 落树。DTO 只允许 confirmationId / autonomous，禁止直接传 children，
+   * 保证用的草案一定是先前 proposeDecomposition 写进库里的那一版。
+   * autonomous=true 时 AI 自主落树（无真人预签字），台账快照让人工可事后撤回 / 打回。
+   */
   const applyDecomposition = async (params = {}, request = {}) => {
-    const keys = Object.keys(params).filter(key => key !== 'confirmationId');
-    if (keys.length) throw fail('SCHEMA_VIOLATION', `flow_apply_decomposition 只接受 confirmationId，不接受 ${keys.join(', ')}`);
-    const { confirmationId } = params;
-    if (!confirmationId) throw fail('CONFIRMATION_REQUIRED', '缺少 confirmationId');
+    const allowed = ['confirmationId', 'autonomous'];
+    const keys = Object.keys(params).filter(key => !allowed.includes(key));
+    if (keys.length) throw fail('SCHEMA_VIOLATION', `flow_apply_decomposition 只接受 confirmationId / autonomous，不接受 ${keys.join(', ')}`);
+    const { confirmationId, autonomous = false } = params;
+    if (!confirmationId) throw fail('CONFIRMATION_REQUIRED', '缺少 confirmationId（裂变草案 id）');
+    const rid = releaseId();
 
     const result = await fastify.sequelize.instance.transaction(async transaction => {
       const confirmation = await models.flowConfirmation.findByPk(confirmationId, { transaction });
-      if (!confirmation) throw fail('INVALID_CONFIRMATION', '确认凭证不存在');
-      if (confirmation.subject !== 'decompose' || confirmation.status !== 'approved' || confirmation.requestedByType !== 'ai') {
-        throw fail('INVALID_CONFIRMATION', '落树需要已批准且由 AI 发起的 decompose 凭证');
+      if (!confirmation) throw fail('INVALID_CONFIRMATION', '裂变草案不存在');
+      if (confirmation.subject !== 'decompose' || confirmation.requestedByType !== 'ai') {
+        throw fail('INVALID_CONFIRMATION', '落树需要由 AI 发起的 decompose 草案');
       }
-      if (confirmation.usedAt) throw fail('CONFIRMATION_USED', '该凭证已被消费（裂变已落树）');
-      if (confirmation.expiresAt < new Date()) throw fail('CONFIRMATION_EXPIRED', '确认凭证已过期');
+      if (!['pending', 'approved'].includes(confirmation.status)) throw fail('INVALID_CONFIRMATION', `草案状态不可落树：${confirmation.status}`);
+      if (confirmation.status === 'pending' && !autonomous) {
+        throw fail('AUTONOMOUS_REQUIRED', '草案尚未经真人批准；AI 自主落树请显式传 autonomous: true');
+      }
+      if (confirmation.usedAt) throw fail('CONFIRMATION_USED', '该草案已被消费（裂变已落树）');
+      if (confirmation.expiresAt < new Date()) throw fail('CONFIRMATION_EXPIRED', '裂变草案已过期');
 
       const parent = await getNode(confirmation.nodeId || confirmation.flowId);
       // 暂停前的 approved 凭证依然有效，但暂停期间不得改树（6B.2.4 第 6 条）
       if (parent.pausedAt) throw fail('NODE_PAUSED', '节点暂停中，恢复后再落树');
       const children = confirmation.proposal?.finalChildren || confirmation.proposal?.children || [];
+      const before = {
+        flow: { stage: parent.stage, status: parent.status, nodeType: parent.nodeType, version: Number(parent.version), isAggregate: !!parent.isAggregate, upstreamNodeIds: parent.upstreamNodeIds || [] },
+        deliverables: [],
+        decompose: { parentId: asId(parent.id), isAggregate: !!parent.isAggregate, upstreamNodeIds: parent.upstreamNodeIds || [], childNodeIds: [] }
+      };
+      // createChildren 要求草案已是 approved；自主模式下由服务端在此授权（不是真人签字），
+      // 台账 mode=ai_autonomous 会如实记录这一点，人工仍可事后撤回 / 打回。
+      if (autonomous && confirmation.status === 'pending') {
+        await confirmation.update({ status: 'approved', comment: 'AI 自主落树（人工可撤回 / 打回）' }, { transaction });
+      }
       const created = await createChildren({ parent, children, confirmation, transaction });
+      before.decompose.childNodeIds = created.map(item => asId(item.id));
       // 父节点裂变出子节点后进入树语义：标记聚合，等待子节点自底向上汇聚
       await parent.update({ isAggregate: true, upstreamNodeIds: created.map(item => asId(item.id)) }, { transaction });
-      await confirmation.update({ usedAt: new Date(), usedByReleaseId: `decompose_${asId(confirmation.id)}` }, { transaction });
+      await confirmation.update({ usedAt: new Date(), usedByReleaseId: rid }, { transaction });
+      if (models.flowRelease) {
+        await models.flowRelease.create(
+          {
+            releaseId: rid,
+            flowId: asId(parent.id),
+            runId: confirmation.runId ? asId(confirmation.runId) : null,
+            action: 'decompose',
+            subject: 'decompose',
+            stage: parent.stage,
+            fromStage: parent.stage,
+            toStage: parent.stage,
+            actorUserId: asId(request?.userInfo?.id),
+            actorType: 'mcp-ai',
+            mode: autonomous ? 'ai_autonomous' : 'human_confirmed',
+            confirmationId: asId(confirmation.id),
+            before,
+            after: { decompose: before.decompose },
+            evidenceRefs: [],
+            note: confirmation.proposal?.rationale || null,
+            createdUserId: asId(request?.userInfo?.id)
+          },
+          { transaction }
+        );
+      }
 
       // 落树由同一事务把 run 置 succeeded 并写 outputs.decomposition
       if (confirmation.runId) {
@@ -238,9 +284,15 @@ module.exports = fp(async (fastify, options) => {
           );
         }
       }
-      return { parentId: asId(parent.id), nodeIds: created.map(item => asId(item.id)), confirmationId: asId(confirmation.id) };
+      return { parentId: asId(parent.id), nodeIds: created.map(item => asId(item.id)), confirmationId: asId(confirmation.id), releaseId: rid, mode: autonomous ? 'ai_autonomous' : 'human_confirmed' };
     });
-    return { ...result, status: 'succeeded', proposalsUsed: 1, requestedBy: asId(request?.userInfo?.id) };
+    return {
+      ...result,
+      status: 'succeeded',
+      proposalsUsed: 1,
+      requestedBy: asId(request?.userInfo?.id),
+      instructions: ['已落树。请把 releaseId 贴给用户：人工可在后台「放行记录」撤回或打回这次裂变。']
+    };
   };
 
   Object.assign(services, {

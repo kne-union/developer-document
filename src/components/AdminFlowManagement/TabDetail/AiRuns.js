@@ -64,13 +64,9 @@ const AiRuns = createWithRemoteLoader({
       });
     };
 
-    if (!list.length) {
-      return <Empty description={formatMessage({ id: 'adminFlow.ai.noRuns' })} />;
-    }
-
-    return (
+    const renderTable = rows => (
       <Table
-        dataSource={list}
+        dataSource={rows}
         columns={[
           { name: 'goal', title: formatMessage({ id: 'adminFlow.queue.table.goal' }), renderType: 'main', getValueOf: item => formatMessage({ id: queueGoalMessageId(item.goal), defaultMessage: item.goal || '-' }) },
           { name: 'status', title: formatMessage({ id: 'adminFlow.ai.status' }), renderType: 'tag-short', getValueOf: item => ({ type: item.status === 'succeeded' ? 'success' : 'default', text: item.status || '-' }) },
@@ -84,6 +80,18 @@ const AiRuns = createWithRemoteLoader({
             getValueOf: item => [{ children: formatMessage({ id: 'adminFlow.ai.viewDetail' }), onClick: () => openDetail(item.runId || item.id) }]
           }
         ]}
+      />
+    );
+
+    if (list.length) return renderTable(list);
+    // 详情接口不返回 recentRuns / aiRuns，Tab 自行拉取，否则「AI 记录」恒为空
+    return (
+      <Fetch
+        {...Object.assign({}, apis.flow.runList, { params: { flowId, perPage: 50 } })}
+        render={({ data }) => {
+          const fetched = Array.isArray(data) ? data : data?.pageData || [];
+          return fetched.length ? renderTable(fetched) : <Empty description={formatMessage({ id: 'adminFlow.ai.noRuns' })} />;
+        }}
       />
     );
   })
