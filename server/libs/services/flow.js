@@ -33,6 +33,18 @@ module.exports = fp(async (fastify, options) => {
     return flow;
   };
 
+  const userInclude = (alias, required = false) => {
+    const userModel = fastify.account?.models?.user;
+    if (!userModel) return null;
+    return { model: userModel, as: alias, attributes: ['id', 'email', 'phone', 'nickname'], required };
+  };
+
+  const stayMinutesOf = data => {
+    if (!data?.stageEnteredAt) return 0;
+    const entered = new Date(data.stageEnteredAt).getTime();
+    return Number.isFinite(entered) ? Math.max(0, Math.round((Date.now() - entered) / 60000)) : 0;
+  };
+
   /**
    * 归属校验：后台管理员（controller 注入 isAdmin）与超管放行，
    * 其余调用者必须是 owner / 参与人 / 认领人之一，防止拿任意 flowId / runId 操作他人流程。
@@ -269,7 +281,7 @@ module.exports = fp(async (fastify, options) => {
       limit: Number(perPage),
       offset: (Number(currentPage) - 1) * Number(perPage),
       order: [['createdAt', 'DESC']],
-      include: [{ model: fastify.account.models.user, as: 'createdUser', attributes: ['id', 'email', 'phone', 'nickname'] }]
+      include: [userInclude('createdUser'), userInclude('ownerUser')].filter(Boolean)
     });
     return {
       totalCount: count,
@@ -281,7 +293,7 @@ module.exports = fp(async (fastify, options) => {
           // 列表页按 parentId 组树，父子两侧必须是同一种字符串形态，否则树挂不上
           parentId: data.parentId === null || data.parentId === undefined ? null : asId(data.parentId),
           rootId: data.rootId === null || data.rootId === undefined ? null : asId(data.rootId),
-          stayMinutes: Math.round((Date.now() - new Date(data.stageEnteredAt).getTime()) / 60000)
+          stayMinutes: stayMinutesOf(data)
         };
       })
     };
@@ -301,7 +313,9 @@ module.exports = fp(async (fastify, options) => {
   };
 
   const detail = async ({ id }) => {
-    const flow = await getFlow(id);
+    const include = [userInclude('ownerUser'), userInclude('createdUser')].filter(Boolean);
+    const flow = include.length ? await models.flow.findByPk(id, { include }) : await getFlow(id);
+    if (!flow) throw fail('FLOW_NOT_FOUND', '流程不存在');
     const records = await models.flowStageRecord.findAll({ where: { flowId: asId(flow.id) }, order: [['enteredAt', 'ASC']] });
     const deliverables = await models.flowDeliverable.findAll({
       where: { flowId: asId(flow.id) },
@@ -312,13 +326,16 @@ module.exports = fp(async (fastify, options) => {
     });
     const summary = summarize(deliverables.filter(item => item.stage === flow.stage));
     const data = plain(flow);
+    // 未处理的人工打回意见要出现在详情页顶部，不能只藏在折叠的放行台账里
+    const feedback = await openFeedback(flow.id);
     return {
       ...data,
       id: asId(data.id),
-      stayMinutes: Math.round((Date.now() - new Date(data.stageEnteredAt).getTime()) / 60000),
+      stayMinutes: stayMinutesOf(data),
       records: records.map(item => ({ ...plain(item), id: asId(item.id) })),
       deliverables: deliverables.map(item => ({ ...plain(item), id: asId(item.id) })),
       deliverableSummary: summary,
+      openFeedback: feedback,
       paused: !!data.pausedAt
     };
   };
@@ -375,6 +392,7 @@ module.exports = fp(async (fastify, options) => {
   const update = async ({ id, version, ...fields }, request = {}) => {
     const flow = await getFlow(id);
     await assertActor(flow, request);
+    if (['completed', 'archived'].includes(flow.status)) throw fail('FLOW_FINISHED', '已完成或已归档的流程不可再修改基础字段');
     if (Number(version) !== Number(flow.version)) throw fail('VERSION_CONFLICT', '流程已被他人更新，请刷新后重试');
     const forbidden = ['stage', 'status', 'parentId', 'code', 'rootId', 'path', 'nodeType', 'convergeKey', 'decomposeKey'].filter(key => key in fields);
     if (forbidden.length) throw fail('READONLY_FIELD', `以下字段不允许直接修改：${forbidden.join(', ')}`);

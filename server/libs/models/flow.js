@@ -162,10 +162,17 @@ module.exports = ({ DataTypes, definePrimaryType, options }) => {
       }
     },
     associate: ({ flow }) => {
-      flow.belongsTo(options.getUserModel(), {
+      const userModel = options.getUserModel();
+      flow.belongsTo(userModel, {
         foreignKey: 'createdUserId',
         as: 'createdUser',
         comment: '创建人'
+      });
+      // 详情 / 列表的「负责人」列读 ownerUser，原先只关联了 createdUser，负责人会一直显示为空
+      flow.belongsTo(userModel, {
+        foreignKey: 'ownerUserId',
+        as: 'ownerUser',
+        comment: '当前负责人'
       });
     },
     options: {

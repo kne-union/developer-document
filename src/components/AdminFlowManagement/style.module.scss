@@ -61,7 +61,7 @@
   gap: 8px;
   font-size: 12px;
   line-height: 18px;
-  color: rgba(0, 0, 0, 0.4);
+  color: rgba(0, 0, 0, 0.55);
 }
 
 .metaCode {
@@ -98,7 +98,7 @@
 .statLabel {
   font-size: 12px;
   line-height: 18px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(0, 0, 0, 0.55);
   white-space: nowrap;
 }
 
@@ -152,7 +152,7 @@
   > span {
     display: block;
     height: 100%;
-    background: linear-gradient(90deg, #1677ff, #4096ff);
+    background: #1677ff;
     border-radius: 2px;
     transition: width 0.3s ease;
   }
@@ -166,6 +166,7 @@
 /* 不加卡片外壳，与列表页保持一致 */
 .stageBar {
   margin-bottom: 20px;
+  overflow-x: auto;
 }
 
 /* ── 详情页：无框分区（材料 / 需求说明 / 记录） ────────── */
@@ -185,7 +186,7 @@
 
 .sectionTitle {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 22px;
   color: rgba(0, 0, 0, 0.88);
@@ -194,7 +195,7 @@
 .sectionSubtitle {
   font-size: 12px;
   line-height: 18px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(0, 0, 0, 0.55);
 }
 
 // 记录区：ghost 折叠面板，去掉 antd 默认面板边框与灰底，只留条目分隔线
@@ -302,7 +303,7 @@
     top: 15px;
     bottom: 15px;
     left: 0;
-    width: 3px;
+    width: 1px;
     background: var(--card-accent, #d9d9d9);
     border-radius: 0 3px 3px 0;
     content: '';
@@ -377,12 +378,12 @@
   margin-top: 6px;
   font-size: 13px;
   line-height: 20px;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgba(0, 0, 0, 0.65);
 }
 
 .cardCriteriaLabel {
   flex-shrink: 0;
-  color: rgba(0, 0, 0, 0.35);
+  color: rgba(0, 0, 0, 0.55);
 
   &::after {
     content: '：';
@@ -437,7 +438,7 @@
 .contentEmpty {
   font-size: 13px;
   line-height: 20px;
-  color: rgba(0, 0, 0, 0.3);
+  color: rgba(0, 0, 0, 0.55);
 }
 
 .contentLink {
@@ -482,7 +483,7 @@
 }
 
 .checklistItemDone {
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(0, 0, 0, 0.55);
 
   .checklistLabel {
     text-decoration: line-through;
@@ -509,7 +510,7 @@
 
 .checklistRemark {
   flex-shrink: 0;
-  color: rgba(0, 0, 0, 0.35);
+  color: rgba(0, 0, 0, 0.55);
 
   &::before {
     content: '· ';
@@ -552,7 +553,7 @@
 .materialItemRemark {
   font-size: 12px;
   line-height: 18px;
-  color: rgba(0, 0, 0, 0.35);
+  color: rgba(0, 0, 0, 0.55);
 }
 
 .materialItemBody {
@@ -578,10 +579,140 @@
 
 .cardRemarkLabel {
   flex-shrink: 0;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(0, 0, 0, 0.55);
 
   &::after {
     content: '：';
+  }
+}
+
+// 加载占位：让内容区保持基本高度，避免转圈时页面塌成一条线
+.pageState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+}
+
+.sectionEmpty {
+  margin: 8px 0 0;
+  padding: 16px 0;
+}
+
+.sectionEmpty :global(.ant-empty-description) {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+// 状态横幅：放在标题下方、阶段条上方，是打回 / 暂停 / 超期的第一视觉入口
+.bannerStack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.banner {
+  margin-bottom: 20px;
+}
+
+.bannerStack .banner {
+  margin-bottom: 0;
+}
+
+.bannerBody {
+  p {
+    margin: 0;
+  }
+
+  p + p {
+    margin-top: 4px;
+  }
+}
+
+.bannerHint {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.recordLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recordBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #ad4e00;
+  background: #fff7e6;
+  border-radius: 10px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.feedbackCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 280px;
+  white-space: normal;
+}
+
+.feedbackText,
+.feedbackAck {
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.75);
+  word-break: break-word;
+}
+
+.feedbackAck {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.releaseDetail {
+  dl {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 0;
+  }
+
+  dl > div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  dt {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    color: rgba(0, 0, 0, 0.55);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 13px;
+    line-height: 22px;
+    color: rgba(0, 0, 0, 0.88);
+    word-break: break-word;
+  }
+}
+
+.evidenceList {
+  margin: 0;
+  padding-left: 18px;
+
+  li {
+    word-break: break-all;
   }
 }
 
@@ -603,7 +734,15 @@
   }
 
   .headerActions {
-    align-self: flex-start;
+    align-self: stretch;
+  }
+
+  .banner :global(.ant-alert) {
+    flex-wrap: wrap;
+  }
+
+  .feedbackCell {
+    max-width: 100%;
   }
 
   .cardHead {

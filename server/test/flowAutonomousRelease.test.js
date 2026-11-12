@@ -312,3 +312,33 @@ test('裂变方案模板默认非必交', () => {
     .map(item => item.code);
   assert.ok(!designCodes.includes('design_decomposition'));
 });
+
+// ---------- 详情页数据与终态一致性 ----------
+
+test('详情返回未处理的打回意见，供详情页顶部提示；缺 stageEnteredAt 时 stayMinutes 为 0', async () => {
+  const env = await makeEnv();
+  const empty = await env.flow.detail({ id: 'F1' });
+  assert.deepEqual(empty.openFeedback, []);
+  assert.equal(empty.stayMinutes, 0);
+  assert.equal(empty.paused, false);
+
+  const { result } = await autonomousReview(env);
+  await env.flow.releaseReject({ releaseId: result.releaseId, reason: '测试报告缺少灰度数据，请补' }, env.admin);
+  const data = await env.flow.detail({ id: 'F1' });
+  assert.equal(data.openFeedback.length, 1);
+  assert.match(data.openFeedback[0].feedback, /灰度数据/);
+  assert.equal(data.openFeedback[0].releaseId, result.releaseId);
+});
+
+test('已归档或已完成的流程不可再改基础字段，进行中仍可编辑', async () => {
+  const env = await makeEnv();
+  env.flowRow.status = 'archived';
+  await assert.rejects(env.flow.update({ id: 'F1', version: 3, title: '改标题' }, env.admin), error => error.code === 'FLOW_FINISHED');
+  env.flowRow.status = 'completed';
+  await assert.rejects(env.flow.update({ id: 'F1', version: 3, title: '改标题' }, env.admin), error => error.code === 'FLOW_FINISHED');
+  env.flowRow.status = 'active';
+  const updated = await env.flow.update({ id: 'F1', version: 3, title: '新标题' }, env.admin);
+  assert.deepEqual(updated.updated, ['title']);
+  assert.equal(env.flowRow.title, '新标题');
+  assert.equal(updated.version, 4);
+});
