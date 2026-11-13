@@ -10,6 +10,22 @@ import { useIntl } from '@kne/react-intl';
 import { DELIVERABLE_STATUS_COLOR, deliverableStatusMessageId, producedByMessageId, templateNameId, templateCriteriaId } from '../constants';
 import { toSelectOption, selectValueOf } from '../selectValue';
 import { classifyFileAttachment, classifyPrototypeUrl, isInPageUrlPreviewTemplate } from '../deliverablePreview';
+import {
+  TEST_CASES_TEMPLATE,
+  REGRESSION_TEMPLATE,
+  parseTestExecution,
+  parseRegressionRuns,
+  buildRegressionTimeline,
+  flattenSteps,
+  hasTestExecutionValue,
+  hasRegressionValue,
+  serializeTestCasesForm,
+  serializeRegressionForm,
+  toTestCasesFormData,
+  toRegressionFormData
+} from '../testExecution';
+import { TestStepsView, RegressionTimelineView, buildTestCasesFields, buildRegressionFields } from './TestExecutionViews';
+import dayjs from 'dayjs';
 import styles from '../style.module.scss';
 
 const getMaterialTypeOptions = formatMessage => [
@@ -115,10 +131,18 @@ const normalizeOption = option => {
 // 交付物清单：每份材料是一张卡片，内容（Markdown / 链接 / 附件 / 清单）直接在卡片里展示，
 // 不再收进「查看内容」弹窗——评审时不需要来回点开对比。
 const DeliverablesPanel = createWithRemoteLoader({
-  modules: ['components-core:FormInfo', 'components-core:FormInfo@useFormModal', 'components-admin:Editor', 'components-core:Global@usePreset', 'components-core:FilePreview', 'components-core:File@Download']
+  modules: [
+    'components-core:FormInfo',
+    'components-core:FormInfo@useFormModal',
+    'components-admin:Editor',
+    'components-core:Global@usePreset',
+    'components-core:FilePreview',
+    'components-core:File@Download',
+    'components-core:File@FileButton'
+  ]
 })(
   withLocale(({ remoteModules, flowId, data, stage, reload: reloadDetail }) => {
-    const [FormInfo, useFormModal, Editor, usePreset, FilePreview, FileDownload] = remoteModules;
+    const [FormInfo, useFormModal, Editor, usePreset, FilePreview, FileDownload, FileButton] = remoteModules;
     const formModal = useFormModal();
     const { ajax, apis } = usePreset();
     const { message } = App.useApp();
@@ -269,7 +293,26 @@ const DeliverablesPanel = createWithRemoteLoader({
       </div>
     );
 
-    const contentNode = item => {
+    const contentNode = (item, list = []) => {
+      // 测试用例：按明确 stepId 把截图挂到步骤上，直接在测试阶段页面展示缩略图；未关联的单列，不按文件名/顺序造关系。
+      // 与自测记录（checklist）分开，不混用数据。
+      if (item.templateCode === TEST_CASES_TEMPLATE) {
+        return <TestStepsView parsed={parseTestExecution(item)} FilePreview={FilePreview} FileButton={FileButton} fileContent={fileContent} formatMessage={formatMessage} emptyContent={emptyContent} />;
+      }
+      // 回归记录：时间线按真实 occurredAt 排序；没有时间就标明未填写，不用更新时间顶替。
+      if (item.templateCode === REGRESSION_TEMPLATE) {
+        const casesItem = (list || []).find(row => row.templateCode === TEST_CASES_TEMPLATE) || {};
+        return (
+          <RegressionTimelineView
+            timeline={buildRegressionTimeline(parseRegressionRuns(item).runs)}
+            steps={flattenSteps(parseTestExecution(casesItem))}
+            FilePreview={FilePreview}
+            FileButton={FileButton}
+            formatMessage={formatMessage}
+            emptyContent={emptyContent}
+          />
+        );
+      }
       if (item.contentType === 'text') return item.content ? markdownContent(item.content) : emptyContent();
       // 原型 / 设计稿走页内预览；其他 url（PR 链接、测试环境、缺陷闭环等）仍用外链，不扩大范围。
       if (item.contentType === 'url') {
@@ -295,6 +338,8 @@ const DeliverablesPanel = createWithRemoteLoader({
     // 卡片里到底有没有东西可审：这决定主操作是「编辑」还是「审核/提交」。
     // 空卡片上直接摆审核按钮是无效操作，所以未填值一律先给编辑入口。
     const hasValue = item => {
+      if (item.templateCode === TEST_CASES_TEMPLATE) return hasTestExecutionValue(parseTestExecution(item));
+      if (item.templateCode === REGRESSION_TEMPLATE) return hasRegressionValue(parseRegressionRuns(item));
       if (item.contentType === 'text') return !!String(item.content || '').trim();
       if (item.contentType === 'url') return !!item.url;
       if (item.contentType === 'file') return !!(item.fileName || item.fileId);
@@ -306,6 +351,8 @@ const DeliverablesPanel = createWithRemoteLoader({
     // 折叠态是 max-height + overflow hidden，不生成滚动容器，
     // 鼠标滚轮始终滚动整页（之前用内滚动 + overscroll-behavior 会把滚轮锁在卡片里）
     const shouldCollapse = item => {
+      // 测试截图与回归时间线要直接可见，不做折叠裁切
+      if (item.templateCode === TEST_CASES_TEMPLATE || item.templateCode === REGRESSION_TEMPLATE) return false;
       if (item.contentType === 'text') return String(item.content || '').length > 1200;
       if (item.contentType === 'checklist') return (item.checklist || []).length > 10;
       if (item.contentType === 'jsonb') return (item.options || []).length > 3;
@@ -314,21 +361,48 @@ const DeliverablesPanel = createWithRemoteLoader({
 
     const toggleExpand = item => setExpandedIds(prev => (prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id]));
 
-    const openEditor = (item, reload, adoptAfter) => {
+    const openEditor = (item, reload, adoptAfter, list = []) => {
       // jsonb 材料 options 里每行的 type 是后端 code，回显前还原成完整选项对象
       const materialTypeOptions = getMaterialTypeOptions(formatMessage);
-      const initialData = Object.assign({}, item);
-      if (Array.isArray(initialData.options)) {
-        initialData.options = initialData.options.map(option => Object.assign({}, option, { type: toSelectOption(option.type, materialTypeOptions) }));
+      let initialData = Object.assign({}, item);
+      let fields;
+      let size = 'small';
+      if (item.templateCode === TEST_CASES_TEMPLATE) {
+        initialData = Object.assign({}, toTestCasesFormData(item));
+        fields = buildTestCasesFields(FormInfo, formatMessage);
+        size = 'large';
+      } else if (item.templateCode === REGRESSION_TEMPLATE) {
+        const form = toRegressionFormData(item);
+        form.runs = (form.runs || []).map(run =>
+          Object.assign({}, run, {
+            occurredAt: run.occurredAt ? dayjs(run.occurredAt) : undefined
+          })
+        );
+        initialData = form;
+        const stepOptions = flattenSteps(parseTestExecution((list || []).find(row => row.templateCode === TEST_CASES_TEMPLATE) || {}))
+          .filter(step => step.stepId)
+          .map(step => ({
+            label: `${step.caseLabel ? `${step.caseLabel} · ` : ''}${step.name}`,
+            value: step.stepId
+          }));
+        fields = buildRegressionFields(FormInfo, Editor, formatMessage, stepOptions);
+        size = 'large';
+      } else {
+        if (Array.isArray(initialData.options)) {
+          initialData.options = initialData.options.map(option => Object.assign({}, option, { type: toSelectOption(option.type, materialTypeOptions) }));
+        }
+        fields = buildContentFields(FormInfo, Editor, formatMessage, item.contentType);
       }
       formModal({
         title: formatMessage({ id: 'adminFlow.deliverable.editTitle' }),
-        size: 'small',
+        size,
         formProps: {
           data: initialData,
           onSubmit: async formData => {
             const payload = { id: item.id, flowId, stage: item.stage, templateCode: item.templateCode };
-            if (item.contentType === 'jsonb') payload.options = (formData.options || []).map(normalizeOption);
+            if (item.templateCode === TEST_CASES_TEMPLATE) payload.options = serializeTestCasesForm(formData);
+            else if (item.templateCode === REGRESSION_TEMPLATE) payload.options = serializeRegressionForm(formData);
+            else if (item.contentType === 'jsonb') payload.options = (formData.options || []).map(normalizeOption);
             else if (item.contentType === 'checklist') payload.checklist = formData.checklist || [];
             else if (item.contentType === 'file') {
               payload.fileId = formData.fileId;
@@ -342,7 +416,7 @@ const DeliverablesPanel = createWithRemoteLoader({
             return true;
           }
         },
-        children: <FormInfo list={buildContentFields(FormInfo, Editor, formatMessage, item.contentType)} />
+        children: <FormInfo list={fields} />
       });
     };
 
@@ -378,7 +452,7 @@ const DeliverablesPanel = createWithRemoteLoader({
       });
     };
 
-    const actionsOf = (item, reload, isCurrentStage) => {
+    const actionsOf = (item, reload, isCurrentStage, deliverables = []) => {
       // 历史阶段只读，且内容已在卡片内直接展示，无需任何操作入口
       if (!isCurrentStage) return [];
       const status = item.status;
@@ -386,7 +460,7 @@ const DeliverablesPanel = createWithRemoteLoader({
       const list = [];
       if (status === 'ai_draft') {
         list.push({ children: formatMessage({ id: 'adminFlow.deliverable.useDraft' }), onClick: async () => (await callApi(apis.flow.deliverableSubmit, { id: item.id })) && refresh(reload, reloadDetail) });
-        list.push({ key: 'edit', children: formatMessage({ id: 'adminFlow.action.editAndAdopt' }), onClick: () => openEditor(item, reload, true) });
+        list.push({ key: 'edit', children: formatMessage({ id: 'adminFlow.action.editAndAdopt' }), onClick: () => openEditor(item, reload, true, deliverables) });
       } else if (status === 'submitted') {
         list.push({
           children: formatMessage({ id: 'adminFlow.action.reviewAccept' }),
@@ -400,7 +474,7 @@ const DeliverablesPanel = createWithRemoteLoader({
       }
 
       if (!['accepted', 'waived'].includes(status)) {
-        list.push({ key: 'edit', children: formatMessage({ id: 'adminFlow.action.edit' }), onClick: () => openEditor(item, reload, false) });
+        list.push({ key: 'edit', children: formatMessage({ id: 'adminFlow.action.edit' }), onClick: () => openEditor(item, reload, false, deliverables) });
       }
       if (['submitted', 'ai_draft'].includes(status)) {
         list.push({
@@ -425,10 +499,10 @@ const DeliverablesPanel = createWithRemoteLoader({
       return list;
     };
 
-    const cardOf = (item, reload, isCurrentStage) => {
+    const cardOf = (item, reload, isCurrentStage, deliverables = []) => {
       const name = formatMessage({ id: templateNameId(item.templateCode), defaultMessage: item.name || item.templateCode });
       const criteria = formatMessage({ id: templateCriteriaId(item.templateCode), defaultMessage: item.acceptCriteria || '' });
-      const actions = actionsOf(item, reload, isCurrentStage);
+      const actions = actionsOf(item, reload, isCurrentStage, deliverables);
       const [primary, ...rest] = actions;
       const collapsible = shouldCollapse(item);
       const expanded = expandedIds.includes(item.id);
@@ -477,7 +551,7 @@ const DeliverablesPanel = createWithRemoteLoader({
               {criteria}
             </div>
           ) : null}
-          <div className={collapsible && !expanded ? `${styles.cardBody} ${styles.cardBodyCollapsed}` : styles.cardBody}>{contentNode(item)}</div>
+          <div className={collapsible && !expanded ? `${styles.cardBody} ${styles.cardBodyCollapsed}` : styles.cardBody}>{contentNode(item, deliverables)}</div>
           {collapsible ? (
             <Button type="link" size="small" className={styles.cardToggle} onClick={() => toggleExpand(item)}>
               {formatMessage({ id: expanded ? 'adminFlow.deliverable.collapse' : 'adminFlow.deliverable.expand' })}
@@ -509,7 +583,7 @@ const DeliverablesPanel = createWithRemoteLoader({
           // 而不是在页面上再挂一枚「历史阶段（只读）」标签
           return (
             <div className={styles.deliverableList} data-archive={isCurrentStage ? undefined : 'true'}>
-              {list.map(item => cardOf(item, reload, isCurrentStage))}
+              {list.map(item => cardOf(item, reload, isCurrentStage, list))}
             </div>
           );
         }}

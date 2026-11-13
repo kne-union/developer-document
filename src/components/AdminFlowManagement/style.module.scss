@@ -919,3 +919,268 @@
   background: #1677ff;
   border-radius: 8px;
 }
+
+// 表单里的稳定 id 不展示，但必须随表单提交以保留明确关联
+.hiddenId {
+  display: none !important;
+}
+
+// 测试步骤 + 截图：缩略图直接可见，步骤纵向排列，长名称折行，窄屏换行
+.testExecution {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  width: 100%;
+}
+
+.testSectionTitle {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.testDocuments,
+.testCase,
+.testUnlinked,
+.testDocument {
+  min-width: 0;
+}
+
+.testSteps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.testStep {
+  padding: 10px 0;
+  border-bottom: 1px solid #eceef1;
+  min-width: 0;
+
+  &:first-child {
+    padding-top: 0;
+  }
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+.testStepHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.testStepName {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.testStepResult {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.testStepResultMuted {
+  flex-shrink: 0;
+  font-size: 13px;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.testStepRemark {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.testUnlinkedHint {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.shotGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.shotEmpty {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.shotThumbBtn {
+  height: auto !important;
+  padding: 0 !important;
+  border: 0;
+}
+
+.shotThumb {
+  display: flex;
+  flex-direction: column;
+  width: 132px;
+  min-width: 0;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #eceef1;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.shotThumbPreview {
+  display: block;
+  width: 132px;
+  height: 96px;
+  overflow: hidden;
+  background: #f4f5f7;
+
+  :global(img),
+  :global(canvas),
+  :global(video) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.shotName {
+  padding: 4px 6px;
+  font-size: 12px;
+  line-height: 18px;
+  color: rgba(0, 0, 0, 0.65);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+// 回归记录时间线：真实时间、结果、操作人、说明、关联步骤与截图
+.regressionTimeline {
+  margin: 4px 0 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.regressionItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding-bottom: 4px;
+}
+
+.regressionTime {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.regressionMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.regressionOperator {
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.regressionHint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.regressionNote {
+  font-size: 14px;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.regressionRelated {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.regressionRelatedLabel {
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.regressionStepList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.regressionStepItem {
+  min-width: 0;
+}
+
+.regressionStepName {
+  font-size: 14px;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .shotThumb,
+  .shotThumbPreview {
+    width: 112px;
+  }
+
+  .shotThumbPreview {
+    height: 84px;
+  }
+
+  .testStepHead,
+  .regressionMeta {
+    gap: 6px 8px;
+  }
+}

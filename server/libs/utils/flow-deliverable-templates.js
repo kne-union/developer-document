@@ -177,12 +177,13 @@ const DELIVERABLE_TEMPLATES = {
     }
   ]),
   testing: build([
+    // test_cases / regression_note 用 jsonb 存明确的 stepId / runId 结构；旧行仍可能是 file / text，展示时按 templateCode 解析，首次结构化保存再升级。
     {
       stage: 'testing',
       code: 'test_cases',
       nameKey: 'adminFlow.deliverableTemplate.testCases.name',
       name: '测试用例',
-      contentType: 'file',
+      contentType: 'jsonb',
       acceptCriteriaKey: 'adminFlow.deliverableTemplate.testCases.criteria',
       acceptCriteria: '覆盖 AC、边界、回归范围',
       reviewerRole: '测试负责人'
@@ -212,7 +213,7 @@ const DELIVERABLE_TEMPLATES = {
       code: 'regression_note',
       nameKey: 'adminFlow.deliverableTemplate.regressionNote.name',
       name: '回归记录',
-      contentType: 'text',
+      contentType: 'jsonb',
       required: false,
       acceptCriteriaKey: 'adminFlow.deliverableTemplate.regressionNote.criteria',
       acceptCriteria: '回归范围与结果'
