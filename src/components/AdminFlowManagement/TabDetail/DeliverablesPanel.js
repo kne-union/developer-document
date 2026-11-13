@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
-import { App, Button, Dropdown, Empty, Tag } from 'antd';
+import { App, Button, Dropdown, Empty } from 'antd';
 import { CheckCircleFilled, LinkOutlined, MinusCircleOutlined, MoreOutlined } from '@ant-design/icons';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
@@ -9,7 +9,9 @@ import { DELIVERABLE_STATUS_COLOR, producedByMessageId, templateNameId, template
 import { toSelectOption, selectValueOf } from '../selectValue';
 import { isInPageUrlPreviewTemplate, resolveFilePreviewPresentation, PREVIEW_PRESENTATION } from '../deliverablePreview';
 import { FileAttachmentPreview, MarkdownWithAttachments } from './FileAttachmentPreview';
-import { FlowCardHeader } from '../FlowCardHeader';
+import { DecompositionPlanView } from './DecompositionPlanView';
+import { isDecompositionTemplate, parseDecompositionDeliverable } from '../decompositionPlan';
+import { FlowCardHeader, FlowCardMeta } from '../FlowCardHeader';
 import { resolveDeliverableStatus } from '../aiRunContext';
 import {
   TEST_CASES_TEMPLATE,
@@ -34,9 +36,6 @@ const getMaterialTypeOptions = formatMessage => [
   { label: formatMessage({ id: 'adminFlow.deliverable.material.url' }), value: 'url' },
   { label: formatMessage({ id: 'adminFlow.deliverable.material.text' }), value: 'text' }
 ];
-
-// 多材料里每种类型的标签色，让「这段是链接还是正文」一眼可分
-const MATERIAL_TYPE_COLOR = { file: 'blue', url: 'cyan', text: 'default' };
 
 // 编辑字段按 contentType 映射；所有长文本统一走 components-admin:Editor 的 Markdown 模式。
 // 必填口径与后端 validateOptions 对齐：type / label 必填，且 file 需 fileId+fileName、
@@ -230,9 +229,7 @@ const DeliverablesPanel = createWithRemoteLoader({
           return (
             <div key={index} className={styles.materialItem}>
               <div className={styles.materialItemHead}>
-                <Tag className={styles.materialType} bordered={false} color={MATERIAL_TYPE_COLOR[type] || 'default'}>
-                  {typeLabel}
-                </Tag>
+                <span className={styles.materialType}>{typeLabel}</span>
                 <span className={styles.materialItemLabel}>{row.label}</span>
                 {row.remark ? <span className={styles.materialItemRemark}>{row.remark}</span> : null}
               </div>
@@ -267,6 +264,14 @@ const DeliverablesPanel = createWithRemoteLoader({
             emptyContent={emptyContent}
           />
         );
+      }
+      if (isDecompositionTemplate(item.templateCode)) {
+        const parsed = parseDecompositionDeliverable(item);
+        if (parsed.kind === 'empty') return emptyContent();
+        if (parsed.kind === 'tasks') {
+          return <DecompositionPlanView parsed={parsed} templateCode={item.templateCode} FilePreview={FilePreview} FileButton={FileButton} FileDownload={FileDownload} formatMessage={formatMessage} emptyContent={emptyContent} />;
+        }
+        return optionsContent(item.options || [], item);
       }
       if (item.contentType === 'text') return item.content ? markdownContent(item.content) : emptyContent();
       // 原型 / 设计稿走页内预览；其他 url（PR 链接、测试环境、缺陷闭环等）仍用外链，不扩大范围。
@@ -466,17 +471,23 @@ const DeliverablesPanel = createWithRemoteLoader({
         <div key={item.id} className={styles.deliverableCard} data-status={item.status}>
           <FlowCardHeader
             title={name}
-            extra={
-              <>
-                {item.required ? <span className={styles.flowCardHeaderHint}>{formatMessage({ id: 'adminFlow.deliverable.required' })}</span> : null}
-                {statusMeta.empty ? null : (
-                  <Tag className={styles.cardFlag} bordered={false} color={DELIVERABLE_STATUS_COLOR[item.status] || 'default'}>
-                    {formatMessage({ id: statusMeta.messageId, values: statusMeta.values })}
-                  </Tag>
-                )}
-              </>
+            description={
+              criteria ? (
+                <>
+                  <span className={styles.cardCriteriaLabel}>{formatMessage({ id: 'adminFlow.deliverable.acceptCriteria' })}</span>
+                  {criteria}
+                </>
+              ) : null
             }
-            summary={item.producedBy ? formatMessage({ id: producedByMessageId(item.producedBy), defaultMessage: item.producedBy }) : null}
+            meta={
+              <FlowCardMeta
+                items={[
+                  item.required ? { key: 'required', tone: 'warning', children: formatMessage({ id: 'adminFlow.deliverable.required' }) } : null,
+                  statusMeta.empty ? null : { key: 'status', tone: DELIVERABLE_STATUS_COLOR[item.status] || 'default', children: formatMessage({ id: statusMeta.messageId, values: statusMeta.values }) },
+                  item.producedBy ? { key: 'produced', children: formatMessage({ id: producedByMessageId(item.producedBy), defaultMessage: item.producedBy }) } : null
+                ]}
+              />
+            }
             actions={
               actions.length ? (
                 <>
@@ -501,12 +512,6 @@ const DeliverablesPanel = createWithRemoteLoader({
               ) : null
             }
           />
-          {criteria ? (
-            <div className={styles.cardCriteria}>
-              <span className={styles.cardCriteriaLabel}>{formatMessage({ id: 'adminFlow.deliverable.acceptCriteria' })}</span>
-              {criteria}
-            </div>
-          ) : null}
           <div className={collapsible && !expanded ? `${styles.cardBody} ${styles.cardBodyCollapsed}` : styles.cardBody}>{contentNode(item, deliverables)}</div>
           {collapsible ? (
             <Button type="link" size="small" className={styles.cardToggle} onClick={() => toggleExpand(item)}>
