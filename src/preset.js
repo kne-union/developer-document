@@ -70,7 +70,7 @@ const globalInit = async () => {
   const componentsCoreRemote = {
     ...registry,
     remote: 'components-core',
-    defaultVersion: '0.6.15'
+    defaultVersion: '0.7.6'
   };
   remoteLoaderPreset({
     remotes: {
@@ -79,27 +79,29 @@ const globalInit = async () => {
       'components-iconfont': {
         ...registry,
         remote: 'components-iconfont',
-        defaultVersion: '0.2.1'
+        defaultVersion: '0.3.0'
       },
       'components-file-manager': {
         ...registry,
         remote: 'components-file-manager',
-        defaultVersion: '0.1.9'
+        defaultVersion: '0.1.13'
       },
       'components-admin': {
         ...registry,
         remote: 'components-admin',
-        defaultVersion: '1.1.131'
+        // npm 最新 1.1.148 的 CDN remoteEntry 为 404；1.1.146 是同时在 npm 与 CDN 上的最新 React 19 稳定版
+        defaultVersion: '1.1.146'
       },
       'components-thirdparty': {
         ...registry,
         remote: 'components-thirdparty',
-        defaultVersion: '0.1.54'
+        defaultVersion: '0.1.61'
       },
       'components-app-manager': {
         ...registry,
         remote: 'components-app-manager',
-        defaultVersion: '0.1.0'
+        // 最新稳定 0.1.1 仍是 React 18 / antd 5，尚无 React 19 发布
+        defaultVersion: '0.1.1'
       },
       'developer-document':
         process.env.NODE_ENV === 'development'
