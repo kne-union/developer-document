@@ -4,7 +4,7 @@
  * checkToken 与限流见 ./flow-security-store.js（数据库实现，无内存 fallback）。
  */
 const crypto = require('crypto');
-const { collectStructuredFileIds } = require('../../../src/components/AdminFlowManagement/testExecution');
+const { collectStructuredFileIds } = require('./test-execution');
 
 const fail = (code, message) => {
   const error = new Error(message || code);
