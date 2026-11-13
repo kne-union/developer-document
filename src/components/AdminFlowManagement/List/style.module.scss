@@ -119,22 +119,47 @@
   word-break: break-word;
 }
 
-.flowListFlags {
+.flowListIdentity {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 8px;
-  flex: none;
-  max-width: 100%;
-  :global(.ant-tag) {
-    margin: 0;
-  }
-}
-
-.flowListStage {
+  margin: 8px 0 0;
   font-size: 13px;
   line-height: 20px;
   color: rgba(0, 0, 0, 0.65);
+
+  > span {
+    display: inline-flex;
+    align-items: center;
+    font-weight: 500;
+
+    &[data-tone='success'] {
+      color: #237804;
+    }
+    &[data-tone='error'] {
+      color: #a8071a;
+    }
+    &[data-tone='warning'] {
+      color: #ad4e00;
+    }
+    &[data-tone='processing'] {
+      color: #0958d9;
+    }
+    &[data-tone='default'] {
+      color: rgba(0, 0, 0, 0.65);
+    }
+
+    &:not(:last-child)::after {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 3px;
+      margin: 0 8px;
+      border-radius: 50%;
+      background: #d0d5dd;
+      flex: none;
+    }
+  }
 }
 
 .flowListMeta {
@@ -168,8 +193,25 @@
     overflow-wrap: anywhere;
     word-break: break-word;
   }
-  :global(.ant-tag) {
-    margin: 0;
+}
+
+.flowListPriority {
+  font-weight: 500;
+
+  &[data-tone='success'] {
+    color: #237804;
+  }
+  &[data-tone='error'] {
+    color: #a8071a;
+  }
+  &[data-tone='warning'] {
+    color: #ad4e00;
+  }
+  &[data-tone='processing'] {
+    color: #0958d9;
+  }
+  &[data-tone='default'] {
+    color: rgba(0, 0, 0, 0.75);
   }
 }
 

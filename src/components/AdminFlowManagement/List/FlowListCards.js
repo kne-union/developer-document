@@ -6,7 +6,7 @@
  */
 import { isValidElement } from 'react';
 import { Link } from 'react-router-dom';
-import { Checkbox, Tag, Typography } from 'antd';
+import { Checkbox, Typography } from 'antd';
 import dayjs from 'dayjs';
 import RemoteLoader from '@kne/remote-loader';
 import { collectCardActions, detailPath, listFromTableProps, mapFlowListItem } from './flowListCard';
@@ -80,14 +80,12 @@ const FlowListCard = ({ item, columns, formatMessage, baseUrl, variant, getSelec
               {mapped.code}
             </Typography.Text>
           ) : null}
-        </div>
-        <div className={styles.flowListFlags}>
-          {mapped.status.empty ? null : (
-            <Tag bordered={false} color={mapped.statusColor}>
-              {enumText(formatMessage, mapped.status)}
-            </Tag>
+          {mapped.status.empty && mapped.stage.empty ? null : (
+            <p className={styles.flowListIdentity}>
+              {mapped.status.empty ? null : <span data-tone={mapped.statusColor}>{enumText(formatMessage, mapped.status)}</span>}
+              {mapped.stage.empty ? null : <span>{enumText(formatMessage, mapped.stage)}</span>}
+            </p>
           )}
-          {mapped.stage.empty ? null : <span className={styles.flowListStage}>{enumText(formatMessage, mapped.stage)}</span>}
         </div>
       </div>
       <dl className={styles.flowListMeta}>
@@ -95,9 +93,9 @@ const FlowListCard = ({ item, columns, formatMessage, baseUrl, variant, getSelec
           <div className={styles.flowListMetaItem}>
             <dt>{formatMessage({ id: 'adminFlow.columns.priority' })}</dt>
             <dd>
-              <Tag bordered={false} color={mapped.priorityColor}>
+              <span className={styles.flowListPriority} data-tone={mapped.priorityColor}>
                 {enumText(formatMessage, mapped.priority)}
-              </Tag>
+              </span>
             </dd>
           </div>
         )}

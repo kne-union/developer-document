@@ -1,7 +1,7 @@
 import { Tag, Timeline } from 'antd';
 import { flattenSteps, formatShanghaiTime, hasRegressionValue, hasTestExecutionValue, lookupStep } from '../testExecution';
 import { PREVIEW_PRESENTATION, resolveFilePreviewPresentation } from '../deliverablePreview';
-import { FileAttachmentPreview, MarkdownWithAttachments } from './FileAttachmentPreview';
+import { FileAttachmentPreview, FILE_PREVIEW_MODAL_PROPS, MarkdownWithAttachments } from './FileAttachmentPreview';
 import styles from '../style.module.scss';
 
 const STEP_RESULT_IDS = {
@@ -62,7 +62,7 @@ export const ScreenshotGallery = ({ shots, FilePreview, FileButton, FileDownload
   return (
     <div className={styles.shotGrid}>
       {shots.map(shot => (
-        <FileButton key={shot.fileId} id={shot.fileId} filename={shot.fileName} type="link" className={styles.shotThumbBtn} openDownload>
+        <FileButton key={shot.fileId} id={shot.fileId} filename={shot.fileName} type="link" className={styles.shotThumbBtn} openDownload modalProps={FILE_PREVIEW_MODAL_PROPS}>
           <span className={styles.shotThumb}>
             <span className={styles.shotThumbPreview}>
               <FilePreview id={shot.fileId} filename={shot.fileName} originName={shot.fileName} />

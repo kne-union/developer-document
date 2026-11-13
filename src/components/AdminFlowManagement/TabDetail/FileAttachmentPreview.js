@@ -7,6 +7,15 @@ import { classifyEvidencePreview, classifyPreviewSource, collectMarkdownFileAtta
 import styles from '../style.module.scss';
 
 /**
+ * FileButton 弹窗由 components-core File 用 renderModal 接到 @kne/react-modal（bodyScroll 默认 true）。
+ * SimpleBar 在无 padding 的 .modal-body 上；默认内边距在里边的 .modal-body-inner（24px）。
+ * 远程 FileButton 的 .file-modal-outer 自带固定高度和 overflow:auto，滚动条落在 inner 的内边距里，轨道内缩、不贴边。
+ * 官方 API noPadding（文档：预览卡片应贴齐内容区边缘）把 inner 内边距清零，轨道贴齐内容区边缘。
+ * 不要把页内 previewStage 的 padding 加到弹窗滚动容器外层，也不要改全局 Modal。
+ */
+export const FILE_PREVIEW_MODAL_PROPS = { noPadding: true };
+
+/**
  * 流程详情统一的文件预览呈现：核心走当前页 FilePreview，非核心走 FileButton 同页弹窗。
  * 下载始终是次操作；非法协议只展示无效提示，不生成可点击跳转。
  */
@@ -52,7 +61,7 @@ export const FileAttachmentPreview = ({ presentation, fileId, src, fileName, Fil
   if (mode === PREVIEW_PRESENTATION.MODAL && FileButton) {
     return (
       <div className={styles.modalPreviewEntry}>
-        <FileButton id={id} src={url} filename={name} originName={name} type="link" className={styles.modalPreviewButton} openDownload ignoreContent={ignoreContent} title={formatMessage({ id: 'adminFlow.deliverable.previewInModal' })}>
+        <FileButton id={id} src={url} filename={name} originName={name} type="link" className={styles.modalPreviewButton} openDownload ignoreContent={ignoreContent} title={formatMessage({ id: 'adminFlow.deliverable.previewInModal' })} modalProps={FILE_PREVIEW_MODAL_PROPS}>
           <span className={styles.modalPreviewLabel}>
             <PaperClipOutlined />
             {name}

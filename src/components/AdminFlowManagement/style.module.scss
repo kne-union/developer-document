@@ -330,16 +330,30 @@
   border-radius: 12px;
 }
 
+// 正文浅底与材料卡片 .cardBody 同一 token（#f8f9fb），不是白底裸正文。
+// 卡片外壳保持白底与完整 1px 边框；header 在白底上，body 在浅井里，层级分开。
 .descriptionBody {
   min-width: 0;
   max-width: 100%;
-  padding: 0 20px;
   box-sizing: border-box;
+  margin: 0 20px;
+  padding: 12px 14px;
+  background: #f8f9fb;
+  border-radius: 8px;
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
 }
 
 .descriptionCard .sectionEmpty {
-  margin: 8px 20px 0;
-  padding: 24px 0;
+  margin: 0;
+  padding: 16px 0;
+  background: transparent;
 }
 
 // 记录区：整组一张正常卡片，条目之间分隔；整行可点，清晰展开图标。
@@ -735,8 +749,9 @@
 }
 
 .previewStage {
-  // 横向：宽文档/Office/iframe 只在本区域滚动，不撑出 375px 页面；不对文档做不可读缩放。
-  // 纵向：不设 max-height，避免抢占页面或 Modal 自身滚动（overflow-x:auto 在无高度限制时不会形成纵向滚动条）。
+  // 仅页内嵌入预览。横向：宽文档只在本区域滚动；纵向不设 max-height，不抢 Modal/页面滚动。
+  // 内边距让预览与边框之间留出衬底，border-box 避免 width:100% + padding 撑出父级。
+  // 不要把这里的 padding 套到 FileButton 预览弹窗的滚动容器外层，否则轨道会内缩。
   box-sizing: border-box;
   min-width: 0;
   max-width: 100%;
@@ -744,7 +759,8 @@
   overflow-x: auto;
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
-  background: #fff;
+  padding: 16px;
+  background: #f8f9fb;
   border: 1px solid #eceef1;
   border-radius: 8px;
 
@@ -752,6 +768,12 @@
   :global(embed),
   :global(object) {
     max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .previewStage {
+    padding: 10px;
   }
 }
 
@@ -873,8 +895,11 @@
 
 .materialType {
   margin: 0;
+  flex: none;
   font-size: 12px;
+  font-weight: 500;
   line-height: 18px;
+  color: rgba(0, 0, 0, 0.55);
 }
 
 .materialItemLabel {
@@ -984,87 +1009,167 @@
   color: rgba(0, 0, 0, 0.88);
 }
 
-// 共享卡片 header：主标题、次摘要、克制状态、右侧操作；窄屏换行不挤标题。
+// 共享卡片标题区：首行仅标题+操作（第一基线）；说明次级；状态等走元信息行，不用标签堆砌。
 .flowCardHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px 16px;
-  flex-wrap: wrap;
+  display: block;
   min-width: 0;
   max-width: 100%;
   width: 100%;
   box-sizing: border-box;
 }
 
-.flowCardHeaderMain {
-  flex: 1 1 12rem;
+.flowCardHeaderLead {
+  display: block;
   min-width: 0;
   max-width: 100%;
 }
 
-.flowCardHeaderTitleRow {
+.flowCardHeaderHeadline {
   display: flex;
-  align-items: center;
+  align-items: first baseline;
+  justify-content: space-between;
+  gap: 8px 20px;
   flex-wrap: wrap;
-  gap: 6px 8px;
   min-width: 0;
+  max-width: 100%;
 }
 
 .flowCardHeaderTitle {
+  flex: 1 1 12rem;
+  min-width: 0;
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  line-height: 22px;
+  line-height: 24px;
+  letter-spacing: -0.01em;
   color: rgba(0, 0, 0, 0.88);
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
-.flowCardHeaderExtra {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
-  min-width: 0;
-  :global(.ant-tag) {
-    margin: 0;
-  }
-}
-
-.flowCardHeaderHint {
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 500;
-  color: #cf1322;
-}
-
-.flowCardHeaderSummary {
+.flowCardHeaderDescription {
   display: block;
-  margin-top: 4px;
+  margin: 6px 0 0;
+  max-width: 65ch;
   font-size: 13px;
+  font-weight: 400;
   line-height: 20px;
   color: rgba(0, 0, 0, 0.65);
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
+.flowCardHeaderMetaSlot {
+  display: block;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.flowCardMeta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 18px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.flowCardMetaItem {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+  color: inherit;
+
+  &[data-tone='success'] {
+    color: #237804;
+  }
+  &[data-tone='error'] {
+    color: #a8071a;
+  }
+  &[data-tone='warning'] {
+    color: #ad4e00;
+  }
+  &[data-tone='processing'] {
+    color: #0958d9;
+  }
+  &[data-tone='default'] {
+    color: rgba(0, 0, 0, 0.65);
+  }
+
+  &:not(:last-child)::after {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 3px;
+    margin: 0 8px;
+    border-radius: 50%;
+    background: #d0d5dd;
+    flex: none;
+  }
+}
+
 .flowCardHeaderActions {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  flex: none;
+  gap: 4px 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
   max-width: 100%;
+
+  :global(.ant-btn) {
+    height: 28px;
+    padding-inline: 11px;
+    font-size: 13px;
+    line-height: 26px;
+  }
+
+  :global(.ant-btn-sm.ant-btn-icon-only) {
+    width: 28px;
+    padding-inline: 0;
+  }
+
+  :global(.ant-btn-text) {
+    color: rgba(0, 0, 0, 0.65);
+  }
 }
 
 .flowCardHeaderCompact {
-  align-items: center;
+  .flowCardHeaderTitle {
+    line-height: 22px;
+  }
 }
 
 .descriptionCard .flowCardHeader {
-  padding: 16px 20px 12px;
+  padding: 18px 20px 10px;
+}
+
+@media (max-width: 640px) {
+  .flowCardHeaderHeadline {
+    align-items: flex-start;
+  }
+
+  .flowCardHeaderActions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
+  .descriptionCard .flowCardHeader {
+    padding: 16px 14px 8px;
+  }
+
+  .descriptionBody {
+    margin: 0 14px;
+  }
+
+  .descriptionCard {
+    padding-bottom: 14px;
+  }
 }
 
 .recordBadge {
@@ -1495,22 +1600,280 @@
   }
 }
 
-// 「查看上下文」弹窗：分组可读；纵向交给 Modal 自身 SimpleBar（bodyScroll 默认 true）。
-// 不再用 max-height + overflow 自管滚动，避免双滚动条。
+// 开发任务拆分 / 任务拆分方案：条目边界 + 名称层级，浅底与卡片 body 一致。
+// 顺序号表达先后，不是装饰。不加左侧色条，不用色标签。
+.decompPlan {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.decompLead {
+  margin: 0 0 16px;
+  max-width: 65ch;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.decompList,
+.decompGroupList,
+.decompMaterials {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.decompGroup,
+.decompGroupPlain {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.decompGroupTitle {
+  margin: 16px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.decompGroup:first-child .decompGroupTitle,
+.decompGroupPlain:first-child .decompGroupTitle {
+  margin-top: 0;
+}
+
+.decompTask {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 14px 0;
+  border-top: 1px solid #eceef1;
+
+  &:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.decompTaskHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.decompIndex {
+  flex: none;
+  min-width: 1.25em;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 24px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(0, 0, 0, 0.45);
+  text-align: right;
+}
+
+.decompTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 24px;
+  color: rgba(0, 0, 0, 0.88);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.decompScope,
+.decompMeta,
+.decompFact,
+.decompBody,
+.decompRemark {
+  margin: 8px 0 0;
+  padding-left: calc(1.25em + 10px);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.decompScope {
+  margin-top: 6px;
+  max-width: calc(65ch + 1.25em + 10px);
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.decompFact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-top: 8px;
+
+  dt {
+    flex: none;
+    font-size: 12px;
+    line-height: 18px;
+    color: rgba(0, 0, 0, 0.55);
+
+    &::after {
+      content: '：';
+    }
+  }
+
+  dd {
+    margin: 0;
+    flex: 1 1 8rem;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 20px;
+    color: rgba(0, 0, 0, 0.88);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+.decompBody {
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.decompRemark {
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.decompMaterials {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eceef1;
+}
+
+.decompMaterial {
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 0;
+}
+
+.decompMaterialLabel {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.88);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .decompScope,
+  .decompMeta,
+  .decompFact,
+  .decompBody,
+  .decompRemark {
+    padding-left: 0;
+  }
+
+  .decompTask {
+    padding: 12px 0;
+  }
+}
+
+// 「查看上下文」弹窗：文档式阅读路径。纵向交给 Modal 自身 SimpleBar（bodyScroll 默认 true）。
+// 不用中间按钮墙、不用把主内容再套一层 Collapse；原始 JSON 作为次要附录收起。
 .contextModal {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.contextLead {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
   max-width: 100%;
+  padding-bottom: 4px;
 }
 
-.contextSummaryTitle {
-  margin: 0 0 8px;
+.contextIdentity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0;
+  margin: 0;
   font-size: 16px;
   font-weight: 600;
   line-height: 24px;
   color: rgba(0, 0, 0, 0.88);
+
+  > span {
+    display: inline-flex;
+    align-items: center;
+
+    &[data-tone='success'] {
+      color: #237804;
+    }
+    &[data-tone='error'] {
+      color: #a8071a;
+    }
+    &[data-tone='warning'] {
+      color: #ad4e00;
+    }
+    &[data-tone='processing'] {
+      color: #0958d9;
+    }
+    &[data-tone='default'] {
+      color: rgba(0, 0, 0, 0.88);
+    }
+
+    &:not(:last-child)::after {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 3px;
+      margin: 0 10px;
+      border-radius: 50%;
+      background: #d0d5dd;
+      flex: none;
+    }
+  }
+}
+
+.contextFacts {
+  min-width: 0;
+  max-width: 100%;
+
+  :global(.ant-descriptions-item-label) {
+    width: auto;
+    font-size: 12px;
+    line-height: 18px;
+    color: rgba(0, 0, 0, 0.55);
+  }
+
+  :global(.ant-descriptions-item-content) {
+    font-size: 13px;
+    line-height: 20px;
+    color: rgba(0, 0, 0, 0.88);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  :global(.ant-descriptions-item) {
+    padding-bottom: 8px;
+  }
 }
 
 .contextMeta {
@@ -1540,7 +1903,7 @@
 }
 
 .contextError {
-  margin-top: 12px;
+  margin: 0;
   padding: 10px 12px;
   background: #fff2f0;
   border-radius: 8px;
@@ -1564,47 +1927,22 @@
   word-break: break-word;
 }
 
-.contextNav {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 0;
-  margin: 0;
-  background: #fff;
-  border-bottom: 1px solid #eceef1;
+.contextSection,
+.contextRawDetails {
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #eceef1;
+  box-sizing: border-box;
 }
 
-.contextNavItem {
-  appearance: none;
-  margin: 0;
-  padding: 4px 10px;
-  border: 1px solid #eceef1;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 13px;
-  line-height: 20px;
+.contextSectionTitle {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
   color: rgba(0, 0, 0, 0.88);
-  cursor: pointer;
-  &:hover {
-    border-color: #d0d5dd;
-    background: #f7f8fa;
-  }
-  &:focus-visible {
-    outline: 2px solid #1677ff;
-    outline-offset: 2px;
-  }
-}
-
-.contextCollapse {
-  min-width: 0;
-}
-
-.contextAnchor {
-  scroll-margin-top: 48px;
-  min-width: 0;
 }
 
 .contextSectionBody {
@@ -1612,6 +1950,61 @@
   flex-direction: column;
   gap: 16px;
   min-width: 0;
+}
+
+.contextRawDetails {
+  padding-top: 12px;
+}
+
+.contextRawSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.65);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+
+  &::-webkit-details-marker,
+  &::marker {
+    display: none;
+    content: '';
+  }
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+    flex: none;
+  }
+
+  &:hover {
+    color: rgba(0, 0, 0, 0.88);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #1677ff;
+    outline-offset: 2px;
+  }
+}
+
+.contextRawDetails[open] > .contextRawSummary {
+  margin-bottom: 12px;
+  color: rgba(0, 0, 0, 0.88);
+
+  &::before {
+    transform: rotate(45deg);
+  }
 }
 
 .contextBlockTitle {
@@ -1642,6 +2035,33 @@
   font-size: 13px;
   line-height: 20px;
   color: rgba(0, 0, 0, 0.65);
+}
+
+.contextInlineStatus {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.75);
+
+  &[data-tone='success'],
+  &[data-tone='green'] {
+    color: #237804;
+  }
+  &[data-tone='error'],
+  &[data-tone='red'] {
+    color: #a8071a;
+  }
+  &[data-tone='warning'],
+  &[data-tone='orange'] {
+    color: #ad4e00;
+  }
+  &[data-tone='processing'] {
+    color: #0958d9;
+  }
+  &[data-tone='default'],
+  &[data-tone='gray'] {
+    color: rgba(0, 0, 0, 0.65);
+  }
 }
 
 .contextQuestionList,
