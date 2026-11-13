@@ -105,7 +105,7 @@ describe('React Compiler：原生开关且产生有效 transform', () => {
 });
 
 describe('远程组件与 React 版本清单（配置契约）', () => {
-  test('preset 覆盖全部已配置 remote，admin 不用 CDN 404 的 npm 最新', () => {
+  test('preset 覆盖全部已配置 remote，版本为 npm 与 CDN 均可用的最新稳定版', () => {
     const src = fs.readFileSync(path.join(__dirname, 'preset.js'), 'utf8');
     const versions = {};
     const re = /remote:\s*'([^']+)'[\s\S]*?defaultVersion:\s*'([^']+)'/g;
@@ -115,11 +115,10 @@ describe('远程组件与 React 版本清单（配置契约）', () => {
       'components-core': '0.7.6',
       'components-iconfont': '0.3.0',
       'components-file-manager': '0.1.13',
-      'components-admin': '1.1.146',
+      'components-admin': '1.1.148',
       'components-thirdparty': '0.1.61',
-      'components-app-manager': '0.1.1'
+      'components-app-manager': '0.1.2'
     });
-    assert.match(src, /1\.1\.148[\s\S]*404|CDN remoteEntry 为 404/);
   });
 
   test('本项目 react / react-dom 与 modules-dev 指向最新稳定，antd 保持 6', () => {

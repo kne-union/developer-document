@@ -89,8 +89,8 @@ const globalInit = async () => {
       'components-admin': {
         ...registry,
         remote: 'components-admin',
-        // npm 最新 1.1.148 的 CDN remoteEntry 为 404；1.1.146 是同时在 npm 与 CDN 上的最新 React 19 稳定版
-        defaultVersion: '1.1.146'
+        // npm 最新 1.1.148，CDN remoteEntry 已 200（此前 404，曾暂用 1.1.146）
+        defaultVersion: '1.1.148'
       },
       'components-thirdparty': {
         ...registry,
@@ -100,8 +100,8 @@ const globalInit = async () => {
       'components-app-manager': {
         ...registry,
         remote: 'components-app-manager',
-        // 最新稳定 0.1.1 仍是 React 18 / antd 5，尚无 React 19 发布
-        defaultVersion: '0.1.1'
+        // 已发布 0.1.2：React 19.3.1 / antd 6.7.0，CDN 共享 react/compiler-runtime@19.3.1
+        defaultVersion: '0.1.2'
       },
       'developer-document':
         process.env.NODE_ENV === 'development'
