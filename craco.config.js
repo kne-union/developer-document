@@ -13,6 +13,11 @@ module.exports = {
             return webpackConfig;
         }
     }, plugins: [{
-        plugin: CracoRemoteComponentsPlugin
+        plugin: CracoRemoteComponentsPlugin,
+        options: {
+            // 官方原生开关：编译器由 @kne/modules-dev 内置，不在业务项目再装 babel-plugin-react-compiler。
+            // target '19' 使用本项目 react 提供的 react/compiler-runtime，并由插件做单例共享。
+            reactCompiler: { target: '19' }
+        }
     }]
 };

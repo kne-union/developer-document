@@ -73,7 +73,7 @@
   "devDependencies": {
     "@craco/craco": "^7.1.0",
     "@kne/craco": "^7.1.4",
-    "@kne/modules-dev": "^2.4.17",
+    "@kne/modules-dev": "^2.4.21",
     "@kne/react-fetch": "^1.5.7",
     "@kne/react-scripts": "^5.1.6",
     "@kne/remote-loader": "^1.5.0",
@@ -89,8 +89,8 @@
     "lodash": "^4.18.1",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.9.10",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-router-dom": "^6.30.6",
     "sass": "^1.106.0"
   },
