@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Button, Collapse, Empty, Space, Spin, Tag, Timeline, Typography } from 'antd';
+import { useMemo } from 'react';
+import { Descriptions, Empty, Spin, Timeline, Typography } from 'antd';
 import { CheckCircleFilled, LinkOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { contentTypeMessageId, DELIVERABLE_STATUS_COLOR, producedByMessageId, templateNameId } from '../constants';
 import { TEST_CASES_TEMPLATE, REGRESSION_TEMPLATE, buildRegressionTimeline, flattenSteps, formatShanghaiTime, hasRegressionValue, hasTestExecutionValue, parseRegressionRuns, parseTestExecution } from '../testExecution';
 import { isInPageUrlPreviewTemplate, PREVIEW_PRESENTATION, resolveFilePreviewPresentation } from '../deliverablePreview';
-import { defaultOpenSections, eventTone, hasDeliverableBody, isPresent, parseAiRunContext, resolveDeliverableStatus, resolveGoal, resolveRunStatus, resolveStage } from '../aiRunContext';
+import { eventTone, hasDeliverableBody, isPresent, parseAiRunContext, resolveDeliverableStatus, resolveGoal, resolveRunStatus, resolveStage } from '../aiRunContext';
 import KneDocumentJsonView from '../../Shared/KneDocumentJsonView';
-import { FlowCardHeader } from '../FlowCardHeader';
+import { FlowCardHeader, FlowCardMeta } from '../FlowCardHeader';
 import { EvidenceRefsList, FileAttachmentPreview, MarkdownWithAttachments } from './FileAttachmentPreview';
+import { DecompositionPlanView, DecompositionOutputView } from './DecompositionPlanView';
+import { isDecompositionTemplate, parseDecompositionDeliverable, parseDecompositionOutput } from '../decompositionPlan';
 import { RegressionTimelineView, TestStepsView } from './TestExecutionViews';
 import { selectValueOf } from '../selectValue';
 import styles from '../style.module.scss';
@@ -119,9 +121,7 @@ const OptionsBlock = ({ rows, templateCode, FilePreview, FileButton, FileDownloa
       return (
         <div key={index} className={styles.materialItem}>
           <div className={styles.materialItemHead}>
-            <Tag className={styles.materialType} bordered={false}>
-              {namedLabel(formatMessage, `adminFlow.deliverable.material.${type}`, type)}
-            </Tag>
+            <span className={styles.materialType}>{namedLabel(formatMessage, `adminFlow.deliverable.material.${type}`, type)}</span>
             <span className={styles.materialItemLabel}>{row.label}</span>
             {row.remark ? <span className={styles.materialItemRemark}>{row.remark}</span> : null}
           </div>
@@ -221,6 +221,13 @@ const DeliverableBody = ({ item, FilePreview, FileButton, FileDownload, formatMe
   if (item.contentType === 'checklist' && item.checklist.length) {
     return <ChecklistBlock rows={item.checklist} formatMessage={formatMessage} />;
   }
+  if (isDecompositionTemplate(item.templateCode)) {
+    const parsed = parseDecompositionDeliverable(item);
+    if (parsed.kind === 'empty') return <div className={styles.contextMuted}>{formatMessage({ id: 'adminFlow.ai.deliverableEmpty' })}</div>;
+    if (parsed.kind === 'tasks') {
+      return <DecompositionPlanView parsed={parsed} templateCode={item.templateCode} FilePreview={FilePreview} FileButton={FileButton} FileDownload={FileDownload} formatMessage={formatMessage} emptyContent={emptyContent} />;
+    }
+  }
   if (item.options && item.options.length) {
     return <OptionsBlock rows={item.options} templateCode={item.templateCode} FilePreview={FilePreview} FileButton={FileButton} FileDownload={FileDownload} formatMessage={formatMessage} emptyContent={emptyContent} />;
   }
@@ -256,7 +263,7 @@ const OutputsSection = ({ outputs, FilePreview, FileButton, FileDownload, format
             const name = code ? namedLabel(formatMessage, templateNameId(code), code) : formatMessage({ id: 'adminFlow.ai.hasContent' });
             return (
               <li key={code || index}>
-                <Tag bordered={false}>{name}</Tag>
+                <span className={styles.contextQuery}>{name}</span>
                 {item && item.hasContent ? <span className={styles.contextMuted}>{formatMessage({ id: 'adminFlow.ai.hasContent' })}</span> : null}
               </li>
             );
@@ -267,7 +274,7 @@ const OutputsSection = ({ outputs, FilePreview, FileButton, FileDownload, format
     {outputs.decomposition ? (
       <div>
         <h4 className={styles.contextBlockTitle}>{formatMessage({ id: 'adminFlow.ai.decomposition' })}</h4>
-        {typeof outputs.decomposition === 'string' ? <pre className={styles.contextCode}>{outputs.decomposition}</pre> : <JsonBlock data={outputs.decomposition} />}
+        <DecompositionOutputView value={outputs.decomposition} formatMessage={formatMessage} unknownFallback={data => <JsonBlock data={data} />} />
       </div>
     ) : null}
     {outputs.retryAfter ? (
@@ -290,9 +297,9 @@ const ExitProgress = ({ exit, formatMessage }) => {
       <h4 className={styles.contextBlockTitle}>{formatMessage({ id: 'adminFlow.ai.exitProgress' })}</h4>
       <div className={styles.contextExitHead}>
         {exit.hasCanAdvance ? (
-          <Tag bordered={false} color={exit.canAdvance ? 'success' : 'warning'}>
+          <span className={styles.contextInlineStatus} data-tone={exit.canAdvance ? 'success' : 'warning'}>
             {formatMessage({ id: exit.canAdvance ? 'adminFlow.ai.canAdvance' : 'adminFlow.ai.cannotAdvance' })}
-          </Tag>
+          </span>
         ) : null}
         {summary.requiredTotal != null ? <span className={styles.contextMuted}>{formatMessage({ id: 'adminFlow.ai.exitRequired' }, { accepted: summary.acceptedCount ?? '-', total: summary.requiredTotal })}</span> : null}
       </div>
@@ -304,9 +311,9 @@ const ExitProgress = ({ exit, formatMessage }) => {
               <li key={(item && item.templateCode) || index}>
                 {(item && (item.name || item.templateCode)) || '-'}
                 {item && item.status ? (
-                  <Tag bordered={false} color={DELIVERABLE_STATUS_COLOR[item.status] || 'default'}>
+                  <span className={styles.contextInlineStatus} data-tone={DELIVERABLE_STATUS_COLOR[item.status] || 'default'}>
                     {enumLabel(formatMessage, resolveDeliverableStatus(item.status))}
-                  </Tag>
+                  </span>
                 ) : null}
               </li>
             ))}
@@ -358,14 +365,18 @@ const SnapshotSection = ({ snapshot, FilePreview, FileButton, FileDownload, form
             <li key={item.code || index} className={styles.contextTemplateItem}>
               <FlowCardHeader
                 title={item.name || (item.code ? namedLabel(formatMessage, templateNameId(item.code), item.code) : '-')}
-                extra={
-                  item.required === true ? (
-                    <span className={styles.flowCardHeaderHint}>{formatMessage({ id: 'adminFlow.deliverable.required' })}</span>
-                  ) : item.required === false ? (
-                    <span className={styles.contextMuted}>{formatMessage({ id: 'adminFlow.deliverable.optional' })}</span>
-                  ) : null
+                meta={
+                  <FlowCardMeta
+                    items={[
+                      item.required === true
+                        ? { key: 'required', tone: 'warning', children: formatMessage({ id: 'adminFlow.deliverable.required' }) }
+                        : item.required === false
+                          ? { key: 'optional', children: formatMessage({ id: 'adminFlow.deliverable.optional' }) }
+                          : null,
+                      item.contentType ? { key: 'type', children: namedLabel(formatMessage, contentTypeMessageId(item.contentType), item.contentType) } : null
+                    ]}
+                  />
                 }
-                summary={item.contentType ? namedLabel(formatMessage, contentTypeMessageId(item.contentType), item.contentType) : null}
               />
             </li>
           ))}
@@ -380,14 +391,14 @@ const SnapshotSection = ({ snapshot, FilePreview, FileButton, FileDownload, form
             <li key={item.id || item.templateCode || index} className={styles.contextDeliverable}>
               <FlowCardHeader
                 title={item.name || (item.templateCode ? namedLabel(formatMessage, templateNameId(item.templateCode), item.templateCode) : '-')}
-                extra={
-                  item.status ? (
-                    <Tag bordered={false} color={DELIVERABLE_STATUS_COLOR[item.status] || 'default'}>
-                      {enumLabel(formatMessage, resolveDeliverableStatus(item.status))}
-                    </Tag>
-                  ) : null
+                meta={
+                  <FlowCardMeta
+                    items={[
+                      item.status ? { key: 'status', tone: DELIVERABLE_STATUS_COLOR[item.status] || 'default', children: enumLabel(formatMessage, resolveDeliverableStatus(item.status)) } : null,
+                      item.producedBy ? { key: 'produced', children: namedLabel(formatMessage, producedByMessageId(item.producedBy), item.producedBy) } : null
+                    ]}
+                  />
                 }
-                summary={item.producedBy ? namedLabel(formatMessage, producedByMessageId(item.producedBy), item.producedBy) : null}
               />
               <DeliverableBody item={item} FilePreview={FilePreview} FileButton={FileButton} FileDownload={FileDownload} formatMessage={formatMessage} emptyContent={emptyContent} />
               {item.sourceRefs && item.sourceRefs.length ? <EvidenceRefsList items={item.sourceRefs} FilePreview={FilePreview} FileButton={FileButton} FileDownload={FileDownload} formatMessage={formatMessage} /> : null}
@@ -419,7 +430,11 @@ const EventsSection = ({ events, formatMessage }) => (
             <div className={styles.contextEventHead}>
               <span className={styles.contextEventTool}>{item.tool || '-'}</span>
               {item.action ? <span className={styles.contextMuted}>{item.action}</span> : null}
-              {item.result ? <Tag bordered={false}>{item.result}</Tag> : null}
+              {item.result ? (
+                <span className={styles.contextInlineStatus} data-tone={eventTone(item.result)}>
+                  {item.result}
+                </span>
+              ) : null}
             </div>
             {item.target ? (
               <div className={styles.contextEventTarget}>
@@ -468,12 +483,6 @@ const SECTION_TITLE = {
 
 export const AiRunContextView = ({ data, FilePreview, FileButton, FileDownload, formatMessage }) => {
   const parsed = useMemo(() => parseAiRunContext(data), [data]);
-  const [openKeys, setOpenKeys] = useState(() => defaultOpenSections(parsed.sections));
-
-  useEffect(() => {
-    setOpenKeys(defaultOpenSections(parsed.sections));
-  }, [parsed]);
-
   const emptyContent = () => <div className={styles.contentEmpty}>{formatMessage({ id: 'adminFlow.deliverable.contentEmpty' })}</div>;
 
   if (parsed.empty) {
@@ -487,93 +496,108 @@ export const AiRunContextView = ({ data, FilePreview, FileButton, FileDownload, 
   const stageLabel = enumLabel(formatMessage, stageMeta);
   const goalLabel = enumLabel(formatMessage, goalMeta);
 
-  const navSections = parsed.sections.filter(item => item !== 'summary');
+  const identity = [statusLabel ? { key: 'status', tone: statusMeta.tone || 'default', label: statusLabel } : null, stageLabel ? { key: 'stage', label: stageLabel } : null, goalLabel ? { key: 'goal', label: goalLabel } : null].filter(
+    Boolean
+  );
 
-  const goTo = key => {
-    setOpenKeys(current => (current.includes(key) ? current : current.concat(key)));
-    requestAnimationFrame(() => {
-      const node = document.getElementById(`ai-run-context-${key}`);
-      if (node) {
-        node.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+  const facts = [
+    parsed.model ? { key: 'model', label: formatMessage({ id: 'adminFlow.ai.model' }), children: parsed.model } : null,
+    parsed.clientName ? { key: 'client', label: formatMessage({ id: 'adminFlow.ai.client' }), children: parsed.clientName } : null,
+    parsed.startedTime ? { key: 'started', label: formatMessage({ id: 'adminFlow.ai.startedAt' }), children: formatTimeLabel(parsed.startedTime, formatMessage) } : null,
+    parsed.finishedTime ? { key: 'finished', label: formatMessage({ id: 'adminFlow.ai.finishedAt' }), children: formatTimeLabel(parsed.finishedTime, formatMessage) } : null,
+    parsed.runId
+      ? {
+          key: 'runId',
+          label: formatMessage({ id: 'adminFlow.ai.runId' }),
+          children: (
+            <Typography.Text className={styles.contextCodeInline} copyable={{ text: parsed.runId }}>
+              {parsed.runId}
+            </Typography.Text>
+          )
+        }
+      : null
+  ].filter(Boolean);
+
+  const sections = [];
+  if (parsed.sections.includes('outputs')) {
+    sections.push({
+      key: 'outputs',
+      titleId: SECTION_TITLE.outputs,
+      children: <OutputsSection outputs={parsed.outputs} FilePreview={FilePreview} FileButton={FileButton} FileDownload={FileDownload} formatMessage={formatMessage} emptyContent={emptyContent} />
     });
-  };
-
-  const collapseItems = navSections.map(key => {
-    let children = null;
-    if (key === 'outputs') {
-      children = <OutputsSection outputs={parsed.outputs} FilePreview={FilePreview} FileButton={FileButton} FileDownload={FileDownload} formatMessage={formatMessage} emptyContent={emptyContent} />;
-    } else if (key === 'snapshot') {
-      children = <SnapshotSection snapshot={parsed.snapshot} FilePreview={FilePreview} FileButton={FileButton} FileDownload={FileDownload} formatMessage={formatMessage} emptyContent={emptyContent} />;
-    } else if (key === 'events') {
-      children = <EventsSection events={parsed.events} formatMessage={formatMessage} />;
-    } else if (key === 'dispatch') {
-      children = (
+  }
+  if (parsed.sections.includes('snapshot')) {
+    sections.push({
+      key: 'snapshot',
+      titleId: SECTION_TITLE.snapshot,
+      children: <SnapshotSection snapshot={parsed.snapshot} FilePreview={FilePreview} FileButton={FileButton} FileDownload={FileDownload} formatMessage={formatMessage} emptyContent={emptyContent} />
+    });
+  }
+  if (parsed.sections.includes('events')) {
+    sections.push({
+      key: 'events',
+      titleId: SECTION_TITLE.events,
+      children: <EventsSection events={parsed.events} formatMessage={formatMessage} />
+    });
+  }
+  if (parsed.sections.includes('dispatch')) {
+    sections.push({
+      key: 'dispatch',
+      titleId: SECTION_TITLE.dispatch,
+      children: (
         <ul className={styles.contextSimpleList}>
           {parsed.priorityReasons.map((item, index) => (
             <li key={index}>{item}</li>
           ))}
         </ul>
-      );
-    } else if (key === 'raw') {
-      children = <RawSection raw={parsed.raw} formatMessage={formatMessage} />;
-    }
-    return {
-      key,
-      label: formatMessage({ id: SECTION_TITLE[key] || 'adminFlow.ai.emptySection' }),
-      children: (
-        <div id={`ai-run-context-${key}`} className={styles.contextAnchor}>
-          {children}
-        </div>
       )
-    };
-  });
+    });
+  }
 
   return (
     <div className={styles.contextModal}>
-      <div className={styles.contextSummary}>
-        <FlowCardHeader title={formatMessage({ id: 'adminFlow.ai.sectionSummary' })} />
-        <dl className={styles.contextMeta}>
-          <MetaItem label={formatMessage({ id: 'adminFlow.ai.status' })}>
-            {parsed.status ? (
-              <Tag bordered={false} color={statusMeta.tone || 'default'}>
-                {statusLabel}
-              </Tag>
-            ) : null}
-          </MetaItem>
-          <MetaItem label={formatMessage({ id: 'adminFlow.ai.stage' })}>{stageLabel}</MetaItem>
-          <MetaItem label={formatMessage({ id: 'adminFlow.ai.goal' })}>{goalLabel}</MetaItem>
-          <MetaItem label={formatMessage({ id: 'adminFlow.ai.model' })}>{parsed.model}</MetaItem>
-          <MetaItem label={formatMessage({ id: 'adminFlow.ai.client' })}>{parsed.clientName}</MetaItem>
-          <MetaItem label={formatMessage({ id: 'adminFlow.ai.startedAt' })}>{formatTimeLabel(parsed.startedTime, formatMessage)}</MetaItem>
-          <MetaItem label={formatMessage({ id: 'adminFlow.ai.finishedAt' })}>{formatTimeLabel(parsed.finishedTime, formatMessage)}</MetaItem>
-          <MetaItem label={formatMessage({ id: 'adminFlow.ai.runId' })}>
-            {parsed.runId ? (
-              <Typography.Text className={styles.contextCodeInline} copyable={{ text: parsed.runId }}>
-                {parsed.runId}
-              </Typography.Text>
-            ) : null}
-          </MetaItem>
-        </dl>
+      <header className={styles.contextLead}>
+        {identity.length ? (
+          <p className={styles.contextIdentity}>
+            {identity.map(item => (
+              <span key={item.key} data-tone={item.tone || undefined}>
+                {item.label}
+              </span>
+            ))}
+          </p>
+        ) : null}
+        {facts.length ? (
+          <Descriptions size="small" column={{ xs: 1, sm: 2 }} colon className={styles.contextFacts}>
+            {facts.map(item => (
+              <Descriptions.Item key={item.key} label={item.label}>
+                {item.children}
+              </Descriptions.Item>
+            ))}
+          </Descriptions>
+        ) : null}
         {parsed.error ? (
           <div className={styles.contextError} role="alert">
             <div className={styles.contextErrorLabel}>{formatMessage({ id: 'adminFlow.ai.error' })}</div>
             <pre className={styles.contextErrorBody}>{parsed.error}</pre>
           </div>
         ) : null}
-      </div>
-      {navSections.length ? (
-        <nav className={styles.contextNav} aria-label={formatMessage({ id: 'adminFlow.ai.navAria' })}>
-          <Space wrap size={8}>
-            {navSections.map(key => (
-              <Button key={key} size="small" onClick={() => goTo(key)}>
-                {formatMessage({ id: SECTION_TITLE[key] || 'adminFlow.ai.emptySection' })}
-              </Button>
-            ))}
-          </Space>
-        </nav>
+      </header>
+      {sections.map(section => (
+        <section key={section.key} className={styles.contextSection} aria-labelledby={`ai-run-context-${section.key}-title`}>
+          <h3 id={`ai-run-context-${section.key}-title`} className={styles.contextSectionTitle}>
+            {formatMessage({ id: section.titleId })}
+          </h3>
+          <div className={styles.contextSectionBody}>{section.children}</div>
+        </section>
+      ))}
+      {parsed.sections.includes('raw') ? (
+        <details className={styles.contextRawDetails}>
+          <summary className={styles.contextRawSummary}>{formatMessage({ id: 'adminFlow.ai.sectionRaw' })}</summary>
+          <div className={styles.contextSectionBody}>
+            <RawSection raw={parsed.raw} formatMessage={formatMessage} />
+          </div>
+        </details>
       ) : null}
-      {collapseItems.length ? <Collapse ghost activeKey={openKeys} onChange={keys => setOpenKeys(Array.isArray(keys) ? keys : [keys])} items={collapseItems} className={styles.contextCollapse} /> : null}
     </div>
   );
 };

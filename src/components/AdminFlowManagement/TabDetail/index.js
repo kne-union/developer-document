@@ -14,7 +14,7 @@ import Tree from './Tree';
 import AiRuns from './AiRuns';
 import ReleaseLog from './ReleaseLog';
 import { RemoteMarkdownWithAttachments } from './FileAttachmentPreview';
-import { FlowCardHeader } from '../FlowCardHeader';
+import { FlowCardHeader, FlowCardMeta } from '../FlowCardHeader';
 import { recordsDefaultActiveKey } from '../recordsCollapse';
 import { STAGE_CODES, STATUS_COLOR, PRIORITY_COLOR, stageMessageId, statusMessageId, priorityMessageId } from '../constants';
 import styles from '../style.module.scss';
@@ -158,7 +158,7 @@ const TabDetail = createWithRemoteLoader({
             ? formatMessage({ id: 'adminFlow.detail.pausedReason' }, { reason: data.pauseReason })
             : formatMessage({ id: data.pausedByType === 'mcp-ai' ? 'adminFlow.detail.pausedByAi' : 'adminFlow.detail.pausedByHuman' });
 
-          const recordHeader = (id, extra) => <FlowCardHeader compact title={formatMessage({ id })} extra={extra} />;
+          const recordHeader = (id, meta) => <FlowCardHeader compact title={formatMessage({ id })} meta={meta} />;
 
           return (
             <Page {...pageProps}>
@@ -265,13 +265,13 @@ const TabDetail = createWithRemoteLoader({
                 <section className={styles.section}>
                   <article className={styles.descriptionCard}>
                     <FlowCardHeader title={formatMessage({ id: 'adminFlow.detail.description' })} />
-                    {data.description ? (
-                      <div className={styles.descriptionBody}>
+                    <div className={styles.descriptionBody}>
+                      {data.description ? (
                         <RemoteMarkdownWithAttachments text={data.description} formatMessage={formatMessage} />
-                      </div>
-                    ) : (
-                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} className={styles.sectionEmpty} description={formatMessage({ id: 'adminFlow.detail.descriptionEmpty' })} />
-                    )}
+                      ) : (
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} className={styles.sectionEmpty} description={formatMessage({ id: 'adminFlow.detail.descriptionEmpty' })} />
+                      )}
+                    </div>
                   </article>
                 </section>
 
@@ -289,7 +289,10 @@ const TabDetail = createWithRemoteLoader({
                       { key: 'ai', label: recordHeader('adminFlow.detail.tabAiRuns'), children: <AiRuns flowId={id} runs={data.aiRuns || data.recentRuns || []} /> },
                       {
                         key: 'release',
-                        label: recordHeader('adminFlow.detail.tabRelease', openFeedback.length ? <span className={styles.recordBadge}>{formatMessage({ id: 'adminFlow.detail.feedbackBadge' }, { count: openFeedback.length })}</span> : null),
+                        label: recordHeader(
+                          'adminFlow.detail.tabRelease',
+                          openFeedback.length ? <FlowCardMeta items={[{ key: 'feedback', tone: 'warning', children: formatMessage({ id: 'adminFlow.detail.feedbackBadge' }, { count: openFeedback.length }) }]} /> : null
+                        ),
                         children: <ReleaseLog flowId={id} />
                       }
                     ]}
