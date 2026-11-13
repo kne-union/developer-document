@@ -1216,6 +1216,11 @@ export default {
   'adminFlow.deliverable.material.textField': '正文',
   'adminFlow.deliverable.material.fileField': '附件',
   'adminFlow.deliverable.preview': '打开',
+  'adminFlow.deliverable.download': '下载',
+  'adminFlow.deliverable.previewUnavailable': '无法在当前页面内嵌预览',
+  'adminFlow.deliverable.previewManualHint': '该地址不是可直接预览的文件，或外站可能禁止嵌入、需要登录。不会自动跳转，需要时可手动打开。',
+  'adminFlow.deliverable.openManually': '手动打开',
+  'adminFlow.deliverable.previewInvalidUrl': '链接无效，无法预览',
   // 23 项交付物模板：名称 + 验收要点
   'adminFlow.deliverableTemplate.requirementDoc.name': '需求说明',
   'adminFlow.deliverableTemplate.requirementDoc.criteria': '背景、目标、范围、非目标写清，无歧义',

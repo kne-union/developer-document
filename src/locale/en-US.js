@@ -1220,6 +1220,11 @@ export default {
   'adminFlow.deliverable.material.textField': 'Content',
   'adminFlow.deliverable.material.fileField': 'Attachment',
   'adminFlow.deliverable.preview': 'Open',
+  'adminFlow.deliverable.download': 'Download',
+  'adminFlow.deliverable.previewUnavailable': 'This can’t be previewed on the current page',
+  'adminFlow.deliverable.previewManualHint': 'This address is not a file that can be embedded, or the site may block framing or require sign-in. It will not open automatically; you can open it manually if you need to.',
+  'adminFlow.deliverable.openManually': 'Open manually',
+  'adminFlow.deliverable.previewInvalidUrl': 'This link is invalid and can’t be previewed',
   // 23 deliverable templates: name + acceptance criteria
   'adminFlow.deliverableTemplate.requirementDoc.name': 'Requirement Document',
   'adminFlow.deliverableTemplate.requirementDoc.criteria': 'Background, goals, scope and non-goals are clear and unambiguous',

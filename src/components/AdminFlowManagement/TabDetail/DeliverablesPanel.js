@@ -9,6 +9,7 @@ import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import { DELIVERABLE_STATUS_COLOR, deliverableStatusMessageId, producedByMessageId, templateNameId, templateCriteriaId } from '../constants';
 import { toSelectOption, selectValueOf } from '../selectValue';
+import { classifyFileAttachment, classifyPrototypeUrl, isInPageUrlPreviewTemplate } from '../deliverablePreview';
 import styles from '../style.module.scss';
 
 const getMaterialTypeOptions = formatMessage => [
@@ -114,10 +115,10 @@ const normalizeOption = option => {
 // 交付物清单：每份材料是一张卡片，内容（Markdown / 链接 / 附件 / 清单）直接在卡片里展示，
 // 不再收进「查看内容」弹窗——评审时不需要来回点开对比。
 const DeliverablesPanel = createWithRemoteLoader({
-  modules: ['components-core:FormInfo', 'components-core:FormInfo@useFormModal', 'components-admin:Editor', 'components-core:Global@usePreset']
+  modules: ['components-core:FormInfo', 'components-core:FormInfo@useFormModal', 'components-admin:Editor', 'components-core:Global@usePreset', 'components-core:FilePreview', 'components-core:File@Download']
 })(
   withLocale(({ remoteModules, flowId, data, stage, reload: reloadDetail }) => {
-    const [FormInfo, useFormModal, Editor, usePreset] = remoteModules;
+    const [FormInfo, useFormModal, Editor, usePreset, FilePreview, FileDownload] = remoteModules;
     const formModal = useFormModal();
     const { ajax, apis } = usePreset();
     const { message } = App.useApp();
@@ -152,23 +153,94 @@ const DeliverablesPanel = createWithRemoteLoader({
       </a>
     );
 
-    const fileContent = (fileName, fileId) => (
-      <span className={styles.contentFile}>
-        <PaperClipOutlined /> {fileName || fileId}
-      </span>
-    );
+    // 扩展材料 jsonb type=file 与测试阶段 contentType=file（测试用例 / 测试报告）共用：
+    // 在当前卡片内嵌入 components-core:FilePreview（id + filename，走 preset 的 getUrl），并保留下载。
+    // 未知类型由 FilePreview 的 UnknownPreview 页内展示，不跳新页。
+    const fileContent = (fileName, fileId) => {
+      const preview = classifyFileAttachment({ fileId, fileName });
+      if (preview.kind === 'empty') {
+        return emptyContent();
+      }
+      return (
+        <div className={styles.inPagePreview}>
+          <div className={styles.previewToolbar}>
+            <span className={styles.previewFileName} title={preview.filename}>
+              <PaperClipOutlined />
+              {preview.filename}
+            </span>
+            <FileDownload id={preview.id} filename={preview.filename} type="link" size="small">
+              {formatMessage({ id: 'adminFlow.deliverable.download' })}
+            </FileDownload>
+          </div>
+          <div className={styles.previewStage}>
+            <FilePreview id={preview.id} filename={preview.filename} originName={preview.filename} ignoreContent={preview.previewType === 'html'} />
+          </div>
+        </div>
+      );
+    };
 
-    // 清单：勾选态用绿色实心勾，未勾选用灰色空心圈，评审时能快速扫出还差哪条
+    // 仅「原型 / 设计稿」(templateCode=prototype)：主操作留在当前详情页。
+    // 可识别的文件 URL 用 FilePreview src 直接内嵌；HTML 走 iframe（ignoreContent），不注入 HTML。
+    // 设计工具 / 无扩展名外链：明确空态 + 用户主动「手动打开」，不自动跳转，也不把跳转叫预览。
+    const prototypeContent = url => {
+      const preview = classifyPrototypeUrl(url);
+      if (preview.kind === 'empty') {
+        return emptyContent();
+      }
+      if (preview.kind === 'invalid') {
+        return (
+          <div className={styles.previewUnsupported}>
+            <p className={styles.previewUnsupportedTitle}>{formatMessage({ id: 'adminFlow.deliverable.previewInvalidUrl' })}</p>
+          </div>
+        );
+      }
+      if (preview.kind === 'filePreview') {
+        return (
+          <div className={styles.inPagePreview}>
+            <div className={styles.previewToolbar}>
+              <span className={styles.previewFileName} title={preview.filename}>
+                {preview.filename}
+              </span>
+              <FileDownload src={preview.src} filename={preview.filename} type="link" size="small">
+                {formatMessage({ id: 'adminFlow.deliverable.download' })}
+              </FileDownload>
+            </div>
+            <div className={styles.previewStage}>
+              <FilePreview src={preview.src} filename={preview.filename} originName={preview.filename} ignoreContent={preview.previewType === 'html'} />
+            </div>
+          </div>
+        );
+      }
+      return (
+        <div className={styles.previewUnsupported} data-preview-reason={preview.reason}>
+          <p className={styles.previewUnsupportedTitle}>{formatMessage({ id: 'adminFlow.deliverable.previewUnavailable' })}</p>
+          <p className={styles.previewUnsupportedHint}>{formatMessage({ id: 'adminFlow.deliverable.previewManualHint' })}</p>
+          <Button type="link" href={preview.url} target="_blank" rel="noopener noreferrer" className={styles.previewManualOpen}>
+            {formatMessage({ id: 'adminFlow.deliverable.openManually' })}
+          </Button>
+        </div>
+      );
+    };
+
+    // 清单（含自测记录）：摘要 + 条目纵向排布，备注换行到标签下方，长文本可折行，窄屏不横向溢出。
+    // 已勾选不再用删除线，避免长句难以阅读；勾选态仍靠绿色实心勾与未勾选的空心圈区分。
     const checklistContent = rows => (
-      <ul className={styles.checklist}>
-        {rows.map((row, index) => (
-          <li key={index} className={row.checked ? styles.checklistItemDone : styles.checklistItem}>
-            <span className={styles.checklistMark}>{row.checked ? <CheckCircleFilled /> : <MinusCircleOutlined />}</span>
-            <span className={styles.checklistLabel}>{row.label}</span>
-            {row.remark ? <span className={styles.checklistRemark}>{row.remark}</span> : null}
-          </li>
-        ))}
-      </ul>
+      <div className={styles.checklistWrap}>
+        <div className={styles.checklistSummary}>{formatMessage({ id: 'adminFlow.deliverable.table.checklistSummary' }, { done: rows.filter(row => row.checked).length, total: rows.length })}</div>
+        <ul className={styles.checklist}>
+          {rows.map((row, index) => (
+            <li key={index} className={row.checked ? styles.checklistItemDone : styles.checklistItem}>
+              <span className={styles.checklistMark} aria-hidden="true">
+                {row.checked ? <CheckCircleFilled /> : <MinusCircleOutlined />}
+              </span>
+              <div className={styles.checklistMain}>
+                <div className={styles.checklistLabel}>{row.label || formatMessage({ id: 'adminFlow.deliverable.contentEmpty' })}</div>
+                {row.remark ? <div className={styles.checklistRemark}>{row.remark}</div> : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     );
 
     // 多份材料：每份先标类型，再平铺其正文/链接/附件
@@ -199,8 +271,14 @@ const DeliverablesPanel = createWithRemoteLoader({
 
     const contentNode = item => {
       if (item.contentType === 'text') return item.content ? markdownContent(item.content) : emptyContent();
-      if (item.contentType === 'url') return item.url ? urlContent(item.url) : emptyContent();
-      if (item.contentType === 'file') return item.fileName || item.fileId ? fileContent(item.fileName, item.fileId) : emptyContent();
+      // 原型 / 设计稿走页内预览；其他 url（PR 链接、测试环境、缺陷闭环等）仍用外链，不扩大范围。
+      if (item.contentType === 'url') {
+        if (isInPageUrlPreviewTemplate(item.templateCode)) {
+          return item.url ? prototypeContent(item.url) : emptyContent();
+        }
+        return item.url ? urlContent(item.url) : emptyContent();
+      }
+      if (item.contentType === 'file') return fileContent(item.fileName, item.fileId);
       const rows = item.contentType === 'checklist' ? item.checklist || [] : item.options || [];
       if (!rows.length) return emptyContent();
       return item.contentType === 'checklist' ? checklistContent(rows) : optionsContent(rows);

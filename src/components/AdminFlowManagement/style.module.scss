@@ -462,58 +462,170 @@
   border-radius: 6px;
 }
 
-// 清单：勾选态与未勾选态对比明显
+// 清单（含自测记录）：摘要与条目纵向排布，备注落在标签下方，长文本折行。
+// 不用删除线，保证长句可读；勾选态用对比足够的图标色区分。不做内嵌卡片。
+.checklistWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.checklistSummary {
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
 .checklist {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
+  min-width: 0;
 }
 
 .checklistItem,
 .checklistItemDone {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  line-height: 21px;
-  color: rgba(0, 0, 0, 0.75);
-}
+  gap: 10px;
+  padding: 8px 0;
+  margin: 0;
+  border-bottom: 1px solid #eceef1;
+  font-size: 14px;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
 
-.checklistItemDone {
-  color: rgba(0, 0, 0, 0.55);
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
 
-  .checklistLabel {
-    text-decoration: line-through;
-    text-decoration-color: rgba(0, 0, 0, 0.25);
+  &:first-child {
+    padding-top: 0;
   }
 }
 
 .checklistMark {
   display: inline-flex;
   flex-shrink: 0;
-  margin-top: 3px;
-  font-size: 13px;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+  font-size: 16px;
   line-height: 1;
-  color: #d0d5dd;
+  color: rgba(0, 0, 0, 0.55);
 
   .checklistItemDone & {
-    color: #52c41a;
+    // #237804 在浅底上对比约 6:1，避免原 #52c41a 不达标
+    color: #237804;
   }
 }
 
+.checklistMain {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .checklistLabel {
+  font-size: 14px;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
 .checklistRemark {
-  flex-shrink: 0;
-  color: rgba(0, 0, 0, 0.55);
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
 
-  &::before {
-    content: '· ';
+// 页内预览：直接嵌在当前卡片里，不跳页、不把弹层当默认预览。
+.inPagePreview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.previewToolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.previewFileName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.previewStage {
+  // 不设 overflow:auto / max-height，避免抢占页面滚轮；FilePreview 自带高度（如约 560–600px），超长随页面滚动。
+  min-width: 0;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #eceef1;
+  border-radius: 8px;
+}
+
+.previewUnsupported {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 4px 0;
+  min-width: 0;
+}
+
+.previewUnsupportedTitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.previewUnsupportedHint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.previewManualOpen {
+  height: auto;
+  padding-left: 0;
+}
+
+@media (max-width: 640px) {
+  .checklistItem,
+  .checklistItemDone {
+    gap: 8px;
+    padding: 10px 0;
   }
 }
 
@@ -532,9 +644,10 @@
 
 .materialItemHead {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
 }
 
 .materialType {
@@ -547,17 +660,22 @@
   font-size: 13px;
   font-weight: 500;
   line-height: 20px;
-  color: rgba(0, 0, 0, 0.8);
+  color: rgba(0, 0, 0, 0.88);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .materialItemRemark {
-  font-size: 12px;
-  line-height: 18px;
-  color: rgba(0, 0, 0, 0.55);
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .materialItemBody {
-  margin-top: 6px;
+  margin-top: 8px;
+  min-width: 0;
 
   &:empty {
     display: none;
