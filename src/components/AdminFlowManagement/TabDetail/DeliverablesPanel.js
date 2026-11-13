@@ -2,14 +2,13 @@ import { useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import { App, Button, Dropdown, Empty, Space, Tag } from 'antd';
-import { CheckCircleFilled, LinkOutlined, MinusCircleOutlined, MoreOutlined, PaperClipOutlined } from '@ant-design/icons';
-import MarkdownRender from '@kne/markdown-components-render';
-import '@kne/markdown-components-render/dist/index.css';
+import { CheckCircleFilled, LinkOutlined, MinusCircleOutlined, MoreOutlined } from '@ant-design/icons';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import { DELIVERABLE_STATUS_COLOR, deliverableStatusMessageId, producedByMessageId, templateNameId, templateCriteriaId } from '../constants';
 import { toSelectOption, selectValueOf } from '../selectValue';
-import { classifyFileAttachment, classifyPrototypeUrl, isInPageUrlPreviewTemplate } from '../deliverablePreview';
+import { isInPageUrlPreviewTemplate, resolveFilePreviewPresentation, PREVIEW_PRESENTATION } from '../deliverablePreview';
+import { FileAttachmentPreview, MarkdownWithAttachments } from './FileAttachmentPreview';
 import {
   TEST_CASES_TEMPLATE,
   REGRESSION_TEMPLATE,
@@ -166,9 +165,7 @@ const DeliverablesPanel = createWithRemoteLoader({
     const emptyContent = () => <div className={styles.contentEmpty}>{formatMessage({ id: 'adminFlow.deliverable.contentEmpty' })}</div>;
 
     const markdownContent = text => (
-      <div className={styles.markdownBody}>
-        <MarkdownRender>{text}</MarkdownRender>
-      </div>
+      <MarkdownWithAttachments text={text} presentation={PREVIEW_PRESENTATION.MODAL} FilePreview={FilePreview} FileButton={FileButton} FileDownload={FileDownload} formatMessage={formatMessage} emptyContent={emptyContent} />
     );
 
     const urlContent = url => (
@@ -177,74 +174,28 @@ const DeliverablesPanel = createWithRemoteLoader({
       </a>
     );
 
-    // 扩展材料 jsonb type=file 与测试阶段 contentType=file（测试用例 / 测试报告）共用：
-    // 在当前卡片内嵌入 components-core:FilePreview（id + filename，走 preset 的 getUrl），并保留下载。
-    // 未知类型由 FilePreview 的 UnknownPreview 页内展示，不跳新页。
-    const fileContent = (fileName, fileId) => {
-      const preview = classifyFileAttachment({ fileId, fileName });
-      if (preview.kind === 'empty') {
-        return emptyContent();
-      }
-      return (
-        <div className={styles.inPagePreview}>
-          <div className={styles.previewToolbar}>
-            <span className={styles.previewFileName} title={preview.filename}>
-              <PaperClipOutlined />
-              {preview.filename}
-            </span>
-            <FileDownload id={preview.id} filename={preview.filename} type="link" size="small">
-              {formatMessage({ id: 'adminFlow.deliverable.download' })}
-            </FileDownload>
-          </div>
-          <div className={styles.previewStage}>
-            <FilePreview id={preview.id} filename={preview.filename} originName={preview.filename} ignoreContent={preview.previewType === 'html'} />
-          </div>
-        </div>
-      );
-    };
+    // 文件预览分级走 deliverablePreview.resolveFilePreviewPresentation：核心当前页嵌入，非核心点击同页弹窗。
+    // 未传 presentation 时默认弹窗，避免把补充附件误做成页内大预览。
+    const fileContent = (fileName, fileId, presentation) => (
+      <FileAttachmentPreview
+        presentation={presentation || resolveFilePreviewPresentation({})}
+        fileId={fileId}
+        fileName={fileName}
+        FilePreview={FilePreview}
+        FileButton={FileButton}
+        FileDownload={FileDownload}
+        formatMessage={formatMessage}
+        emptyContent={emptyContent}
+      />
+    );
 
     // 仅「原型 / 设计稿」(templateCode=prototype)：主操作留在当前详情页。
     // 可识别的文件 URL 用 FilePreview src 直接内嵌；HTML 走 iframe（ignoreContent），不注入 HTML。
     // 设计工具 / 无扩展名外链：明确空态 + 用户主动「手动打开」，不自动跳转，也不把跳转叫预览。
-    const prototypeContent = url => {
-      const preview = classifyPrototypeUrl(url);
-      if (preview.kind === 'empty') {
-        return emptyContent();
-      }
-      if (preview.kind === 'invalid') {
-        return (
-          <div className={styles.previewUnsupported}>
-            <p className={styles.previewUnsupportedTitle}>{formatMessage({ id: 'adminFlow.deliverable.previewInvalidUrl' })}</p>
-          </div>
-        );
-      }
-      if (preview.kind === 'filePreview') {
-        return (
-          <div className={styles.inPagePreview}>
-            <div className={styles.previewToolbar}>
-              <span className={styles.previewFileName} title={preview.filename}>
-                {preview.filename}
-              </span>
-              <FileDownload src={preview.src} filename={preview.filename} type="link" size="small">
-                {formatMessage({ id: 'adminFlow.deliverable.download' })}
-              </FileDownload>
-            </div>
-            <div className={styles.previewStage}>
-              <FilePreview src={preview.src} filename={preview.filename} originName={preview.filename} ignoreContent={preview.previewType === 'html'} />
-            </div>
-          </div>
-        );
-      }
-      return (
-        <div className={styles.previewUnsupported} data-preview-reason={preview.reason}>
-          <p className={styles.previewUnsupportedTitle}>{formatMessage({ id: 'adminFlow.deliverable.previewUnavailable' })}</p>
-          <p className={styles.previewUnsupportedHint}>{formatMessage({ id: 'adminFlow.deliverable.previewManualHint' })}</p>
-          <Button type="link" href={preview.url} target="_blank" rel="noopener noreferrer" className={styles.previewManualOpen}>
-            {formatMessage({ id: 'adminFlow.deliverable.openManually' })}
-          </Button>
-        </div>
-      );
-    };
+    // 原型 / 设计稿是核心文件：可嵌入的当前页 FilePreview；外站不能嵌入则空态 + 用户主动打开，不自动跳转。
+    const prototypeContent = url => (
+      <FileAttachmentPreview presentation={PREVIEW_PRESENTATION.INLINE} src={url} FilePreview={FilePreview} FileButton={FileButton} FileDownload={FileDownload} formatMessage={formatMessage} emptyContent={emptyContent} />
+    );
 
     // 清单（含自测记录）：摘要 + 条目纵向排布，备注换行到标签下方，长文本可折行，窄屏不横向溢出。
     // 已勾选不再用删除线，避免长句难以阅读；勾选态仍靠绿色实心勾与未勾选的空心圈区分。
@@ -268,11 +219,12 @@ const DeliverablesPanel = createWithRemoteLoader({
     );
 
     // 多份材料：每份先标类型，再平铺其正文/链接/附件
-    const optionsContent = rows => (
+    const optionsContent = (rows, item) => (
       <div className={styles.materialList}>
         {rows.map((row, index) => {
           const type = selectValueOf(row.type) || 'text';
           const typeLabel = getMaterialTypeOptions(formatMessage).find(option => option.value === type)?.label || type;
+          const filePresentation = resolveFilePreviewPresentation({ templateCode: item && item.templateCode, entryKind: 'option_file' });
           return (
             <div key={index} className={styles.materialItem}>
               <div className={styles.materialItemHead}>
@@ -285,7 +237,7 @@ const DeliverablesPanel = createWithRemoteLoader({
               <div className={styles.materialItemBody}>
                 {type === 'text' ? (row.content ? markdownContent(row.content) : emptyContent()) : null}
                 {type === 'url' ? (row.url ? urlContent(row.url) : emptyContent()) : null}
-                {type === 'file' ? (row.fileName || row.fileId ? fileContent(row.fileName, row.fileId) : emptyContent()) : null}
+                {type === 'file' ? (row.fileName || row.fileId ? fileContent(row.fileName, row.fileId, filePresentation) : emptyContent()) : null}
               </div>
             </div>
           );
@@ -297,7 +249,7 @@ const DeliverablesPanel = createWithRemoteLoader({
       // 测试用例：按明确 stepId 把截图挂到步骤上，直接在测试阶段页面展示缩略图；未关联的单列，不按文件名/顺序造关系。
       // 与自测记录（checklist）分开，不混用数据。
       if (item.templateCode === TEST_CASES_TEMPLATE) {
-        return <TestStepsView parsed={parseTestExecution(item)} FilePreview={FilePreview} FileButton={FileButton} fileContent={fileContent} formatMessage={formatMessage} emptyContent={emptyContent} />;
+        return <TestStepsView parsed={parseTestExecution(item)} FilePreview={FilePreview} FileButton={FileButton} FileDownload={FileDownload} fileContent={fileContent} formatMessage={formatMessage} emptyContent={emptyContent} />;
       }
       // 回归记录：时间线按真实 occurredAt 排序；没有时间就标明未填写，不用更新时间顶替。
       if (item.templateCode === REGRESSION_TEMPLATE) {
@@ -308,6 +260,7 @@ const DeliverablesPanel = createWithRemoteLoader({
             steps={flattenSteps(parseTestExecution(casesItem))}
             FilePreview={FilePreview}
             FileButton={FileButton}
+            FileDownload={FileDownload}
             formatMessage={formatMessage}
             emptyContent={emptyContent}
           />
@@ -321,10 +274,10 @@ const DeliverablesPanel = createWithRemoteLoader({
         }
         return item.url ? urlContent(item.url) : emptyContent();
       }
-      if (item.contentType === 'file') return fileContent(item.fileName, item.fileId);
+      if (item.contentType === 'file') return fileContent(item.fileName, item.fileId, resolveFilePreviewPresentation({ templateCode: item.templateCode, entryKind: 'deliverable_main' }));
       const rows = item.contentType === 'checklist' ? item.checklist || [] : item.options || [];
       if (!rows.length) return emptyContent();
-      return item.contentType === 'checklist' ? checklistContent(rows) : optionsContent(rows);
+      return item.contentType === 'checklist' ? checklistContent(rows) : optionsContent(rows, item);
     };
 
     // 多份材料里，行可能建了但没填实质内容，不能只按数组长度判断

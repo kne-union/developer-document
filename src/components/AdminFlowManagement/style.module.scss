@@ -621,6 +621,63 @@
   padding-left: 0;
 }
 
+.previewDownload {
+  flex: none;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+// 非核心附件：文件名是预览入口，下载放在旁边作为次操作，不自动跳页。
+.modalPreviewEntry {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.modalPreviewButton {
+  height: auto;
+  padding: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.modalPreviewLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.modalPreviewList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.markdownFiles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #eceef1;
+  min-width: 0;
+}
+
+.markdownFilesTitle {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.65);
+}
+
 @media (max-width: 640px) {
   .checklistItem,
   .checklistItemDone {

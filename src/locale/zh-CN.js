@@ -1221,6 +1221,8 @@ export default {
   'adminFlow.deliverable.previewManualHint': '该地址不是可直接预览的文件，或外站可能禁止嵌入、需要登录。不会自动跳转，需要时可手动打开。',
   'adminFlow.deliverable.openManually': '手动打开',
   'adminFlow.deliverable.previewInvalidUrl': '链接无效，无法预览',
+  'adminFlow.deliverable.previewInModal': '点击在当前页弹窗预览',
+  'adminFlow.deliverable.markdownFiles': '正文中的附件',
   'adminFlow.testStep.cases': '测试用例与步骤',
   'adminFlow.testStep.steps': '测试步骤',
   'adminFlow.testStep.shots': '步骤截图',

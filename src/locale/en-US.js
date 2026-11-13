@@ -1225,6 +1225,8 @@ export default {
   'adminFlow.deliverable.previewManualHint': 'This address is not a file that can be embedded, or the site may block framing or require sign-in. It will not open automatically; you can open it manually if you need to.',
   'adminFlow.deliverable.openManually': 'Open manually',
   'adminFlow.deliverable.previewInvalidUrl': 'This link is invalid and can’t be previewed',
+  'adminFlow.deliverable.previewInModal': 'Click to preview in a modal on this page',
+  'adminFlow.deliverable.markdownFiles': 'Attachments in this text',
   'adminFlow.testStep.cases': 'Test cases and steps',
   'adminFlow.testStep.steps': 'Steps',
   'adminFlow.testStep.shots': 'Step screenshots',

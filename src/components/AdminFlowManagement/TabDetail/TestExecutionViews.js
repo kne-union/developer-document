@@ -1,5 +1,7 @@
 import { Tag, Timeline } from 'antd';
 import { flattenSteps, formatShanghaiTime, hasRegressionValue, hasTestExecutionValue, lookupStep } from '../testExecution';
+import { PREVIEW_PRESENTATION, resolveFilePreviewPresentation } from '../deliverablePreview';
+import { FileAttachmentPreview, MarkdownWithAttachments } from './FileAttachmentPreview';
 import styles from '../style.module.scss';
 
 const STEP_RESULT_IDS = {
@@ -33,10 +35,30 @@ export const regressionStatusOptions = formatMessage => [
   { label: formatMessage({ id: REGRESSION_STATUS_IDS.blocked }), value: 'blocked' }
 ];
 
-export const ScreenshotGallery = ({ shots, FilePreview, FileButton, emptyText }) => {
+export const ScreenshotGallery = ({ shots, FilePreview, FileButton, FileDownload, emptyText, presentation, formatMessage }) => {
   if (!shots || !shots.length) {
     return emptyText ? <div className={styles.shotEmpty}>{emptyText}</div> : null;
   }
+  // 非核心（如回归记录自身截图）：文件名点击同页弹窗，页面上不铺大预览。
+  if (presentation === PREVIEW_PRESENTATION.MODAL) {
+    return (
+      <div className={styles.modalPreviewList}>
+        {shots.map(shot => (
+          <FileAttachmentPreview
+            key={shot.fileId}
+            presentation={PREVIEW_PRESENTATION.MODAL}
+            fileId={shot.fileId}
+            fileName={shot.fileName}
+            FilePreview={FilePreview}
+            FileButton={FileButton}
+            FileDownload={FileDownload}
+            formatMessage={formatMessage}
+          />
+        ))}
+      </div>
+    );
+  }
+  // 核心测试步骤截图：缩略图直接可见，点击在同页弹窗放大，下载是弹窗内的次操作。
   return (
     <div className={styles.shotGrid}>
       {shots.map(shot => (
@@ -55,7 +77,7 @@ export const ScreenshotGallery = ({ shots, FilePreview, FileButton, emptyText })
   );
 };
 
-export const TestStepsView = ({ parsed, FilePreview, FileButton, fileContent, formatMessage, emptyContent }) => {
+export const TestStepsView = ({ parsed, FilePreview, FileButton, FileDownload, fileContent, formatMessage, emptyContent }) => {
   if (!hasTestExecutionValue(parsed)) {
     return emptyContent();
   }
@@ -66,7 +88,7 @@ export const TestStepsView = ({ parsed, FilePreview, FileButton, fileContent, fo
           <h3 className={styles.testSectionTitle}>{formatMessage({ id: 'adminFlow.testStep.documents' })}</h3>
           {parsed.documents.map(doc => (
             <div key={doc.fileId} className={styles.testDocument}>
-              {fileContent(doc.fileName, doc.fileId)}
+              {fileContent(doc.fileName, doc.fileId, resolveFilePreviewPresentation({ templateCode: 'test_cases', entryKind: 'test_case_document' }))}
             </div>
           ))}
         </section>
@@ -89,7 +111,15 @@ export const TestStepsView = ({ parsed, FilePreview, FileButton, fileContent, fo
                     )}
                   </div>
                   {step.remark ? <div className={styles.testStepRemark}>{step.remark}</div> : null}
-                  <ScreenshotGallery shots={step.screenshots} FilePreview={FilePreview} FileButton={FileButton} emptyText={formatMessage({ id: 'adminFlow.testStep.noShots' })} />
+                  <ScreenshotGallery
+                    shots={step.screenshots}
+                    FilePreview={FilePreview}
+                    FileButton={FileButton}
+                    FileDownload={FileDownload}
+                    presentation={resolveFilePreviewPresentation({ templateCode: 'test_cases', entryKind: 'test_step_screenshot' })}
+                    formatMessage={formatMessage}
+                    emptyText={formatMessage({ id: 'adminFlow.testStep.noShots' })}
+                  />
                 </li>
               ))}
             </ol>
@@ -102,14 +132,21 @@ export const TestStepsView = ({ parsed, FilePreview, FileButton, fileContent, fo
         <section className={styles.testUnlinked}>
           <h3 className={styles.testSectionTitle}>{formatMessage({ id: 'adminFlow.testStep.unlinked' })}</h3>
           <p className={styles.testUnlinkedHint}>{formatMessage({ id: 'adminFlow.testStep.unlinkedHint' })}</p>
-          <ScreenshotGallery shots={parsed.unlinkedScreenshots} FilePreview={FilePreview} FileButton={FileButton} />
+          <ScreenshotGallery
+            shots={parsed.unlinkedScreenshots}
+            FilePreview={FilePreview}
+            FileButton={FileButton}
+            FileDownload={FileDownload}
+            presentation={resolveFilePreviewPresentation({ templateCode: 'test_cases', entryKind: 'test_unlinked_screenshot' })}
+            formatMessage={formatMessage}
+          />
         </section>
       ) : null}
     </div>
   );
 };
 
-export const RegressionTimelineView = ({ timeline, steps, FilePreview, FileButton, formatMessage, emptyContent }) => {
+export const RegressionTimelineView = ({ timeline, steps, FilePreview, FileButton, FileDownload, formatMessage, emptyContent }) => {
   if (!hasRegressionValue({ runs: timeline && timeline.items })) {
     return emptyContent();
   }
@@ -146,7 +183,19 @@ export const RegressionTimelineView = ({ timeline, steps, FilePreview, FileButto
                 ) : null}
               </div>
               {run.plainText ? <p className={styles.regressionHint}>{formatMessage({ id: 'adminFlow.regression.plainTextHint' })}</p> : null}
-              {run.content ? <div className={styles.regressionNote}>{run.content}</div> : null}
+              {run.content ? (
+                <div className={styles.regressionNote}>
+                  <MarkdownWithAttachments
+                    text={run.content}
+                    presentation={PREVIEW_PRESENTATION.MODAL}
+                    FilePreview={FilePreview}
+                    FileButton={FileButton}
+                    FileDownload={FileDownload}
+                    formatMessage={formatMessage}
+                    emptyContent={emptyContent}
+                  />
+                </div>
+              ) : null}
               {related.length ? (
                 <div className={styles.regressionRelated}>
                   <div className={styles.regressionRelatedLabel}>{formatMessage({ id: 'adminFlow.regression.relatedSteps' })}</div>
@@ -156,13 +205,31 @@ export const RegressionTimelineView = ({ timeline, steps, FilePreview, FileButto
                         <div className={styles.regressionStepName}>
                           {item.step ? `${item.step.caseLabel ? `${item.step.caseLabel} · ` : ''}${item.step.name}` : `${formatMessage({ id: 'adminFlow.regression.unknownStep' })}（${item.stepId}）`}
                         </div>
-                        {item.step && item.step.screenshots && item.step.screenshots.length ? <ScreenshotGallery shots={item.step.screenshots} FilePreview={FilePreview} FileButton={FileButton} /> : null}
+                        {item.step && item.step.screenshots && item.step.screenshots.length ? (
+                          <ScreenshotGallery
+                            shots={item.step.screenshots}
+                            FilePreview={FilePreview}
+                            FileButton={FileButton}
+                            FileDownload={FileDownload}
+                            presentation={resolveFilePreviewPresentation({ templateCode: 'test_cases', entryKind: 'test_step_screenshot' })}
+                            formatMessage={formatMessage}
+                          />
+                        ) : null}
                       </li>
                     ))}
                   </ul>
                 </div>
               ) : null}
-              {run.screenshots && run.screenshots.length ? <ScreenshotGallery shots={run.screenshots} FilePreview={FilePreview} FileButton={FileButton} /> : null}
+              {run.screenshots && run.screenshots.length ? (
+                <ScreenshotGallery
+                  shots={run.screenshots}
+                  FilePreview={FilePreview}
+                  FileButton={FileButton}
+                  FileDownload={FileDownload}
+                  presentation={resolveFilePreviewPresentation({ templateCode: 'regression_note', entryKind: 'regression_screenshot' })}
+                  formatMessage={formatMessage}
+                />
+              ) : null}
             </div>
           )
         };
