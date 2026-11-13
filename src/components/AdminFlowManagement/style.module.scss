@@ -750,8 +750,8 @@
 
 .previewStage {
   // 仅页内嵌入预览。横向：宽文档只在本区域滚动；纵向不设 max-height，不抢 Modal/页面滚动。
-  // 内边距让预览与边框之间留出衬底，border-box 避免 width:100% + padding 撑出父级。
-  // 不要把这里的 padding 套到 FileButton 预览弹窗的滚动容器外层，否则轨道会内缩。
+  // 内边距让预览与边框之间留出空隙，border-box 避免 width:100% + padding 撑出父级。
+  // 衬底用已有白色 token #fff，与文件内容背景一致。不要把这里的 padding 套到 FileButton 预览弹窗的滚动容器外层，否则轨道会内缩。
   box-sizing: border-box;
   min-width: 0;
   max-width: 100%;
@@ -760,7 +760,7 @@
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   padding: 16px;
-  background: #f8f9fb;
+  background: #fff;
   border: 1px solid #eceef1;
   border-radius: 8px;
 

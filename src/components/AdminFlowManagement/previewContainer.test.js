@@ -50,6 +50,16 @@ describe('页内文件预览容器：横向滚动、不撑出页面、不抢纵�
     assert.match(mobile[1], /padding:\s*10px/);
   });
 
+  test('previewStage 衬底用已有白色 token #fff，与文件内容一致；需求说明浅底仍是 #f8f9fb', () => {
+    const block = blockOf('previewStage');
+    assert.match(block, /background:\s*#fff;/);
+    assert.doesNotMatch(block, /#f8f9fb/);
+    const descriptionBody = blockOf('descriptionBody');
+    const cardBody = blockOf('cardBody');
+    assert.match(descriptionBody, /background:\s*#f8f9fb/);
+    assert.match(cardBody, /background:\s*#f8f9fb/);
+  });
+
   test('祖先链 inPagePreview / cardBody / deliverableCard / markdownBody 都有 min-width:0 与宽度上限', () => {
     for (const name of ['inPagePreview', 'cardBody', 'deliverableCard', 'markdownBody', 'descriptionCard']) {
       const block = blockOf(name);
