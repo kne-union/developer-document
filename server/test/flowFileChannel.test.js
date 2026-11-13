@@ -74,6 +74,22 @@ test('collectFileRefs 覆盖 file 类型与 jsonb.options 里的 file 项', () =
   );
 });
 
+test('collectFileRefs 收集测试步骤与回归记录中嵌套的截图 fileId', () => {
+  assert.deepEqual(
+    collectFileRefs({
+      contentType: 'jsonb',
+      payload: {
+        options: [
+          { type: 'test_case', caseId: 'c1', label: '登录', steps: [{ stepId: 's1', name: '打开', screenshots: [{ fileId: 'shot-1', fileName: 'a.png' }] }] },
+          { type: 'file', fileId: 'shot-2', fileName: 'b.png', stepId: 's1' },
+          { type: 'regression_run', runId: 'r1', content: '回归', screenshots: [{ fileId: 'shot-3', fileName: 'c.png' }] }
+        ]
+      }
+    }).sort(),
+    ['shot-1', 'shot-2', 'shot-3']
+  );
+});
+
 test('collectFileRefs 去重并对非文件类型返回空', () => {
   assert.deepEqual(
     collectFileRefs({

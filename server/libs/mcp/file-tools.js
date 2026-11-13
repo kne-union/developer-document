@@ -114,8 +114,8 @@ const registerFileTools = (mcpServer, { fastify, userId, isAdmin = false }) => {
     return; // 未挂载文件管理插件时不注册，不影响其它 MCP 工具
   }
 
-  const buildOptions = ({ flowId, runId, templateCode, sha256, source }) =>
-    Object.fromEntries(Object.entries({ actorType: 'mcp-ai', userId, flowId, runId, templateCode, sha256, source }).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+  const buildOptions = ({ flowId, runId, templateCode, stepId, caseId, sha256, source }) =>
+    Object.fromEntries(Object.entries({ actorType: 'mcp-ai', userId, flowId, runId, templateCode, stepId, caseId, sha256, source }).filter(([, value]) => value !== undefined && value !== null && value !== ''));
 
   const readFileRow = async fileId => {
     try {
@@ -170,7 +170,7 @@ const registerFileTools = (mcpServer, { fastify, userId, isAdmin = false }) => {
         '返回的 url 为可直接访问的完整地址（含 origin），AI 直接 fetch 即可，不要自行拼接路径。'
       ].join('\n'),
       inputSchema: z.object({
-        fileName: z.string().describe('文件名（含扩展名），如 测试报告.md / TC-UI-001-step-02.png'),
+        fileName: z.string().describe('文件名（含扩展名），如 测试报告.md。截图与测试步骤的对应关系不能靠文件名推断，必须在 flow_save_deliverables 里用明确的 stepId。'),
         localPath: z.string().optional().describe('服务端可访问的产物文件路径；默认根目录 <cwd>/.workbuddy/flow-testing，可用 FLOW_ARTIFACT_ROOT 覆盖'),
         contentBase64: z.string().optional().describe('文件内容 base64 或 data URL，默认上限 1MB'),
         sourceUrl: z.string().optional().describe('服务端抓取的 http(s) 文件地址'),
@@ -179,7 +179,9 @@ const registerFileTools = (mcpServer, { fastify, userId, isAdmin = false }) => {
         fileId: z.string().optional().describe('传已上传的 fileId 时原地覆盖该文件记录（改稿幂等），不传则新建'),
         flowId: z.string().optional().describe('关联流程 id，写入文件 options 供审计'),
         runId: z.string().optional().describe('关联 AI run id，写入文件 options 供审计'),
-        templateCode: z.string().optional().describe('关联交付物模板 code，如 test_cases / test_report')
+        templateCode: z.string().optional().describe('关联交付物模板 code，如 test_cases / test_report'),
+        stepId: z.string().optional().describe('仅写入文件 options 供审计，不会据此自动关联测试步骤。步骤关联必须在 flow_save_deliverables 的 options 里使用明确的 stepId，不能靠文件名或顺序配对。'),
+        caseId: z.string().optional().describe('仅写入文件 options 供审计，同样不会自动建立用例/步骤关系。')
       })
     },
     async args => {
@@ -214,7 +216,7 @@ const registerFileTools = (mcpServer, { fastify, userId, isAdmin = false }) => {
             // 已在 resolveLocalFile 里限制大小，读入内存后再交给 fileManager，避免文件句柄竞态
             file: { filename: fileName, mimetype: mimeType, encoding: 'binary', file: Readable.from([content]) },
             namespace,
-            options: buildOptions({ flowId: args.flowId, runId: args.runId, templateCode: args.templateCode, sha256, source })
+            options: buildOptions({ flowId: args.flowId, runId: args.runId, templateCode: args.templateCode, stepId: args.stepId, caseId: args.caseId, sha256, source })
           });
         } else if (args.contentBase64) {
           const { content, mimeType: dataMime } = decodeBase64(args.contentBase64);
@@ -224,12 +226,12 @@ const registerFileTools = (mcpServer, { fastify, userId, isAdmin = false }) => {
             id,
             file: { filename: fileName, mimetype: args.mimeType || dataMime || mimeType, encoding: 'binary', file: Readable.from([content]) },
             namespace,
-            options: buildOptions({ flowId: args.flowId, runId: args.runId, templateCode: args.templateCode, sha256, source })
+            options: buildOptions({ flowId: args.flowId, runId: args.runId, templateCode: args.templateCode, stepId: args.stepId, caseId: args.caseId, sha256, source })
           });
         } else {
           const safeUrl = await assertSafeSourceUrl(args.sourceUrl);
           source = 'sourceUrl';
-          const options = buildOptions({ flowId: args.flowId, runId: args.runId, templateCode: args.templateCode, sha256: null, source });
+          const options = buildOptions({ flowId: args.flowId, runId: args.runId, templateCode: args.templateCode, stepId: args.stepId, caseId: args.caseId, sha256: null, source });
           if (process.env.FLOW_SOURCE_URL_STRICT_FETCH === 'true') {
             // 严格模式：自己抓取且禁止跟随重定向，避免 uploadFromUrl 被 302 带到内网
             const response = await fetch(safeUrl, { redirect: 'error' });

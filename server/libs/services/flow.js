@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const { STAGES, STAGE_CODES, ORDER, NODE_TYPES, NODE_TYPE_STAGES, NODE_TYPE_CHILDREN, stageIndex, isStageAllowed, assertStageAllowed, nodeTypeOfStage } = require('../utils/flow-stages');
 const { DELIVERABLE_TEMPLATES, getTemplatesByStage, getTemplate, validateOptions } = require('../utils/flow-deliverable-templates');
 const { fail, asId, plain, releaseId, makeEvent, appendEvents, validateSourceRefs, normalizeEvidenceRefs, collectFileRefs, suggestQueries } = require('../utils/flow-helpers');
+const { TEST_CASES_TEMPLATE, REGRESSION_TEMPLATE, validateTestCasesOptions, validateRegressionOptions, ensureExplicitIds, collectStructuredFileIds } = require('../../../src/components/AdminFlowManagement/testExecution');
 const { createFlowSecurity } = require('../utils/flow-security-store');
 
 const CONTENT_FIELDS = ['fileId', 'fileName', 'url', 'content', 'checklist', 'options'];
@@ -434,7 +435,25 @@ module.exports = fp(async (fastify, options) => {
   };
 
   // ---------- 交付物 ----------
-  const validateContent = ({ contentType, payload }) => {
+  const validateStructuredOptions = (templateCode, options) => {
+    if (templateCode === TEST_CASES_TEMPLATE) {
+      validateTestCasesOptions(Array.isArray(options) ? options : []);
+      return true;
+    }
+    if (templateCode === REGRESSION_TEMPLATE) {
+      validateRegressionOptions(Array.isArray(options) ? options : []);
+      return true;
+    }
+    return false;
+  };
+
+  const validateContent = ({ contentType, payload, templateCode }) => {
+    // 仅已升级为 jsonb 的测试用例 / 回归记录走结构化校验；未升级的 file/text 旧行仍走下方原逻辑，避免提交时被 options:[] 误判。
+    if (contentType === 'jsonb' && validateStructuredOptions(templateCode, payload.options)) {
+      const leaked = CONTENT_FIELDS.filter(key => !['options'].includes(key)).filter(key => payload[key] !== undefined && payload[key] !== null && (!Array.isArray(payload[key]) || payload[key].length));
+      if (leaked.length) throw fail('CONTENT_MUTEX', `jsonb 类型不得同时传 ${leaked.join(', ')}`);
+      return;
+    }
     if (contentType === 'jsonb') {
       validateOptions(payload.options);
       const leaked = CONTENT_FIELDS.filter(key => !['options'].includes(key)).filter(key => payload[key] !== undefined && payload[key] !== null && (!Array.isArray(payload[key]) || payload[key].length));
@@ -511,12 +530,35 @@ module.exports = fp(async (fastify, options) => {
       return { skipped: [{ templateCode: row.templateCode, reason: 'human_content' }], saved: [] };
     }
     if (overwrite && Number(version) !== Number(row.version)) throw fail('VERSION_CONFLICT', '交付物版本冲突，请刷新');
-    validateContent({ contentType: row.contentType, payload: content });
-    await assertFileRefsExist({ contentType: row.contentType, payload: content, templateCode: row.templateCode, flowId: row.flowId, request });
+    let saveContentType = row.contentType;
+    let savePayload = content;
+    if ((row.templateCode === TEST_CASES_TEMPLATE || row.templateCode === REGRESSION_TEMPLATE) && Array.isArray(content.options)) {
+      let options = ensureExplicitIds(content.options, generateId);
+      if (row.templateCode === TEST_CASES_TEMPLATE) {
+        const existingIds = collectStructuredFileIds({ options });
+        const legacyId = row.fileId ? String(row.fileId) : '';
+        if (legacyId && !existingIds.includes(legacyId)) {
+          options = options.concat([{ type: 'file', label: row.fileName || legacyId, fileId: row.fileId, fileName: row.fileName || legacyId, kind: 'document' }]);
+        }
+      }
+      savePayload = { options };
+      saveContentType = 'jsonb';
+    }
+    validateContent({ contentType: saveContentType, payload: savePayload, templateCode: row.templateCode });
+    await assertFileRefsExist({ contentType: saveContentType, payload: savePayload, templateCode: row.templateCode, flowId: row.flowId, request });
     const patch = {};
-    CONTENT_FIELDS.forEach(key => {
-      if (content[key] !== undefined) patch[key] = content[key];
-    });
+    if (saveContentType === 'jsonb' && (row.templateCode === TEST_CASES_TEMPLATE || row.templateCode === REGRESSION_TEMPLATE) && Array.isArray(savePayload.options)) {
+      patch.contentType = 'jsonb';
+      patch.options = savePayload.options;
+      patch.fileId = null;
+      patch.fileName = null;
+      patch.content = null;
+      patch.url = null;
+    } else {
+      CONTENT_FIELDS.forEach(key => {
+        if (content[key] !== undefined) patch[key] = content[key];
+      });
+    }
     patch.status = isAi ? 'ai_draft' : 'pending';
     patch.producedBy = isAi ? 'ai' : row.producedBy === 'ai' ? 'hybrid' : 'human';
     if (content.sourceRefs !== undefined) patch.sourceRefs = validateSourceRefs(content.sourceRefs);
@@ -533,7 +575,7 @@ module.exports = fp(async (fastify, options) => {
       const row = await models.flowDeliverable.findByPk(targetId);
       if (!row) throw fail('DELIVERABLE_NOT_FOUND', '交付物不存在');
       if (!['pending', 'ai_draft', 'rejected'].includes(row.status)) throw fail('INVALID_STATUS', `${row.templateCode} 当前状态不可送审`);
-      validateContent({ contentType: row.contentType, payload: contentOf(row) });
+      validateContent({ contentType: row.contentType, payload: contentOf(row), templateCode: row.templateCode });
       await row.update({
         status: 'submitted',
         submittedBy: asId(request?.userInfo?.id),

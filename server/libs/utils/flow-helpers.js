@@ -4,6 +4,7 @@
  * checkToken 与限流见 ./flow-security-store.js（数据库实现，无内存 fallback）。
  */
 const crypto = require('crypto');
+const { collectStructuredFileIds } = require('../../../src/components/AdminFlowManagement/testExecution');
 
 const fail = (code, message) => {
   const error = new Error(message || code);
@@ -105,14 +106,8 @@ const suggestQueries = (stage, templateCodes = []) => {
 
 // ---- 交付物文件引用：收集需要校验存在性的 fileId ----
 const collectFileRefs = ({ contentType, payload = {} }) => {
-  const ids = [];
-  if (contentType === 'file' && payload.fileId) ids.push(String(payload.fileId));
-  if (contentType === 'jsonb' && Array.isArray(payload.options)) {
-    payload.options.forEach(item => {
-      if (item && item.type === 'file' && item.fileId) ids.push(String(item.fileId));
-    });
-  }
-  return [...new Set(ids)];
+  // 覆盖 file / jsonb.file，以及测试步骤截图、回归记录截图里嵌套的 fileId
+  return collectStructuredFileIds(payload);
 };
 
 module.exports = {
