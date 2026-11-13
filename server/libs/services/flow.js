@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 const { STAGES, STAGE_CODES, ORDER, NODE_TYPES, NODE_TYPE_STAGES, NODE_TYPE_CHILDREN, stageIndex, isStageAllowed, assertStageAllowed, nodeTypeOfStage } = require('../utils/flow-stages');
 const { DELIVERABLE_TEMPLATES, getTemplatesByStage, getTemplate, validateOptions } = require('../utils/flow-deliverable-templates');
 const { fail, asId, plain, releaseId, makeEvent, appendEvents, validateSourceRefs, normalizeEvidenceRefs, collectFileRefs, suggestQueries } = require('../utils/flow-helpers');
-const { TEST_CASES_TEMPLATE, REGRESSION_TEMPLATE, validateTestCasesOptions, validateRegressionOptions, ensureExplicitIds, collectStructuredFileIds } = require('../../../src/components/AdminFlowManagement/testExecution');
+const { TEST_CASES_TEMPLATE, REGRESSION_TEMPLATE, validateTestCasesOptions, validateRegressionOptions, ensureExplicitIds, collectStructuredFileIds } = require('../utils/test-execution');
 const { createFlowSecurity } = require('../utils/flow-security-store');
 
 const CONTENT_FIELDS = ['fileId', 'fileName', 'url', 'content', 'checklist', 'options'];
