@@ -3,8 +3,13 @@ import Fetch from '@kne/react-fetch';
 import { Empty } from 'antd';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
-import { queueGoalMessageId } from '../constants';
+import { resolveGoal, resolveRunStatus } from '../aiRunContext';
 import { ContextLoadError, ContextLoading, RemoteAiRunContextView } from './AiRunContextView';
+
+const enumText = (formatMessage, meta, empty = '-') => {
+  if (!meta || meta.empty) return empty;
+  return formatMessage({ id: meta.messageId, values: meta.values || {} });
+};
 
 // AI 工作记录：列表 + 弹窗看上下文，不用抽屉和多张卡片
 const AiRuns = createWithRemoteLoader({
@@ -38,8 +43,16 @@ const AiRuns = createWithRemoteLoader({
       <Table
         dataSource={rows}
         columns={[
-          { name: 'goal', title: formatMessage({ id: 'adminFlow.queue.table.goal' }), renderType: 'main', getValueOf: item => formatMessage({ id: queueGoalMessageId(item.goal), defaultMessage: item.goal || '-' }) },
-          { name: 'status', title: formatMessage({ id: 'adminFlow.ai.status' }), renderType: 'tag-short', getValueOf: item => ({ type: item.status === 'succeeded' ? 'success' : 'default', text: item.status || '-' }) },
+          { name: 'goal', title: formatMessage({ id: 'adminFlow.queue.table.goal' }), renderType: 'main', getValueOf: item => enumText(formatMessage, resolveGoal(item.goal)) },
+          {
+            name: 'status',
+            title: formatMessage({ id: 'adminFlow.ai.status' }),
+            renderType: 'tag-short',
+            getValueOf: item => {
+              const meta = resolveRunStatus(item.status);
+              return { type: meta.tone || 'default', text: enumText(formatMessage, meta) };
+            }
+          },
           { name: 'model', title: formatMessage({ id: 'adminFlow.ai.model' }) },
           { name: 'startedAt', title: formatMessage({ id: 'adminFlow.ai.startedAt' }), format: 'datetime', getValueOf: item => item.startedAt || null },
           {

@@ -351,6 +351,9 @@ function parseAiRunContext(data) {
     finishedAt: data.finishedAt || null,
     startedTime: formatShanghaiTime(data.startedAt),
     finishedTime: formatShanghaiTime(data.finishedAt),
+    statusMeta: resolveRunStatus(data.status ? String(data.status) : ''),
+    stageMeta: resolveStage(stage ? String(stage) : ''),
+    goalMeta: resolveGoal(goal ? String(goal) : ''),
     snapshot,
     outputs,
     events,
@@ -361,6 +364,47 @@ function parseAiRunContext(data) {
       outputs: hasRawOutputs ? stableStringify(rawOutputs) : ''
     }
   };
+}
+
+const STAGE_CODES = Object.freeze(['requirement', 'product_design', 'development', 'testing', 'pre_release']);
+const QUEUE_GOAL_CODES = Object.freeze(['draft', 'review_ready', 'release', 'unblock', 'decompose', 'converge']);
+const DELIVERABLE_STATUS_CODES = Object.freeze(['pending', 'ai_draft', 'submitted', 'accepted', 'rejected', 'waived']);
+
+function toCamel(code) {
+  return String(code || '').replace(/_([a-z0-9])/g, (match, letter) => letter.toUpperCase());
+}
+
+/**
+ * 把存储 code 映射到已有 i18n key，不在这里写死展示文案。
+ * 未知 code 不把原文当成标签，交给 unknown messageId，values.code 留给「未知（code）」展示。
+ */
+function resolveCodedLabel(code, knownCodes, messageIdForKnown, unknownMessageId) {
+  const value = code == null ? '' : String(code).trim();
+  if (!value) {
+    return { empty: true, known: false, code: '', messageId: '', values: {} };
+  }
+  if (knownCodes.indexOf(value) !== -1) {
+    return { empty: false, known: true, code: value, messageId: messageIdForKnown(value), values: {} };
+  }
+  return { empty: false, known: false, code: value, messageId: unknownMessageId, values: { code: value } };
+}
+
+function resolveRunStatus(status) {
+  const resolved = resolveCodedLabel(status, RUN_STATUS_VALUES, value => 'adminFlow.ai.status.' + toCamel(value), 'adminFlow.ai.status.unknown');
+  resolved.tone = resolved.empty ? 'default' : runStatusTone(resolved.known ? resolved.code : '');
+  return resolved;
+}
+
+function resolveStage(stage) {
+  return resolveCodedLabel(stage, STAGE_CODES, value => 'adminFlow.stage.' + toCamel(value), 'adminFlow.ai.stage.unknown');
+}
+
+function resolveGoal(goal) {
+  return resolveCodedLabel(goal, QUEUE_GOAL_CODES, value => 'adminFlow.queue.goal.' + toCamel(value), 'adminFlow.ai.goal.unknown');
+}
+
+function resolveDeliverableStatus(status) {
+  return resolveCodedLabel(status, DELIVERABLE_STATUS_CODES, value => 'adminFlow.deliverable.status.' + toCamel(value), 'adminFlow.ai.status.unknown');
 }
 
 function runStatusTone(status) {
@@ -409,6 +453,15 @@ module.exports = {
   KNOWN_SNAPSHOT_KEYS,
   KNOWN_OUTPUT_KEYS,
   RUN_STATUS_VALUES,
+  STAGE_CODES,
+  QUEUE_GOAL_CODES,
+  DELIVERABLE_STATUS_CODES,
+  toCamel,
+  resolveCodedLabel,
+  resolveRunStatus,
+  resolveStage,
+  resolveGoal,
+  resolveDeliverableStatus,
   isPresent,
   isSensitiveKey,
   omitSensitive,

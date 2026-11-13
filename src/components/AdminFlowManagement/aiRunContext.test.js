@@ -13,7 +13,14 @@ const {
   runStatusTone,
   defaultOpenSections,
   sectionHasContent,
-  stableStringify
+  stableStringify,
+  RUN_STATUS_VALUES,
+  STAGE_CODES,
+  QUEUE_GOAL_CODES,
+  resolveRunStatus,
+  resolveStage,
+  resolveGoal,
+  resolveDeliverableStatus
 } = require('./aiRunContext');
 
 describe('parseAiRunContext 空值与保真', () => {
@@ -233,5 +240,90 @@ describe('呈现辅助', () => {
     assert.equal(parsed.goal, 'draft');
     assert.ok(parsed.sections.includes('summary'));
     assert.ok(parsed.sections.includes('snapshot'));
+  });
+});
+
+describe('枚举 code 映射到已有标签，未知值不把原文当标签', () => {
+  test('全部真实 run 状态都有已知 i18n key，不是把 code 当展示文案', () => {
+    const expected = {
+      claimed: 'adminFlow.ai.status.claimed',
+      running: 'adminFlow.ai.status.running',
+      awaiting_human: 'adminFlow.ai.status.awaitingHuman',
+      succeeded: 'adminFlow.ai.status.succeeded',
+      failed: 'adminFlow.ai.status.failed',
+      abandoned: 'adminFlow.ai.status.abandoned',
+      blocked: 'adminFlow.ai.status.blocked'
+    };
+    assert.deepEqual(RUN_STATUS_VALUES.slice().sort(), Object.keys(expected).sort());
+    RUN_STATUS_VALUES.forEach(code => {
+      const resolved = resolveRunStatus(code);
+      assert.equal(resolved.empty, false, code);
+      assert.equal(resolved.known, true, code);
+      assert.equal(resolved.code, code);
+      assert.equal(resolved.messageId, expected[code]);
+      assert.deepEqual(resolved.values, {});
+    });
+    assert.equal(resolveRunStatus('succeeded').tone, 'success');
+    assert.equal(resolveRunStatus('failed').tone, 'error');
+    assert.equal(resolveRunStatus('running').tone, 'processing');
+    assert.equal(resolveRunStatus('awaiting_human').tone, 'warning');
+  });
+
+  test('未知或空状态：明确未知，保留原始 code 供展示，不编造标签', () => {
+    const unknown = resolveRunStatus('not_a_real_status');
+    assert.equal(unknown.known, false);
+    assert.equal(unknown.empty, false);
+    assert.equal(unknown.code, 'not_a_real_status');
+    assert.equal(unknown.messageId, 'adminFlow.ai.status.unknown');
+    assert.deepEqual(unknown.values, { code: 'not_a_real_status' });
+    assert.equal(unknown.tone, 'default');
+    const empty = resolveRunStatus('');
+    assert.equal(empty.empty, true);
+    assert.equal(empty.messageId, '');
+    assert.equal(resolveRunStatus(null).empty, true);
+  });
+
+  test('阶段与目标复用已有字典；未知给 unknown key 且带原始 code', () => {
+    assert.deepEqual(STAGE_CODES, ['requirement', 'product_design', 'development', 'testing', 'pre_release']);
+    assert.equal(resolveStage('product_design').messageId, 'adminFlow.stage.productDesign');
+    assert.equal(resolveStage('product_design').known, true);
+    const badStage = resolveStage('design_v2');
+    assert.equal(badStage.known, false);
+    assert.equal(badStage.messageId, 'adminFlow.ai.stage.unknown');
+    assert.deepEqual(badStage.values, { code: 'design_v2' });
+
+    assert.deepEqual(QUEUE_GOAL_CODES, ['draft', 'review_ready', 'release', 'unblock', 'decompose', 'converge']);
+    assert.equal(resolveGoal('review_ready').messageId, 'adminFlow.queue.goal.reviewReady');
+    assert.equal(resolveGoal('review_ready').known, true);
+    const badGoal = resolveGoal('ship_it');
+    assert.equal(badGoal.known, false);
+    assert.equal(badGoal.messageId, 'adminFlow.ai.goal.unknown');
+    assert.deepEqual(badGoal.values, { code: 'ship_it' });
+  });
+
+  test('交付物状态复用已有映射；解析结果里的原始 JSON 仍是存储 code', () => {
+    assert.equal(resolveDeliverableStatus('ai_draft').messageId, 'adminFlow.deliverable.status.aiDraft');
+    assert.equal(resolveDeliverableStatus('ai_draft').known, true);
+    const bad = resolveDeliverableStatus('done');
+    assert.equal(bad.known, false);
+    assert.equal(bad.messageId, 'adminFlow.ai.status.unknown');
+    const parsed = parseAiRunContext({
+      status: 'succeeded',
+      stage: 'testing',
+      goal: 'draft',
+      contextSnapshot: { stage: 'testing', goal: 'draft' },
+      outputs: { summary: 'ok' }
+    });
+    assert.equal(parsed.statusMeta.known, true);
+    assert.equal(parsed.statusMeta.messageId, 'adminFlow.ai.status.succeeded');
+    assert.equal(parsed.stageMeta.messageId, 'adminFlow.stage.testing');
+    assert.equal(parsed.goalMeta.messageId, 'adminFlow.queue.goal.draft');
+    // 原始数据不被改成译文
+    assert.equal(parsed.status, 'succeeded');
+    assert.equal(parsed.raw.contextSnapshot.stage, 'testing');
+    const weird = parseAiRunContext({ status: 'mystery', contextSnapshot: { stage: '??' }, outputs: {} });
+    assert.equal(weird.statusMeta.known, false);
+    assert.equal(weird.statusMeta.code, 'mystery');
+    assert.equal(weird.raw.contextSnapshot.stage, '??');
   });
 });
