@@ -5,15 +5,8 @@ import { App, Empty, Input, Modal, Tag, Typography } from 'antd';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import { stageMessageId, stageRecordActionId } from '../constants';
+import { RemoteEvidenceRefsList } from './FileAttachmentPreview';
 import styles from '../style.module.scss';
-
-const formatRef = item => {
-  if (!item) return '';
-  if (typeof item === 'string') return item;
-  const type = item.type || 'ref';
-  const ref = item.ref || item.url || item.id || '';
-  return ref ? `${type}:${ref}` : type;
-};
 
 // 放行台账：AI 自主放行的每一次动作都可查，人工控制点只有「撤回」与「打回」。
 // 打回会附带意见，AI 未处理前服务端会拒绝同一流程的下一次放行。
@@ -195,11 +188,7 @@ const ReleaseLog = createWithRemoteLoader({
                         <dt>{formatMessage({ id: 'adminFlow.release.evidenceRefs' })}</dt>
                         <dd>
                           {Array.isArray(inspecting.evidenceRefs) && inspecting.evidenceRefs.length ? (
-                            <ul className={styles.evidenceList}>
-                              {inspecting.evidenceRefs.map((item, index) => (
-                                <li key={`${formatRef(item)}-${index}`}>{formatRef(item)}</li>
-                              ))}
-                            </ul>
+                            <RemoteEvidenceRefsList items={inspecting.evidenceRefs} formatMessage={formatMessage} emptyText={formatMessage({ id: 'adminFlow.release.evidenceEmpty' })} />
                           ) : (
                             formatMessage({ id: 'adminFlow.release.evidenceEmpty' })
                           )}

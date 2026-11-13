@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Alert, Button, Collapse, Empty, Spin, Tag } from 'antd';
 import dayjs from 'dayjs';
-import MarkdownRender from '@kne/markdown-components-render';
-import '@kne/markdown-components-render/dist/index.css';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
 import Actions from '../Actions';
@@ -14,6 +12,7 @@ import StageRecords from './StageRecords';
 import Tree from './Tree';
 import AiRuns from './AiRuns';
 import ReleaseLog from './ReleaseLog';
+import { RemoteMarkdownWithAttachments } from './FileAttachmentPreview';
 import { STAGE_CODES, STATUS_COLOR, PRIORITY_COLOR, stageMessageId, statusMessageId, priorityMessageId } from '../constants';
 import styles from '../style.module.scss';
 
@@ -270,9 +269,7 @@ const TabDetail = createWithRemoteLoader({
                     <h2 className={styles.sectionTitle}>{formatMessage({ id: 'adminFlow.detail.description' })}</h2>
                   </div>
                   {data.description ? (
-                    <div className={styles.markdownBody}>
-                      <MarkdownRender>{data.description}</MarkdownRender>
-                    </div>
+                    <RemoteMarkdownWithAttachments text={data.description} formatMessage={formatMessage} />
                   ) : (
                     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} className={styles.sectionEmpty} description={formatMessage({ id: 'adminFlow.detail.descriptionEmpty' })} />
                   )}
