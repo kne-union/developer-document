@@ -1,0 +1,202 @@
+// 流程列表卡片 / 移动呈现：宽度吃进父级，320/375 不撑出页面。
+// 不用整页 overflow:hidden；网格最小列宽不超过 100%。
+// 完整卡片边框，不加左侧装饰条。
+
+.flowListShell,
+.flowListShellMobile {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.flowListGrid,
+.flowListStack {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}
+
+// 桌面：多列时最小列宽不超过容器，避免 300px 固定下限在窄屏撑破
+.flowListGrid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+}
+
+.flowListStack {
+  grid-template-columns: 1fr;
+}
+
+.flowListCard,
+.flowListMobile {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid #edf0f5;
+  border-radius: 12px;
+}
+
+.flowListCardSelected {
+  border-color: #91caff;
+  background: #f5f9ff;
+}
+
+.flowListHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.flowListSelection {
+  flex: none;
+}
+
+.flowListHeadMain {
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.flowListTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.flowListTitleLink {
+  color: inherit;
+  text-decoration: none;
+  &:hover {
+    color: #1677ff;
+  }
+  &:focus-visible {
+    outline: 2px solid #1677ff;
+    outline-offset: 2px;
+  }
+}
+
+// 桌面卡片标题最多两行，悬停看全文；移动端完整换行，不截操作
+.flowListCard .flowListTitle {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.flowListMobile .flowListTitle {
+  display: block;
+  overflow: visible;
+}
+
+.flowListCode {
+  display: block;
+  margin-top: 4px;
+  max-width: 100%;
+  font-size: 12px;
+  line-height: 18px;
+  color: rgba(0, 0, 0, 0.55);
+  font-family:
+    sfmono-regular,
+    consolas,
+    liberation mono,
+    menlo,
+    monospace;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.flowListFlags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  flex: none;
+  max-width: 100%;
+  :global(.ant-tag) {
+    margin: 0;
+  }
+}
+
+.flowListStage {
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.flowListMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.flowListMetaItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  min-width: 0;
+  max-width: 100%;
+  dt {
+    font-size: 12px;
+    line-height: 18px;
+    color: rgba(0, 0, 0, 0.55);
+    flex: none;
+  }
+  dd {
+    margin: 0;
+    font-size: 13px;
+    line-height: 20px;
+    color: rgba(0, 0, 0, 0.88);
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  :global(.ant-tag) {
+    margin: 0;
+  }
+}
+
+.flowListActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 0;
+  padding-top: 4px;
+  border-top: 1px solid #f2f4f8;
+}
+
+@media (max-width: 640px) {
+  .flowListGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .flowListCard,
+  .flowListMobile {
+    padding: 14px 14px;
+  }
+
+  .flowListActions {
+    justify-content: flex-start;
+  }
+}
