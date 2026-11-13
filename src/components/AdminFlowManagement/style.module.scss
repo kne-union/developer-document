@@ -3,18 +3,138 @@
   padding: 4px 0 8px;
 }
 
-// 长文本正文：控制行宽，Markdown 渲染结果保持可读
+// 长文本正文：控制行宽与排版，Markdown 列表/代码/图片/表格可读；不改正文内容。
+// 引用左边线是 Markdown 语义，不是卡片装饰条。
 .markdownBody {
-  max-width: 72ch;
-  font-size: 14px;
+  max-width: min(72ch, 100%);
+  min-width: 0;
+  width: 100%;
+  font-size: 15px;
   line-height: 1.75;
+  color: rgba(0, 0, 0, 0.88);
+  overflow-wrap: anywhere;
   word-break: break-word;
+
+  :global(h1),
+  :global(h2),
+  :global(h3),
+  :global(h4),
+  :global(h5),
+  :global(h6) {
+    margin: 1.25em 0 0.5em;
+    font-weight: 600;
+    line-height: 1.4;
+    color: rgba(0, 0, 0, 0.88);
+    overflow-wrap: anywhere;
+  }
+  :global(h1) {
+    font-size: 20px;
+  }
+  :global(h2) {
+    font-size: 18px;
+  }
+  :global(h3) {
+    font-size: 16px;
+  }
+  :global(h4),
+  :global(h5),
+  :global(h6) {
+    font-size: 15px;
+  }
+
+  :global(p) {
+    margin: 0 0 12px;
+  }
+
+  :global(ul),
+  :global(ol) {
+    margin: 0 0 12px;
+    padding-left: 1.5em;
+  }
+
+  :global(li) {
+    margin: 0 0 4px;
+  }
+
+  :global(blockquote) {
+    margin: 0 0 12px;
+    padding: 0 0 0 12px;
+    border-left: 3px solid #eceef1;
+    color: rgba(0, 0, 0, 0.65);
+  }
+
+  :global(code) {
+    padding: 0.1em 0.35em;
+    font-size: 0.92em;
+    background: #f4f5f7;
+    border-radius: 4px;
+  }
+
+  :global(pre) {
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    background: #f4f5f7;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre;
+  }
+
+  :global(pre) :global(code) {
+    padding: 0;
+    background: transparent;
+    font-size: inherit;
+  }
+
+  :global(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+
+  :global(table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    margin: 0 0 12px;
+  }
+
+  :global(th),
+  :global(td) {
+    padding: 8px 12px;
+    border: 1px solid #eceef1;
+    text-align: left;
+  }
+
+  :global(hr) {
+    margin: 16px 0;
+    border: 0;
+    border-top: 1px solid #eceef1;
+  }
+
+  :global(a) {
+    color: #1677ff;
+  }
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
 }
 
 .sectionStack {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* ── 详情页：页面头部（指标 + 流水号），不再做成卡片 ────── */
@@ -175,6 +295,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .sectionHead {
@@ -198,10 +320,43 @@
   color: rgba(0, 0, 0, 0.55);
 }
 
-// 记录区：ghost 折叠面板，去掉 antd 默认面板边框与灰底，只留条目分隔线
+// 需求说明：正常完整卡片边框，标题在卡片 header；空态与正文同一容器。
+.descriptionCard {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 0 20px;
+  background: #fff;
+  border: 1px solid #edf0f5;
+  border-radius: 12px;
+}
+
+.descriptionBody {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.descriptionCard .sectionEmpty {
+  margin: 8px 20px 0;
+  padding: 24px 0;
+}
+
+// 记录区：整组一张正常卡片，条目之间分隔；整行可点，清晰展开图标。
+// 不加左侧装饰条。展开行为由 recordsDefaultActiveKey 决定。
+.recordsSection {
+  min-width: 0;
+  max-width: 100%;
+  background: #fff;
+  border: 1px solid #edf0f5;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 .records {
   :global(.ant-collapse-item) {
-    border-bottom: 1px solid #f2f4f8;
+    border-bottom: 1px solid #eceef1;
+    border-radius: 0 !important;
   }
 
   :global(.ant-collapse-item:last-child) {
@@ -209,12 +364,39 @@
   }
 
   :global(.ant-collapse-header) {
-    padding: 12px 0 !important;
+    align-items: center !important;
+    padding: 14px 16px !important;
+    min-width: 0;
+    &:hover {
+      background: #f7f8fa;
+    }
+    &:focus-visible {
+      outline: 2px solid #1677ff;
+      outline-offset: -2px;
+    }
   }
 
   :global(.ant-collapse-content-box) {
-    padding: 4px 0 16px !important;
+    padding: 4px 16px 20px !important;
+    min-width: 0;
+    max-width: 100%;
   }
+
+  :global(.ant-collapse-expand-icon) {
+    height: auto !important;
+    padding-inline-end: 10px !important;
+  }
+}
+
+.recordsExpandIcon {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s;
+}
+
+.records .flowCardHeader {
+  width: 100%;
+  min-width: 0;
 }
 
 // 内容区主标题：页头固定为「流程管理」，具体流程标题在这里展开。
@@ -247,18 +429,16 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
-// 历史阶段：整块材料降为「存档」质感——状态色条统一灰化、底色与边框更淡、去掉 hover 反馈。
+// 历史阶段：整块材料降为「存档」质感——底色与边框更淡、去掉 hover 反馈。不加左侧色条。
 // 用整体明度差表达「这是过去的内容」，比挂一枚「历史阶段（只读）」标签更克制。
 .deliverableList[data-archive='true'] {
   .deliverableCard {
     background: #fcfcfd;
     border-color: #f2f4f8;
-
-    &::before {
-      background: #e3e7ee;
-    }
 
     &:hover {
       border-color: #f2f4f8;
@@ -289,49 +469,16 @@
 
 .deliverableCard {
   position: relative;
-  padding: 16px 18px 16px 20px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 16px 18px;
   background: #fff;
   border: 1px solid #edf0f5;
   border-radius: 12px;
   transition:
     border-color 0.18s ease,
     box-shadow 0.18s ease;
-
-  // 左侧状态色条：扫一眼就知道哪份材料还没交、哪份待审
-  &::before {
-    position: absolute;
-    top: 15px;
-    bottom: 15px;
-    left: 0;
-    width: 1px;
-    background: var(--card-accent, #d9d9d9);
-    border-radius: 0 3px 3px 0;
-    content: '';
-  }
-
-  &[data-status='submitted'] {
-    --card-accent: #1677ff;
-  }
-
-  &[data-status='accepted'] {
-    --card-accent: #52c41a;
-  }
-
-  &[data-status='ai_draft'] {
-    --card-accent: #faad14;
-  }
-
-  &[data-status='rejected'] {
-    --card-accent: #ff4d4f;
-  }
-
-  &[data-status='pending'] {
-    --card-accent: #d9d9d9;
-  }
-
-  &[data-status='waived'] {
-    --card-accent: #bfbfbf;
-  }
 
   &:hover {
     border-color: #e2e8f2;
@@ -394,6 +541,9 @@
 // 否则鼠标停在正文上时滚轮会被卡片内部吃掉、整页滚不动。
 // 只用浅底区分，不再加边框（卡片本身已经是唯一一层线）
 .cardBody {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 12px 14px;
   margin-top: 10px;
   background: #f8f9fb;
@@ -558,7 +708,9 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  max-width: 100%;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .previewToolbar {
@@ -583,12 +735,24 @@
 }
 
 .previewStage {
-  // 不设 overflow:auto / max-height，避免抢占页面滚轮；FilePreview 自带高度（如约 560–600px），超长随页面滚动。
+  // 横向：宽文档/Office/iframe 只在本区域滚动，不撑出 375px 页面；不对文档做不可读缩放。
+  // 纵向：不设 max-height，避免抢占页面或 Modal 自身滚动（overflow-x:auto 在无高度限制时不会形成纵向滚动条）。
+  box-sizing: border-box;
   min-width: 0;
+  max-width: 100%;
   width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
   background: #fff;
   border: 1px solid #eceef1;
   border-radius: 8px;
+
+  :global(iframe),
+  :global(embed),
+  :global(object) {
+    max-width: none;
+  }
 }
 
 .previewUnsupported {
@@ -811,7 +975,96 @@
 .recordLabel {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+// 共享卡片 header：主标题、次摘要、克制状态、右侧操作；窄屏换行不挤标题。
+.flowCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.flowCardHeaderMain {
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.flowCardHeaderTitleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.flowCardHeaderTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  color: rgba(0, 0, 0, 0.88);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.flowCardHeaderExtra {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+  :global(.ant-tag) {
+    margin: 0;
+  }
+}
+
+.flowCardHeaderHint {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  color: #cf1322;
+}
+
+.flowCardHeaderSummary {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.65);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.flowCardHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: none;
+  max-width: 100%;
+}
+
+.flowCardHeaderCompact {
+  align-items: center;
+}
+
+.descriptionCard .flowCardHeader {
+  padding: 16px 20px 12px;
 }
 
 .recordBadge {
@@ -1242,14 +1495,14 @@
   }
 }
 
-// 「查看上下文」弹窗：分组可读，原始 JSON 次要；一个主滚动，窄屏可折行。
+// 「查看上下文」弹窗：分组可读；纵向交给 Modal 自身 SimpleBar（bodyScroll 默认 true）。
+// 不再用 max-height + overflow 自管滚动，避免双滚动条。
 .contextModal {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-  max-height: min(72vh, 840px);
-  overflow: auto;
+  max-width: 100%;
 }
 
 .contextSummaryTitle {
@@ -1506,9 +1759,11 @@
   word-break: break-word;
 }
 
-.contextJson {
-  max-height: 320px;
-  overflow: auto;
+.contextJsonView {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
 .contextCodeInline {
@@ -1616,9 +1871,6 @@
 }
 
 @media (max-width: 640px) {
-  .contextModal {
-    max-height: min(80vh, 840px);
-  }
   .contextMeta {
     grid-template-columns: 1fr;
   }

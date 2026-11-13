@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
-import { App, Button, Dropdown, Empty, Space, Tag } from 'antd';
+import { App, Button, Dropdown, Empty, Tag } from 'antd';
 import { CheckCircleFilled, LinkOutlined, MinusCircleOutlined, MoreOutlined } from '@ant-design/icons';
 import withLocale from '@root/withLocale';
 import { useIntl } from '@kne/react-intl';
-import { DELIVERABLE_STATUS_COLOR, deliverableStatusMessageId, producedByMessageId, templateNameId, templateCriteriaId } from '../constants';
+import { DELIVERABLE_STATUS_COLOR, producedByMessageId, templateNameId, templateCriteriaId } from '../constants';
 import { toSelectOption, selectValueOf } from '../selectValue';
 import { isInPageUrlPreviewTemplate, resolveFilePreviewPresentation, PREVIEW_PRESENTATION } from '../deliverablePreview';
 import { FileAttachmentPreview, MarkdownWithAttachments } from './FileAttachmentPreview';
+import { FlowCardHeader } from '../FlowCardHeader';
+import { resolveDeliverableStatus } from '../aiRunContext';
 import {
   TEST_CASES_TEMPLATE,
   REGRESSION_TEMPLATE,
@@ -459,45 +461,46 @@ const DeliverablesPanel = createWithRemoteLoader({
       const [primary, ...rest] = actions;
       const collapsible = shouldCollapse(item);
       const expanded = expandedIds.includes(item.id);
+      const statusMeta = resolveDeliverableStatus(item.status);
       return (
         <div key={item.id} className={styles.deliverableCard} data-status={item.status}>
-          <div className={styles.cardHead}>
-            <div className={styles.cardTitleWrap}>
-              <span className={styles.cardTitle}>{name}</span>
-              {item.required ? (
-                <Tag className={styles.cardFlag} bordered={false} color="error">
-                  {formatMessage({ id: 'adminFlow.deliverable.required' })}
-                </Tag>
-              ) : null}
-              <Tag className={styles.cardFlag} bordered={false} color={DELIVERABLE_STATUS_COLOR[item.status] || 'default'}>
-                {formatMessage({ id: deliverableStatusMessageId(item.status), defaultMessage: item.status })}
-              </Tag>
-              <Tag className={styles.cardFlag} bordered={false}>
-                {formatMessage({ id: producedByMessageId(item.producedBy || 'human'), defaultMessage: item.producedBy || 'human' })}
-              </Tag>
-            </div>
-            {actions.length ? (
-              <Space size={6} className={styles.cardActions}>
-                <Button size="small" type="primary" onClick={primary.onClick}>
-                  {primary.children}
-                </Button>
-                {rest.length ? (
-                  <Dropdown
-                    trigger={['click']}
-                    menu={{
-                      items: rest.map((action, index) => ({ key: String(index), label: action.children, danger: !!action.isDelete })),
-                      onClick: ({ key }) => {
-                        const action = rest[Number(key)];
-                        action && action.onClick && action.onClick();
-                      }
-                    }}
-                  >
-                    <Button size="small" type="text" icon={<MoreOutlined />} />
-                  </Dropdown>
-                ) : null}
-              </Space>
-            ) : null}
-          </div>
+          <FlowCardHeader
+            title={name}
+            extra={
+              <>
+                {item.required ? <span className={styles.flowCardHeaderHint}>{formatMessage({ id: 'adminFlow.deliverable.required' })}</span> : null}
+                {statusMeta.empty ? null : (
+                  <Tag className={styles.cardFlag} bordered={false} color={DELIVERABLE_STATUS_COLOR[item.status] || 'default'}>
+                    {formatMessage({ id: statusMeta.messageId, values: statusMeta.values })}
+                  </Tag>
+                )}
+              </>
+            }
+            summary={item.producedBy ? formatMessage({ id: producedByMessageId(item.producedBy), defaultMessage: item.producedBy }) : null}
+            actions={
+              actions.length ? (
+                <>
+                  <Button size="small" type="primary" onClick={primary.onClick}>
+                    {primary.children}
+                  </Button>
+                  {rest.length ? (
+                    <Dropdown
+                      trigger={['click']}
+                      menu={{
+                        items: rest.map((action, index) => ({ key: String(index), label: action.children, danger: !!action.isDelete })),
+                        onClick: ({ key }) => {
+                          const action = rest[Number(key)];
+                          action && action.onClick && action.onClick();
+                        }
+                      }}
+                    >
+                      <Button size="small" type="text" icon={<MoreOutlined />} />
+                    </Dropdown>
+                  ) : null}
+                </>
+              ) : null
+            }
+          />
           {criteria ? (
             <div className={styles.cardCriteria}>
               <span className={styles.cardCriteriaLabel}>{formatMessage({ id: 'adminFlow.deliverable.acceptCriteria' })}</span>

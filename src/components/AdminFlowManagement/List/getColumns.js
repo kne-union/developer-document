@@ -1,6 +1,10 @@
-import { stageMessageId, statusMessageId, priorityMessageId, STATUS_COLOR, PRIORITY_COLOR } from '../constants';
+import { mapFlowListItem } from './flowListCard';
 
-// 列表只留扫一眼需要的字段，其余信息放详情页；列渲染统一用 TablePage 的 renderType。
+const enumText = (formatMessage, meta, empty = '-') => {
+  if (!meta || meta.empty) return empty;
+  return formatMessage({ id: meta.messageId, values: meta.values || {} });
+};
+
 const getColumns = ({ navigate, formatMessage, baseUrl }) => [
   {
     name: 'title',
@@ -27,19 +31,25 @@ const getColumns = ({ navigate, formatMessage, baseUrl }) => [
     name: 'stage',
     title: formatMessage({ id: 'adminFlow.columns.stage' }),
     renderType: 'tag-short',
-    getValueOf: item => ({ type: 'default', text: formatMessage({ id: stageMessageId(item.stage), defaultMessage: item.stage }) })
+    getValueOf: item => ({ type: 'default', text: enumText(formatMessage, mapFlowListItem(item).stage) })
   },
   {
     name: 'status',
     title: formatMessage({ id: 'adminFlow.columns.status' }),
     renderType: 'status',
-    getValueOf: item => ({ type: STATUS_COLOR[item.status] || 'default', text: formatMessage({ id: statusMessageId(item.status), defaultMessage: item.status }) })
+    getValueOf: item => {
+      const mapped = mapFlowListItem(item);
+      return { type: mapped.statusColor, text: enumText(formatMessage, mapped.status) };
+    }
   },
   {
     name: 'priority',
     title: formatMessage({ id: 'adminFlow.columns.priority' }),
     renderType: 'tag-short',
-    getValueOf: item => ({ type: PRIORITY_COLOR[item.priority] || 'default', text: formatMessage({ id: priorityMessageId(item.priority), defaultMessage: item.priority }) })
+    getValueOf: item => {
+      const mapped = mapFlowListItem(item);
+      return { type: mapped.priorityColor, text: enumText(formatMessage, mapped.priority) };
+    }
   },
   {
     name: 'ownerUser',

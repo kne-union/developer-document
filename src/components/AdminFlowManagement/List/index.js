@@ -6,15 +6,13 @@ import { useIntl } from '@kne/react-intl';
 import FormInner from '../FormInner';
 import { getActionList } from '../Actions';
 import getColumns from './getColumns';
-import createAdminListCards from '@components/Shared/createAdminListCards';
+import { createFlowListCards } from './FlowListCards';
 import { STAGE_CODES, STATUS_CODES, PRIORITY_CODES, stageMessageId, statusMessageId, priorityMessageId } from '../constants';
 import { pickSelectFilterValue } from '../selectValue';
 import styles from '../style.module.scss';
 
 // 阶段切换器取值：'all' 表示不按阶段过滤
 const ALL_STAGES_KEY = 'all';
-
-const renderAdminListCards = createAdminListCards();
 
 // 列表：BizUnit 作为容器，筛选走 Filter；阶段改为顶部 StateBar(type="step") 切换，不再占用筛选行。
 // 侧栏 menu 必须经 BizUnit 的 page 传给内部的 Layout@TablePage，外层另包 Page 会被覆盖。
@@ -127,11 +125,11 @@ const List = createWithRemoteLoader({
           // 树形必须先拿到父子同一批数据：分页会把父子拆到两页，树就散架了。
           // 用大页一次取全量，一页装下时分页器自动隐藏；等量级上来再换按根节点懒加载
           pagination: { paramsType: 'params', pageSize: 200, showSizeChanger: false, hideOnSinglePage: true },
-          renderMobile: renderAdminListCards,
-          renderCard: renderAdminListCards
+          renderMobile: createFlowListCards({ formatMessage, baseUrl, variant: 'mobile' }),
+          renderCard: createFlowListCards({ formatMessage, baseUrl, variant: 'card' })
         }
       }),
-      [formatMessage]
+      [formatMessage, baseUrl]
     );
 
     const page = useMemo(

@@ -2,6 +2,7 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { RightOutlined } from '@ant-design/icons';
 import { Alert, Button, Collapse, Empty, Spin, Tag } from 'antd';
 import dayjs from 'dayjs';
 import withLocale from '@root/withLocale';
@@ -13,6 +14,8 @@ import Tree from './Tree';
 import AiRuns from './AiRuns';
 import ReleaseLog from './ReleaseLog';
 import { RemoteMarkdownWithAttachments } from './FileAttachmentPreview';
+import { FlowCardHeader } from '../FlowCardHeader';
+import { recordsDefaultActiveKey } from '../recordsCollapse';
 import { STAGE_CODES, STATUS_COLOR, PRIORITY_COLOR, stageMessageId, statusMessageId, priorityMessageId } from '../constants';
 import styles from '../style.module.scss';
 
@@ -155,12 +158,7 @@ const TabDetail = createWithRemoteLoader({
             ? formatMessage({ id: 'adminFlow.detail.pausedReason' }, { reason: data.pauseReason })
             : formatMessage({ id: data.pausedByType === 'mcp-ai' ? 'adminFlow.detail.pausedByAi' : 'adminFlow.detail.pausedByHuman' });
 
-          const recordLabel = (id, badge) => (
-            <span className={styles.recordLabel}>
-              {formatMessage({ id })}
-              {badge ? <span className={styles.recordBadge}>{badge}</span> : null}
-            </span>
-          );
+          const recordHeader = (id, extra) => <FlowCardHeader compact title={formatMessage({ id })} extra={extra} />;
 
           return (
             <Page {...pageProps}>
@@ -265,30 +263,33 @@ const TabDetail = createWithRemoteLoader({
                 </section>
 
                 <section className={styles.section}>
-                  <div className={styles.sectionHead}>
-                    <h2 className={styles.sectionTitle}>{formatMessage({ id: 'adminFlow.detail.description' })}</h2>
-                  </div>
-                  {data.description ? (
-                    <RemoteMarkdownWithAttachments text={data.description} formatMessage={formatMessage} />
-                  ) : (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} className={styles.sectionEmpty} description={formatMessage({ id: 'adminFlow.detail.descriptionEmpty' })} />
-                  )}
+                  <article className={styles.descriptionCard}>
+                    <FlowCardHeader title={formatMessage({ id: 'adminFlow.detail.description' })} />
+                    {data.description ? (
+                      <div className={styles.descriptionBody}>
+                        <RemoteMarkdownWithAttachments text={data.description} formatMessage={formatMessage} />
+                      </div>
+                    ) : (
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} className={styles.sectionEmpty} description={formatMessage({ id: 'adminFlow.detail.descriptionEmpty' })} />
+                    )}
+                  </article>
                 </section>
 
-                {/* 记录类内容收进无边框折叠，展开后由内部表格自己承担线条；有待处理打回时默认打开台账 */}
-                <div id="flow-records">
+                {/* 记录类内容收进折叠：有待处理打回时默认打开操作记录。展开行为见 recordsDefaultActiveKey。 */}
+                <div id="flow-records" className={styles.recordsSection}>
                   <Collapse
                     ghost
                     key={`${id}-${openFeedback.length ? 'feedback' : 'plain'}`}
                     className={styles.records}
-                    defaultActiveKey={openFeedback.length ? ['release'] : []}
+                    defaultActiveKey={recordsDefaultActiveKey(openFeedback)}
+                    expandIcon={({ isActive }) => <RightOutlined rotate={isActive ? 90 : 0} className={styles.recordsExpandIcon} aria-hidden />}
                     items={[
-                      { key: 'records', label: recordLabel('adminFlow.detail.timeline'), children: <StageRecords flowId={id} /> },
-                      { key: 'tree', label: recordLabel('adminFlow.detail.tabTree'), children: <Tree baseUrl={baseUrl} rootId={data.rootId || id} currentId={id} /> },
-                      { key: 'ai', label: recordLabel('adminFlow.detail.tabAiRuns'), children: <AiRuns flowId={id} runs={data.aiRuns || data.recentRuns || []} /> },
+                      { key: 'records', label: recordHeader('adminFlow.detail.timeline'), children: <StageRecords flowId={id} /> },
+                      { key: 'tree', label: recordHeader('adminFlow.detail.tabTree'), children: <Tree baseUrl={baseUrl} rootId={data.rootId || id} currentId={id} /> },
+                      { key: 'ai', label: recordHeader('adminFlow.detail.tabAiRuns'), children: <AiRuns flowId={id} runs={data.aiRuns || data.recentRuns || []} /> },
                       {
                         key: 'release',
-                        label: recordLabel('adminFlow.detail.tabRelease', openFeedback.length ? formatMessage({ id: 'adminFlow.detail.feedbackBadge' }, { count: openFeedback.length }) : null),
+                        label: recordHeader('adminFlow.detail.tabRelease', openFeedback.length ? <span className={styles.recordBadge}>{formatMessage({ id: 'adminFlow.detail.feedbackBadge' }, { count: openFeedback.length })}</span> : null),
                         children: <ReleaseLog flowId={id} />
                       }
                     ]}
